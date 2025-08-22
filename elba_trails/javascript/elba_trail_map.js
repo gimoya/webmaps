@@ -3,6 +3,7 @@ function trim(str) {
 	return str.replace(/^\s+|\s+$/g, '');  
 }
 
+/*
 var pw_prompt = prompt('Bitte Passwort eingeben (Anfrage per E-Mail an: kay@tiroltrailhead.com), um auf die **ELBA TRAIL MAP** zu gelangen..',' ');
 var pw = 'gimmegimme';
 // if prompt is cancelled the pw_prompt var will be null!
@@ -26,7 +27,7 @@ if (trim(pw_prompt) == pw ) {
 	}
 	window.location='http://tiroltrailhead.com/guiding';
 }
-
+*/
 
 /*** Add base maps with controls ***/
 var map = L.map('map', {

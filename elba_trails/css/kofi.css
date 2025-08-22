@@ -1,0 +1,19 @@
+.floatingchat-container-wrap-mobi,
+.floatingchat-container-wrap,
+.floatingchat-container {
+    right: 0px !important;
+    bottom: 40px !important;
+    width: 50%;
+    left: unset !important;
+}
+
+.floating-chat-kofi-popup-iframe-mobi,
+.floating-chat-kofi-popup-iframe {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    margin: 0 !important;
+}
+
+
