@@ -1,0 +1,108 @@
+/*** General ***/
+
+html, body, #map {
+    height: 100%;
+    width: 100vw;
+}
+
+body{
+    padding-top:50px;
+}
+
+#pop_cont_name {
+    font-weight: bold;
+}
+
+#pop_cont_descr {
+	font-family: 'Nunito';
+}
+
+#track {
+	padding-top: 8px;
+}
+
+
+/* font awesome hack */
+.fa {
+    line-height: 30px!important;
+}
+
+.noselect {
+  -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Old versions of Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome, Opera and Firefox */
+}
+
+/*** Navigation ***/
+
+.navbar {
+	background: #378929;
+    border-width: 0px;
+}
+
+.navbar-default .navbar-brand,
+.navbar-default .navbar-brand:hover {
+  color: #fff;
+}
+
+.navbar-default .navbar-brand {
+  padding-left: 15px;
+}
+
+.navbar-default .navbar-brand:hover {
+  cursor: default;
+}
+
+.navbar-brand {
+	font-family: 'Rye', cursive; 
+	font-size:calc(20px + .5vw);
+	letter-spacing: 0.3em;
+}
+
+.navbar-toggle {
+	background-color: #fff!important;
+    position: relative;
+    float: right;
+    padding: 9px 10px;
+    margin-top: 8px;
+    margin-right: 7px;
+    margin-bottom: 8px;
+    background-color: transparent;
+    background-image: none;
+    border: 3px solid;
+    border-radius: 4px;
+    border-color: #00000080!important;
+}
+
+ul.nav.navbar-nav.navbar-right a {
+  color: #fff;
+  transition: color 0.4s;
+  font-family: inherit; 
+  font-size:calc(12px + .4vw);
+  margin-right: 10px;
+}
+
+ul.nav.navbar-nav.navbar-right li a:hover {
+  color: #000;
+}
+
+/*** Control font size of title on small screens ***/
+@media screen and (max-width: 400px) {
+  .navbar-default .navbar-brand {
+    font-size: 1.2em;
+	padding-top: 19px;
+  }
+}
+
+/*** popup contents ***/
+
+.trailPopupClass .leaflet-popup-content-wrapper {
+    padding: 5px;
+    text-align: left;
+    border-radius: 0px!important;
+	width: 300px;
+}

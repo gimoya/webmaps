@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+<Document>
+<atom:author><atom:name>Locus (Android)</atom:name></atom:author>
+	<Style id="track001">
+		<LineStyle>
+			<color>96ff0000</color>
+			<width>4.0</width>
+		</LineStyle>
+	</Style>
+<Placemark>
+	<name>Strega</name>
+	<description><![CDATA[<p><strong>Strega </strong><span class="IT-Click">IT</span> | <span class="EN-Click">EN</span></p>
+		<div class="IT">tempo di percorrenza 1h - difficoltà medio  - consigliato a biker con buone capacità di guida, sopratutto esploratori che non rinnegano spingere un po la bici (il trail presenta una irta salita in partenza non pedalabile per raggiungere la vetta dove il panorama ripagherà tutte le fatiche fatte, verso la metà si trova una discesa ripida con fondo smosso dove è bene prestare attenzione, per il resto il trail non presenta grosse difficoltà).</div>
+		<div class="EN">1 h duration - medium difficulty - recommended for bikers with good driving skills, especially explorers who are not afraid to push the bike for a while (The trail has an unprecedented climb uphill to reach the summit where the panorama will repay all the efforts made, in the middle there is a steep descent with loose ground where it is good to pay close attention, the rest of the trail does not have any too difficult sections).</div>]]></description>
+	<styleUrl>#track001</styleUrl>
+	<MultiGeometry>
+		<LineString>
+			<coordinates>
+				10.401724,42.825641,301.57
+				10.401723,42.825635,301.61
+				10.401710,42.825590,301.93
+				10.401540,42.825390,304.64
+				10.401330,42.825220,309.35
+				10.401130,42.824990,316.76
+				10.400920,42.824840,323.88
+				10.400640,42.824750,331.99
+				10.400400,42.824640,340.45
+				10.400210,42.824540,347.57
+				10.399910,42.824510,355.04
+				10.399630,42.824450,362.73
+				10.399420,42.824320,371.50
+				10.399200,42.824210,379.21
+				10.398920,42.824170,384.45
+				10.398710,42.824040,390.64
+				10.398520,42.823870,396.76
+				10.398430,42.823660,402.00
+				10.398370,42.823440,405.77
+				10.398240,42.823230,407.57
+				10.398040,42.823030,406.97
+				10.397980,42.822820,407.59
+				10.397890,42.822600,407.79
+				10.397770,42.822390,407.22
+				10.397620,42.822180,405.59
+				10.397440,42.821980,403.30
+				10.397270,42.821790,401.26
+				10.397100,42.821620,400.11
+				10.397010,42.821380,400.36
+				10.396970,42.821170,400.76
+				10.396820,42.820970,401.70
+				10.396710,42.820760,402.25
+				10.396670,42.820590,402.33
+				10.396390,42.820500,399.76
+				10.396130,42.820390,394.65
+				10.396096,42.820369,393.97
+				10.395880,42.820240,390.11
+				10.395640,42.820090,387.35
+				10.395450,42.819920,385.95
+				10.395320,42.819710,384.85
+				10.395190,42.819490,383.12
+				10.395060,42.819280,381.06
+				10.395040,42.819040,380.16
+				10.394910,42.818850,377.91
+				10.394830,42.818610,376.11
+				10.394630,42.818440,373.14
+				10.394350,42.818290,369.13
+				10.394140,42.818140,367.29
+				10.394030,42.817950,368.39
+				10.393880,42.817730,369.66
+				10.393820,42.817540,371.62
+				10.393770,42.817330,373.12
+				10.393650,42.817110,373.93
+				10.393540,42.816870,374.61
+				10.393560,42.816680,374.65
+				10.393580,42.816450,373.01
+				10.393600,42.816210,369.74
+				10.393670,42.816000,366.15
+				10.393933,42.815796,361.67
+				10.393920,42.815630,357.73
+				10.393820,42.815420,351.71
+				10.393750,42.815220,346.11
+				10.393650,42.815010,342.51
+				10.393598,42.814926,342.24
+				10.393540,42.814831,342.86
+				10.393511,42.814834,342.82
+				10.393540,42.814831,342.86
+				10.394016,42.814707,343.73
+				10.395565,42.813947,323.34
+				10.395786,42.813690,320.39
+				10.395835,42.813494,319.37
+				10.395642,42.813124,317.84
+				10.395259,42.812858,314.14
+				10.394777,42.812860,320.96
+				10.394339,42.812691,319.22
+				10.394331,42.812611,317.31
+				10.394814,42.812496,308.89
+				10.395470,42.811954,298.57
+				10.395725,42.811632,291.83
+				10.395896,42.811404,285.88
+				10.396223,42.811235,278.28
+				10.396274,42.811076,277.07
+				10.396259,42.811072,277.26
+			</coordinates>
+		</LineString>
+	</MultiGeometry>
+</Placemark>
+</Document>
+</kml>

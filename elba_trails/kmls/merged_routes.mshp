@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SAGA_METADATA>
+  <HISTORY saga-version="2.3.2">
+    <MODULE library="shapes_tools" id="2" name="Merge Layers">
+      <OPTION type="boolean" id="SRCINFO" name="Add Source Information">TRUE</OPTION>
+      <OPTION type="boolean" id="MATCH" name="Match Fields by Name">TRUE</OPTION>
+      <INPUT_LIST type="shapes_list" id="INPUT" name="Layers">
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/5e4fedfa0c7c4d1e953b19fad8d95a34/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/5da906e427bd425496658a2a98d53440/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/f762d2370a084b9bbc41be6646fed174/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/ed39a2b380c742f4966fa1cc854fe40a/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/beff2a9b37214e5bace2877274b7d089/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/b4467d6aaabe4ece8e0aebfa18bf4445/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/49900bbff30e4ecab05cf8738bb9e2ca/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/6c07be0a5f9048a5b49e98f5f18fe36f/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/8f744f8139a1425a9c7441cdfbdfd63b/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/6a958f2e4c6b4f97af028f3438d5f022/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/00586040461a4d38a702761d639fdeb7/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/bbeadc98ac5049db8175158400ac708c/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/c35a7f1284164d08aa7e1c95ceba4e5f/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/61c9b5d3181f440bb95cc4cb7827daeb/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/2cfb2decefd34940b250a9d9e04ba84c/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/0f8ea2f016c84308b4f4f3ff2a0823d8/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/ca452d1b47d0436694ac674be56d2cbb/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/5dc8be4612fc4afda7872d1818a7c015/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/d61bace6514b4d6095f5795c8228a60f/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/f35892240b044938a907368946fe467f/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/148e36101ae34ab5a5715d1eba526334/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/25d6e85481db4097a24ab7f98c46d03a/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/cb2d383c1a7e495d8161b21e46a8a383/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/25960768f53e492099f705acdc69db56/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/4db1658e853949ec83c184f8e0659036/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/c4af0ebf2ca743939c173ad6c2e7405c/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/f95ab15679c0483595f4a7b508f7527d/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/bb1bdd819ff14d0ca8c161cec5410c88/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/d9dcd0e5999241068717cebb10ca88df/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/3abe990360114b81bf32028f23288bd9/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/60b230573d3c4f0d87579934fb84aa5b/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/87d5ed751d2b43c584c4b0cbd46c6bd5/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/f8d1d7934a164c219e2ad4b25368f53a/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/581f2bc96e6d4204b0817008294d0769/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/7323ab2e60464dd2b6964edca4bf555f/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/0adb6e656fb34fa6b79832f0930c3177/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/72b04aa5d55b49708823922524285b1a/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/49bdbf3117ed4313a5355da7bb3dac7b/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/47407fd3bece4e17b96fabdd6936fe4b/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/ae00f9fc4588429dbb00618a2e7c3889/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/ed8eb224fdae41f3975844622d5cecc9/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/9020cc127be6411ea22cf37deb1647c9/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/6690c7be725440d4b85dcbaa1d593dfe/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/e831d06e3282491684c849a4287f07dc/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/0aef9018c00940709d97bc16dba858f2/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/df57e0103a1f4fa4865e84609c977334/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/8d75b41f795e44f0b6d930ee15526a0e/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/3c894167191f41edb8b2b95af4ae1dbc/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/b039fbb92033461b9da7075bd84ead24/INPUT.shp</FILE>
+        </INPUT>
+        <INPUT type="shapes_list" id="INPUT" name="Layers">
+          <FILE>C:/Users/Kay/AppData/Local/Temp/processing_b1d8dd19f8204259ab5e0b1e76efea39/0f1ceb92ab904ccfbe4dd5c9c3f4427d/INPUT.shp</FILE>
+        </INPUT>
+      </INPUT_LIST>
+      <OUTPUT type="shapes" id="MERGED" name="Merged Layer">Merged Layers</OUTPUT>
+    </MODULE>
+  </HISTORY>
+  <SOURCE>
+    <FILE></FILE>
+    <DATABASE>
+      <FIELDS>
+        <FIELD TYPE="STRING">Source</FIELD>
+        <FIELD TYPE="STRING">Name</FIELD>
+        <FIELD TYPE="STRING">descriptio</FIELD>
+        <FIELD TYPE="STRING">timestamp</FIELD>
+        <FIELD TYPE="STRING">begin</FIELD>
+        <FIELD TYPE="STRING">end</FIELD>
+        <FIELD TYPE="STRING">altitudeMo</FIELD>
+        <FIELD TYPE="LONGINT">tessellate</FIELD>
+        <FIELD TYPE="LONGINT">extrude</FIELD>
+        <FIELD TYPE="LONGINT">visibility</FIELD>
+        <FIELD TYPE="LONGINT">drawOrder</FIELD>
+        <FIELD TYPE="STRING">icon</FIELD>
+      </FIELDS>
+    </DATABASE>
+    <PROJECTION>
+      <OGC_WKT>GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]</OGC_WKT>
+      <PROJ4>+proj=longlat +a=6378137.000000 +b=6356752.314245 +no_defs</PROJ4>
+      <EPSG>-1</EPSG>
+    </PROJECTION>
+  </SOURCE>
+  <DESCRIPTION></DESCRIPTION>
+</SAGA_METADATA>

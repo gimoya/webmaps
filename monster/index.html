@@ -1,0 +1,280 @@
+<!doctype html>
+
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+
+  <title>TheMonster</title>
+  <meta name="description" content="The Monster Strava MTB">
+  <meta name="KC" content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <link rel="shortcut icon" type="image/x-icon" href="images/icon.png" />
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Roboto&family=Zilla+Slab+Highlight&display=swap" rel="stylesheet">  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/leaflet.css" />
+
+<style>
+
+@font-face {
+    font-family: FloridaShark;
+    src: url("fonts/FloridaShark.otf") format("opentype");
+    font-weight: normal;
+    font-style: normal;
+}
+
+body {
+  margin: 10px;
+}
+    
+h1 {
+  margin-top:0px;
+  margin-bottom:2px;
+  font-family: 'Zilla Slab Highlight', cursive;
+  font-size: 36px;
+  font-weight: 400;
+  color: rgb(21 20 16);
+}
+
+h2, h3 {
+  font-family: 'Zilla Slab Highlight', cursive;
+  font-weight: 400;
+  color: #494844;
+  text-align:right;
+}
+
+h2 {
+  font-size: 19px;
+}
+
+h3{
+  font-size: 16px;
+  }
+
+/*
+img captions h4
+position to be set inline!
+*/
+h4 {
+font-family: 'FloridaShark';
+color:white;
+font-size:26px;
+font-weight: 100;
+z-index:99;
+position:absolute;
+padding:0px;
+margin:0px;
+}
+
+.floating-box {
+  position:relative;
+  float: left;
+  width: 345px;
+  height: 460px;
+  margin: 10px;  
+  background-color:#edeaea;
+}
+
+.mymap {
+ height: 100%; 
+ background-color: black;
+}
+	
+.animate{
+ opacity: 1;
+ -webkit-transition: opacity 2.5s linear;
+ max-width:100%;
+ max-height:100%;
+ position: absolute;
+ left:0;
+ right:0;
+ bottom:0;
+ top:0;
+ margin:auto;
+}
+
+img {
+ opacity: 0;
+}
+
+.leaflet-marker-pane img {
+	opacity: 1!important;
+}
+
+.leaflet-container {
+	font: 12px/1.5 Arial, Helvetica, sans-serif!important; 
+}		
+
+.leaflet-popup-content-wrapper {
+	background-color:rgba(71,71,71,0.85);
+	color:white;
+	text-align:center!important;
+}
+
+.leaflet-popup-content {
+	margin: 10px 10px;
+	line-height:1.2;
+}
+
+.leaflet-popup-tip {
+	display:none;
+}
+
+</style>
+</head>
+<body>
+<script src="scripts/bowser.js"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha256-4+XzXVhsDmqanXGHaHvgh1gMQKX40OUvDEBTu8JcmNs=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.4.0/gpx.min.js"></script>
+
+<script type="text/javascript">	
+
+	function trim(str) {
+		return str.replace(/^\s+|\s+$/g, '');  
+	}
+	
+	var pw_prompt = prompt('Passwort eingeben: ',' ');
+	var pw = 'mnstr';
+	// if prompt is cancelled the pw_prompt var will be null!
+	if (pw_prompt == null) {
+		//alert('..kein Passwort? Du wirst umgeleitet');
+		if (bowser.msie) {
+			document.execCommand('Stop');
+		} else {
+			window.stop();
+		}
+		window.location='tilt.html';
+	}
+	if (trim(pw_prompt) == pw ) {
+		//alert('...yes!');
+	} else {
+		//alert('...nö!');
+		if (bowser.msie) {
+			document.execCommand('Stop');
+		} else {
+			window.stop();
+		}
+		window.location='tilt.html';
+	}
+</script>
+
+<div class="floating-box">
+	<img onload="this.className='animate'" id="poster" src="images/poster_neg.jpg" />
+</div>
+
+<div class="floating-box">
+<h1>Die st(g)eilsten SÖM-Trails in einer Fahrt..</h1>
+<h2>
+  <span style="white-space: nowrap;">"Blattfang" 🔪 ..Steeep!</span></br>
+  <span style="white-space: nowrap;">"Runstweg-Kicker" 🤘 ..Fun;)</span></br>
+  <span style="white-space: nowrap;">"Playground" 💀 ..Loam & Rock Drop!</span></br>
+  <span style="white-space: nowrap;">"Widum" ✝️ ..North-Shore & Loam Skids!</span></br>
+  <span style="white-space: nowrap;">"Egerdach" 😱 ..unfahrbar!?</span></br>
+</h2>
+<h3>
+  ..Äktschn-Fotos an <a href="mailto:monster@tiroltrailhead.com?subject=Monster%20Shot">monster@tiroltrailhead.com</a> schicken!</br></br>
+  <span style="white-space: nowrap;">..Sehr fesche Monster Shirts gibt's im </span></br><a href="https://tiroltrailhead-shop.myspreadshop.at/">Spreadshop!</a></br>
+</h3>
+
+<h2>&nbsp;&nbsp;..die Spots&nbsp;>>&nbsp;<a href="gps/mSpots.gpx">mSpots.gpx</a>&nbsp;&nbsp;&nbsp;&nbsp;</br>
+&nbsp;&nbsp;..der Track&nbsp;>>&nbsp;<a href="gps/mTrack.gpx">mTrack.gpx</a>&nbsp;&nbsp;&nbsp;&nbsp;</br></br>
+
+</div>
+<div class="floating-box">
+	<div class="mymap" id="map">
+		<script>
+			var map = L.map('map');
+			/*L.tileLayer('https://maps{s}.wien.gv.at/basemap/bmaphidpi/{type}/google3857/{z}/{y}/{x}.{format}', {
+				maxZoom: 19,
+				attribution: 'Datenquelle: <a href="https://www.basemap.at">basemap.at</a>',
+				subdomains: ["", "1", "2", "3", "4"],
+				type: 'normal',
+				format: 'jpeg',
+				bound: [[46.35877, 8.782379], [49.037872, 17.189532]]
+			}).addTo(map);
+			*/
+			L.tileLayer('https://tile.thunderforest.com/spinal-map/{z}/{x}/{y}.png?apikey={apikey}', {
+				attribution: '&copy; <a href="http://www.thunderforest.com/">Thunderforest</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+				apikey: 'c7e0f21896d24f7c9f7b4218160f6750',
+				maxZoom: 22
+			}).addTo(map);
+			
+			var track = new L.GPX('gps/mTrack.gpx', {
+				async:true, 
+				polyline_options: {
+					color: 'Gray',
+					opacity: 0.75,
+					weight: 2.8,
+					lineCap: 'round'
+				}
+			});
+
+			var spots = new L.GPX('gps/mSpots.gpx', {
+				async: true,
+				gpx_options: 
+					{parseElements:['waypoint']},
+				marker_options: 
+					{
+					iconSize:[20,30],
+					iconAnchor:[10,30],
+					popupAnchor: [0, -20],
+					/* Marker Icons festlegen Festlegung erfolgt nach */
+					/* <sym> bla bla </sym> Tag in der GPX Datei      */
+					wptIconUrls: 
+						{
+						'': 'crossW.png'					
+						}
+					}
+			});	
+			
+			track.addTo(map);
+			spots.addTo(map);
+
+			var southWest = L.latLng(47.2709131415841, 11.48531341343187),
+				northEast = L.latLng(47.217306206692285, 11.426090238383042),
+				bds = L.latLngBounds(southWest, northEast);
+			map.fitBounds(bds);
+		
+			L.control.scale({'imperial':false,'position':'topright'}).addTo(map);	
+	
+		</script>
+	</div>
+</div>
+<div class="floating-box">
+	<img onload="this.className='animate'" id="monster_photo" src="images/monster_photo.png"/>
+</div>
+<div class="floating-box">
+	<h4 style="left:10px; bottom:11px;">'Blattfang Gully'</h4>
+	<img onload="this.className='animate'" id="alex" src="images/IMG-20210307-WA0000.jpg"/>
+</div>
+<div class="floating-box">
+	<h4 style="bottom:12px; right:17px;">'Widum North-Shore'</h4>
+	<img onload="this.className='animate'" id="widum" src="images/IMG-20210308-WA0001.jpg"/>
+</div>
+<div class="floating-box">
+	<h4 style="bottom:12px; right:25px;color:black;">'Runstweg-Kicker'</h4>
+	<img onload="this.className='animate'" id="Runstweg-Kicker" src="images/runstweg-kicker.jpg"/>
+</div>
+<div class="floating-box">
+	<h4 style="bottom:12px; right:25px;color:white;">'Playground Rock'</h4>
+	<img onload="this.className='animate'" id="playground" src="images/playground_St.png"/>
+</div>
+<div class="floating-box">
+	<h4 style="bottom:12px; left:55px;color:white;transform: rotate(-0deg);">'Bockala-Schleuder'</h4>
+	<img onload="this.className='animate'" id="bockala" src="images/egerdach_leap.jpg"/>
+</div>
+<div class="floating-box">
+	<h3 style="z-index:99;position:absolute;bottom:0px;left:50px;">Weitere Äktschn-Fotos gehen hier her...</h3>
+	<img onload="this.className='animate'" id="polaroid" src="images/polaroid.png"/>
+</div>
+<div class="floating-box">
+<h2 style="z-index:99;position:absolute;top:0px;left:0px;text-align:left;">🏆 Get a Monster Shirt 🤟</h2>
+<img onload="this.className='animate'" id="t-shirt" style="transform: rotate(-5deg);"  src="images/monster_shirt.jpg"/>
+<h3 style="width:100%;z-index:99;position:absolute;bottom:0px;text-align:right;">
+TheMonster'21&nbsp;&copy;&nbsp;<a href="https://tiroltrailhead-shop.myspreadshop.at/">tiroltrailhead-shop.myspreadshop.at</a>
+</h3>
+</div>
+</div>
+</body>
+</html>

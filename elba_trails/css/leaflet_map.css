@@ -1,0 +1,212 @@
+/*** General ***/
+
+html, body, #map {
+    height: 100%;
+    width: 100vw;
+}
+
+body{
+	padding-top:50px;
+}
+
+/* font awesome hack */
+.fa {
+    line-height: 30px!important;
+}
+
+.noselect {
+  -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Old versions of Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome, Opera and Firefox */
+}
+
+/*** Navigation ***/
+
+.navbar {
+  margin-bottom: 0;
+  padding: 0 15px;
+  background: #4EB086;
+}
+
+.navbar-default .navbar-brand,
+.navbar-default .navbar-brand:hover {
+  color: #fff;
+}
+
+.navbar-default .navbar-brand {
+  padding-left: 5px;
+}
+
+.navbar-default .navbar-brand:hover {
+  cursor: default;
+}
+
+.navbar-toggle {
+  background-color: #fff;
+}
+
+ul.nav.navbar-nav.navbar-right a {
+  color: #fff;
+  font-weight: bold;
+  transition: color 0.4s;
+}
+
+ul.nav.navbar-nav.navbar-right li a:hover {
+  color: #000;
+}
+
+/*** Control font size of title on small screens ***/
+@media screen and (max-width: 400px) {
+  .navbar-default .navbar-brand {
+    font-size: 1em;
+  }
+}
+
+/*** Map popup Title***/
+
+.map-popup {
+  font-size: 1.3em;
+  font-weight: bold;
+}
+
+/*** popup contents ***/
+.trailPopupClass .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+    box-shadow: none;
+}
+
+.trailPopupClass .leaflet-popup-content-wrapper {
+    padding: 5px;
+    text-align: left;
+    border-radius: 5px;
+}
+
+/* 
+PAYPAL SECTION 
+*/
+
+#paypal {
+  position: fixed;
+  width: 20%;
+  z-index: 9999;
+  text-align: center;
+  padding: 10px;
+  top: 40%;
+  right: 35%;
+  background-color: white;
+  border-radius: 5px;
+  display: none;
+}
+
+#svg_container {
+  width: 60%;
+  display: block;
+  margin: auto;
+  padding: 12px;
+}
+
+#heart {
+  fill: red;
+  display: block;
+}
+
+.support {
+  margin: 5px;
+}
+
+.support:hover {
+  cursor: pointer;
+  background-color: lightgreen; 
+}
+
+.pulse2 {
+  -webkit-animation: pulse2 1.5s linear infinite;
+  -moz-animation: pulse2 1.5s linear infinite;
+  -ms-animation: pulse2 1.5s linear infinite;
+  animation: pulse2 1.5s linear infinite;
+}
+
+@keyframes "pulse2" {
+  0% {
+    -webkit-transform: scale(1.1);
+    -moz-transform: scale(1.1);
+    -o-transform: scale(1.1);
+    -ms-transform: scale(1.1);
+    transform: scale(1.1);
+  }
+  50% {
+    -webkit-transform: scale(0.8);
+    -moz-transform: scale(0.8);
+    -o-transform: scale(0.8);
+    -ms-transform: scale(0.8);
+    transform: scale(0.8);
+  }
+  100% {
+    -webkit-transform: scale(1);
+    -moz-transform: scale(1);
+    -o-transform: scale(1);
+    -ms-transform: scale(1);
+    transform: scale(1);
+  }
+}
+
+@-moz-keyframes pulse2 {
+  0% {
+    -moz-transform: scale(1.1);
+    transform: scale(1.1);
+  }
+  50% {
+    -moz-transform: scale(0.8);
+    transform: scale(0.8);
+  }
+  100% {
+    -moz-transform: scale(1);
+    transform: scale(1);
+  }
+}
+
+@-webkit-keyframes "pulse2" {
+  0% {
+    -webkit-transform: scale(1.1);
+    transform: scale(1.1);
+  }
+  50% {
+    -webkit-transform: scale(0.8);
+    transform: scale(0.8);
+  }
+  100% {
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
+
+@-ms-keyframes "pulse2" {
+  0% {
+    -ms-transform: scale(1.1);
+    transform: scale(1.1);
+  }
+  50% {
+    -ms-transform: scale(0.8);
+    transform: scale(0.8);
+  }
+  100% {
+    -ms-transform: scale(1);
+    transform: scale(1);
+  }
+}
+
+button[class="support"] {
+  font-family: Exo;
+  padding: 8px;
+  font-size: 14px;
+  border: none;
+  border-radius: 5px;
+  background-color: rgb(10, 255, 90);
+}
+
+button[class="support"][id="x"] {
+  background-color: rgb(180, 180, 180);
+}

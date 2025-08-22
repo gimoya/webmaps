@@ -1,0 +1,456 @@
+<!doctype html>
+
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+
+  <title>Trailspotting</title>
+  <meta name="description" content="Trailspotting Strava MTB">
+  <meta name="KC" content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <meta http-equiv="Content-Security-Policy" content="*">
+  
+  
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Special+Elite&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/leaflet.css" />
+
+<style>
+
+body {
+  margin: 10px;
+}
+
+#poster {
+  height: 100%;
+  float: left;
+}
+
+#danger {
+	position: absolute;
+	left:0;
+	bottom:0;
+	width:100%;
+	z-index: 999;
+}
+    
+pre, .floating-box, .gps-footer, #map-title {
+  font-family: 'Special Elite';
+  font-size: 17px;
+}
+
+.floating-box {
+  position:relative;
+  float: left;
+  width: 390px;
+  height: 550px;
+  margin: 20px;  
+}
+
+.gps-footer {
+  width: 97%;
+  height: 6%;
+  border: 1px solid lightgray;
+  border-radius: 3px;
+  text-align: center;
+  padding-top: 20px;
+}
+
+.themap { height: 100%; }
+
+.leaflet-marker-pane img {
+    margin-left: -13px!important;
+    margin-top: -30px!important;
+    width: 22px!important;
+    height: 30px!important;
+	}
+
+#map-title {
+	position:absolute;
+	right:0;
+	padding:10px 10px 0px 10px;
+	z-index:9999;
+	font-size:38px;
+	background-color: rgba(210,210,210,0.65);
+}
+
+
+</style>
+</head>
+<body>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.4.0/gpx.min.js"></script>
+
+<div class="floating-box">
+	<img id="poster" src="images/poster.png"/>
+</div>
+
+<div class="floating-box">
+<PRE><span style="font-size:55px;">Choose your
+route..
+Choose your 
+pace..
+Catch your
+train.. 
+</span>
+
+<span style="font-size:25px;">
+..too late!? 
+..well, bollocks.</span>
+<span style="font-size:14px;">
+Trail(n)spotting - das heißt:
+kombiniere deine MTB-Fahrt im Inntal mit
+den Öffis und hol' dir so (auf angenehme 
+Weise - vor allem in der kalten Jahreszeit;)
+viele, viele Trail-Km heraus!
+</span>
+</PRE>
+</div>
+
+<!-- Define the map source as a variable -->
+<script>
+	const mapSource = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
+	const mapAttribution = 'Map data &copy; <a href="https://www.opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)';
+</script>
+
+<div class="floating-box">
+	<div class="themap" id="map_A">
+	<div id="map-title">A</div>
+		<script>
+			var map_A = L.map('map_A');
+			L.tileLayer(mapSource, {
+			  attribution: mapAttribution,
+			  minZoom:10,
+			  maxZoom:15,
+			  maxNativeZoom:15
+			}).addTo(map_A);
+
+			var gpx_A1 = 'gps/A1.gpx'; // URL to your GPX file or the GPX itself
+			new L.GPX(gpx_A1, {
+				async:true, 
+				polyline_options: {
+					color: 'red',
+					opacity: 0.75,
+					weight: 2.8,
+					lineCap: 'round'}
+			}).on('loaded', function(e) {
+				var bds = e.target.getBounds().pad(1);
+				map_A.fitBounds(bds);
+				map_A.setMaxBounds(bds);
+			}).addTo(map_A);
+
+			var gpx_A2 = 'gps/A2.gpx'; // URL to your GPX file or the GPX itself
+			new L.GPX(gpx_A2, {
+				async:true, 
+				polyline_options: {
+					color: 'red',
+					opacity: 0.75,
+					weight: 2.8,
+					lineCap: 'round'}
+			}).on('loaded', function(e) {
+				var bds = e.target.getBounds().pad(1);
+				map_A.fitBounds(bds);
+				map_A.setMaxBounds(bds);
+			}).addTo(map_A);
+			
+			L.control.scale().addTo(map_A);	
+		</script>
+	</div>
+</div>
+	
+<div class="floating-box">
+<PRE>
+<h1 style="margin-bottom:0px;">Züge Variante (A)</h1>
+------------------------------------
+IVB				J/M Bus
+------------------------------------
+Innsbruck		?
+Igls				?
+------------------------------------
+🚴‍♂️&uarr;358 m&rarr;15,0km	ca. 90'				
+------------------------------------
+ÖBB-Bhf.			REX
+------------------------------------
+Hall 			09:29
+Schwaz			09:40 (11')
+------------------------------------
+🚴‍♂️&uarr;1064m&rarr;25,1km	max. 148'		max. 208'
+------------------------------------
+ÖBB-Bhf.			S4-Telfs/Pf.	S5-Ötztal	
+------------------------------------
+Terfens/W.		12:08		12:38 		 
+Innsbruck		11:25 (17')	12:55 (17')
+------------------------------------
+</PRE>
+</div>
+	
+<div class="floating-box">
+	<div class="themap" id="map_B">
+	<div id="map-title">B</div>
+		<script>
+			var map_B = L.map('map_B');
+			L.tileLayer(mapSource, {
+			  attribution: mapAttribution,
+			  minZoom:10,
+			  maxZoom:15,
+			  maxNativeZoom:15
+			}).addTo(map_B);
+
+			var gpx_B = 'gps/B__Trailspotting.gpx'; // URL to your GPX file or the GPX itself
+			new L.GPX(gpx_B, {
+				async:true, 
+				polyline_options: {
+					color: 'red',
+					opacity: 0.75,
+					weight: 2.8,
+					lineCap: 'round'}
+				}).on('loaded', function(e) {
+				var bds = e.target.getBounds().pad(1);
+				map_B.fitBounds(bds);
+				map_B.setMaxBounds(bds);
+			}).addTo(map_B);
+			L.control.scale().addTo(map_B);
+		</script>
+	</div>
+</div>
+
+<div class="floating-box">
+<PRE>
+<h1 style="margin-bottom:0px;">Züge Variante (B)</h1>
+IVB				J Bus
+------------------------------------
+Innsbruck		?
+Igls				?
+------------------------------------
+🚴‍♂️&uarr;358m&rarr;15,0km	ca. 90'				
+------------------------------------
+ÖBB-Bhf.			S4-Kufstein
+------------------------------------
+Hall 			09:45
+Münster/W.		10:12 (27')
+------------------------------------
+🚴‍♂️&uarr;513m&rarr;17,1km	max. 90'		max. 114'
+------------------------------------
+ÖBB-Bhf.			S4-Telfs/Pf.	REX-Land.
+------------------------------------
+Brixlegg 		11:42		12:06
+Schwaz			11:58 (16')	12:19 (13')
+------------------------------------
+🚴‍♂️&uarr;1064m&rarr;25,1km	max. 160'		max. 169'
+------------------------------------
+ÖBB-Bhf.			S4-Telfs/Pf.	S5-Ötztal	
+------------------------------------
+Terfens/W.		14:38		15:08 		 
+Innsbruck		14:55 (17')	15:25 (17')
+------------------------------------
+</PRE>
+</div>
+
+
+<div class="floating-box">
+	<div class="themap" id="map_C">
+		<div id="map-title">C</div>
+		<script>
+			var map_C = L.map('map_C');
+			L.tileLayer(mapSource, {
+			  attribution: mapAttribution,
+			  minZoom:11,
+			  maxZoom:15,
+			  maxNativeZoom:15
+			}).addTo(map_C);
+
+			var gpx_C = 'gps/C__Trailspotting.gpx'; // URL to your GPX file or the GPX itself
+			new L.GPX(gpx_C, {
+				async:true, 
+				polyline_options: {
+					color: 'red',
+					opacity: 0.75,
+					weight: 2.8,
+					lineCap: 'round'}
+				}).on('loaded', function(e) {
+				var bds = e.target.getBounds().pad(1);
+				map_C.fitBounds(bds);
+				map_C.setMaxBounds(bds);
+			}).addTo(map_C);
+			L.control.scale().addTo(map_C);
+		</script>
+	</div>
+</div>
+
+<div class="floating-box">
+<PRE>
+<h1 style="margin-bottom:0px;">Züge Variante (C)</h1>
+IVB				J Bus
+------------------------------------
+Innsbruck		?
+Igls				?
+------------------------------------
+🚴‍♂️&uarr;358m&rarr;15,0km	ca. 90'				
+------------------------------------
+ÖBB-Bhf.			Bus 3,6,7
+------------------------------------
+Hall 			10:20
+Walderbrücke	10:35 (15')
+------------------------------------
+🚴‍♂️&uarr;490m&rarr;15,9km	max. 89'		max. 100'
+------------------------------------
+ÖBB-Bhf.			S5-Steinach	S4-Telfs/Pf.
+------------------------------------
+Hall 			12:04		12:15
+Innsbruck		12:13 (9')		12:25 (10')
+------------------------------------
+</PRE>
+</div>
+	
+<!--div class="floating-box">
+	<img id="danger" src="images/yellow-warning-tape.png" />
+	<div class="themap" id="map_D">
+		<div id="map-title">D</div>
+		<script>
+			var map_D = L.map('map_D');
+			L.tileLayer(mapSource, {
+			  attribution: mapAttribution,
+			  minZoom:11,
+			  maxZoom:15,
+			  maxNativeZoom:15
+			}).addTo(map_D);
+
+
+			var gpx_D = 'gps/D__Trailspotting.gpx'; // URL to your GPX file or the GPX itself
+			new L.GPX(gpx_D, {
+				async:true, 
+				polyline_options: {
+					color: 'red',
+					opacity: 0.75,
+					weight: 2.8,
+					lineCap: 'round'}
+				}).on('loaded', function(e) {
+				var bds = e.target.getBounds().pad(1);
+				map_D.fitBounds(bds);
+				map_D.setMaxBounds(bds);
+			}).addTo(map_D);
+			L.control.scale().addTo(map_D);			
+		</script>
+	</div>
+</div>	
+
+
+<div class="floating-box">
+<img id="danger" src="images/yellow-warning-tape.png" />
+<PRE>
+<h1 style="margin-bottom:0px;">⚠ Züge Variante (D)</h1>
+ÖBB-Bhf.			REX
+------------------------------------
+Innsbruck		10:52
+Stams			11:17 (25')
+------------------------------------
+🚴‍♂️&uarr;900m&rarr;26,9km	ca. 180'				
+------------------------------------
+ÖBB-Bhf.			REX/S4/S5
+------------------------------------
+Telfs			ca. alle 15'
+Innsbruck		?
+------------------------------------
+</PRE>
+</div-->
+	
+</div>
+	<div class="floating-box">
+	<div class="themap" id="map_D">
+		<div id="map-title">D</div>
+		<script>
+			var map_D = L.map('map_D');
+			L.tileLayer(mapSource, {
+			  attribution: mapAttribution,
+                          minZoom:11,
+                          maxZoom:15,
+						  maxNativeZoom:15
+			}).addTo(map_D);
+
+			var gpx_D = 'gps/D__Trailspotting.gpx'; // URL to your GPX file or the GPX itself
+			new L.GPX(gpx_D, {
+				async:true, 
+				polyline_options: {
+					color: 'red',
+					opacity: 0.75,
+					weight: 2.8,
+					lineCap: 'round'}
+				}).on('loaded', function(e) {
+				var bds = e.target.getBounds().pad(1);
+				map_D.fitBounds(bds);
+				map_D.setMaxBounds(bds);
+			}).addTo(map_D);
+			L.control.scale().addTo(map_D);
+		</script>
+	</div>
+</div>
+	
+</div>
+	<div class="floating-box">
+	<div class="themap" id="map_DD">
+		<div id="map-title">DD</div>
+		<script>
+			var map_DD = L.map('map_DD');
+			L.tileLayer(mapSource, {
+			  attribution: mapAttribution,
+                          minZoom:11,
+                          maxZoom:15,
+						  maxNativeZoom:15
+			}).addTo(map_DD);
+
+			var gpx_DD = 'gps/DD__Trailspotting.gpx'; // URL to your GPX file or the GPX itself
+			new L.GPX(gpx_DD, {
+				async:true, 
+				polyline_options: {
+					color: 'red',
+					opacity: 0.75,
+					weight: 2.8,
+					lineCap: 'round'}
+				}).on('loaded', function(e) {
+				var bds = e.target.getBounds().pad(1);
+				map_DD.fitBounds(bds);
+				map_DD.setMaxBounds(bds);
+			}).addTo(map_DD);
+			L.control.scale().addTo(map_DD);
+		</script>
+	</div>
+</div>
+
+<div class="floating-box">
+<PRE>
+<h1 style="margin-bottom:0px;">Züge Variante (D/DD)</h1>
+ÖBB-Bhf.			S6
+------------------------------------
+Innsbruck		11:08
+Reith			11:39 (31')
+------------------------------------
+🚴‍♂️&uarr;730m&rarr;24km	ca. 130'				
+------------------------------------
+ÖBB-Bhf.			S5
+------------------------------------
+Völs			13:53
+Innsbruck		14:01 (8')
+------------------------------------
+</PRE>
+</div>
+
+<div class="floating-box">
+	<h3>Alle S-Bahnen und REX fahren wochentags im 60' Takt</h3>
+	<h1>GPX-Tracks:</h1>
+	<p><a href="gps/A__Trailspotting.gpx">A__Trailspotting.gpx</a></p>
+	<p><a href="gps/A__Trailspotting.gpx">AA__Trailspotting.gpx</a></p>
+	<p><a href="gps/B__Trailspotting.gpx">B__Trailspotting.gpx</a></p>
+	<p><a href="gps/C__Trailspotting.gpx">C__Trailspotting.gpx</a></p>
+	<p><a href="gps/D__Trailspotting.gpx">D__Trailspotting.gpx</a></p>
+	<p><a href="gps/DD__Trailspotting.gpx">DD__Trailspotting.gpx</a></p>
+	<div class="gps-footer">
+	Trail<span style="text-decoration: line-through;">Train</span>spotting
+	 &copy; <a href="http://www.tiroltrailhead.com">tiroltrailhead.com</a>
+	</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet_work.css">
+        <link rel="stylesheet" href="css/qgis2web.css"><link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/MarkerCluster.css">
+        <link rel="stylesheet" href="css/MarkerCluster.Default.css">
+        <link rel="stylesheet" href="css/filter.css">
+<link rel="stylesheet" href="css/nouislider.min.css">
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+		
+		#title {
+			padding-top: 15px;
+			text-align: center;
+			font-family: sans-serif;
+			font-weight: 700;
+			font-size: 24px;
+		}			
+		body {
+			background-color: #cfcfcf;
+			}
+		.noUi-connect {
+			background: #606468!important;
+		}
+
+        </style>
+        <title></title>
+    </head>
+    <body>
+		<div id="title">Erhebung MTB-Nutzung IBK 2020 (<a href="Erlaeuterungen.jpg" target="_blank">Erläuterungen<a/>|<a href="Auswertung.jpg" target="_blank">Auswertung<a/>)</div>
+        <div id="map">
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet.wms.js"></script>
+        <script src="js/leaflet.markercluster.js"></script>
+        <script src="js/tailDT.js"></script>
+		<script src="js/nouislider.min.js"></script>
+		<script src="js/wNumb.js"></script>
+        <script src="data/trails_4.js"></script>
+        <script src="data/Untersuchungsraum_5.js"></script>
+        <script src="data/sitephotos_6.js"></script>
+		<script src="data/besstr_filtered_dslvd_0.js"></script>
+        <script>
+		var southWest = L.latLng(47.174,11.245),
+			northEast = L.latLng(47.353,11.660),
+			bounds = L.latLngBounds(southWest, northEast);		
+        var map = L.map('map', {
+            zoomControl:true, maxZoom:16, minZoom:12,  maxBounds: bounds
+        });
+		map.fitBounds(bounds);
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        var bounds_group = new L.featureGroup([]);
+        map.createPane('pane_Image_Schummerung_Gelaendemodell_0');
+        map.getPane('pane_Image_Schummerung_Gelaendemodell_0').style.zIndex = 399;
+        var layer_Image_Schummerung_Gelaendemodell_0 = L.WMS.layer("https://gis.tirol.gv.at/arcgis/services/Service_Public/terrain/MapServer/WMSServer?", "Image_Schummerung_Gelaendemodell", {
+            pane: 'pane_Image_Schummerung_Gelaendemodell_0',
+            format: 'image/png',
+            uppercase: true,
+            transparent: true,
+            continuousWorld : true,
+            tiled: true,
+            info_format: 'text/html',
+            opacity: 1,
+            identify: false,
+            attribution: 'Land Tirol',
+        });
+        map.createPane('pane_AVKarte_1');
+        map.getPane('pane_AVKarte_1').style.zIndex = 400;
+        var layer_AVKarte_1 = L.tileLayer('https://maps.bergfex.at/oek/standard/{z}/{x}/{y}.jpg', {
+            pane: 'pane_AVKarte_1',
+            opacity: 1.0,
+            attribution: 'bergfex.at',
+            minZoom: 12,
+            maxZoom: 16,
+            minNativeZoom: 12,
+            maxNativeZoom: 16
+        });
+        layer_AVKarte_1;
+        map.addLayer(layer_AVKarte_1);
+        map.createPane('pane_strava_2');
+        map.getPane('pane_strava_2').style.zIndex = 402;
+        var layer_strava_2 = L.tileLayer('//tiroltrailhead.com/strava_tiles_06_2020/{z}/{x}/{y}.png', {
+            pane: 'pane_strava_2',
+            opacity: 1.0,
+            attribution: 'Strava.com',
+            minZoom: 12,
+            maxZoom: 16,
+            minNativeZoom: 13,
+            maxNativeZoom: 14
+        });
+        layer_strava_2;
+
+        function style_trails_4_0() {
+            return {
+                pane: 'pane_trails_4',
+                opacity: 1,
+                color: 'rgba(200,0,130,0.8)',
+                lineCap: 'round',
+                lineJoin: 'round',
+                weight: 2.5,
+                fillOpacity: 0,
+                interactive: true,
+            }
+        }
+		
+        function pop_trails_4(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Name</th>\
+                        <td>' + (feature.properties['Name'] !== null ? autolinker.link(feature.properties['Name'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">MTB Freq.</th>\
+                        <td>' + (feature.properties['MTB Freq.'] !== null ? autolinker.link(feature.properties['MTB Freq.'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Fussgeher Freq.</th>\
+                        <td>' + (feature.properties['Fussgeher Freq.'] !== null ? autolinker.link(feature.properties['Fussgeher Freq.'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Schwierigkeit</th>\
+                        <td>' + (feature.properties['Schwierigkeit'] !== null ? autolinker.link(feature.properties['Schwierigkeit'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Gefahrenstellen</th>\
+                        <td>' + (feature.properties['Gefahrenstellen'] !== null ? autolinker.link(feature.properties['Gefahrenstellen'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Bodenerosion</th>\
+                        <td>' + (feature.properties['Bodenerosion'] !== null ? autolinker.link(feature.properties['Bodenerosion'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+			// highlight:
+			layer.on('mouseover', function () {
+				this.setStyle({
+					color: 'rgba(220,0,0,0.9)',
+					weight: 6.0
+				});
+			});
+			layer.on('mouseout', function () {
+				layer_trails_4.resetStyle(this);
+			});		
+			layer.on('click', function () {
+				map.fitBounds(this.getBounds());
+			});
+        }
+
+        map.createPane('pane_trails_4');
+        map.getPane('pane_trails_4').style.zIndex = 404;
+        map.getPane('pane_trails_4').style['mix-blend-mode'] = 'normal';
+        var layer_trails_4 = new L.geoJson(json_trails_4, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_trails_4',
+            layerName: 'layer_trails_4',
+            pane: 'pane_trails_4',
+            onEachFeature: pop_trails_4,
+            style: style_trails_4_0,
+        });
+        bounds_group.addLayer(layer_trails_4);
+        map.addLayer(layer_trails_4);
+		
+        function pop_Untersuchungsraum_5(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['fid'] !== null ? autolinker.link(feature.properties['fid'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_Untersuchungsraum_5_0() {
+            return {
+                pane: 'pane_Untersuchungsraum_5',
+                stroke: false, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(178,178,178,0.9)',
+                interactive: false,
+            }
+        }
+        map.createPane('pane_Untersuchungsraum_5');
+        map.getPane('pane_Untersuchungsraum_5').style.zIndex = 405;
+        map.getPane('pane_Untersuchungsraum_5').style['mix-blend-mode'] = 'normal';
+        var layer_Untersuchungsraum_5 = new L.geoJson(json_Untersuchungsraum_5, {
+            attribution: '',
+            interactive: false,
+            dataVar: 'json_Untersuchungsraum_5',
+            layerName: 'layer_Untersuchungsraum_5',
+            pane: 'pane_Untersuchungsraum_5',
+            onEachFeature: pop_Untersuchungsraum_5,
+            style: style_Untersuchungsraum_5_0,
+        });
+        bounds_group.addLayer(layer_Untersuchungsraum_5);
+        map.addLayer(layer_Untersuchungsraum_5);
+        function pop___sitephotos_6(feature, layer) {
+            var popupContent = '<table>\
+					<tr>\
+                        <td colspan="2"><img src="http://tiroltrailhead.com/mtb-ibk-web/photos/' + autolinker.link(feature.properties['filename'].toLocaleString()) + '.jpg" width="250px" height="auto"></td>\
+                    </tr>\
+                        <th scope="row">Beschreibung:</th>\
+                        <td>' + (feature.properties['filename'] !== null ? autolinker.link(feature.properties['filename'].toLocaleString()).replace(/.*_/,''): '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Seehöhe:</th>\
+                        <td>' + (feature.properties['altitude'] !== null ? autolinker.link(feature.properties['altitude'].toLocaleString()).replace(/,.*/,''):'')+' m </td>\
+                    </tr>\
+                    <tr>\
+						<th scope="row">Aufnahme:</th>\
+                        <td>' + (feature.properties['timestamp'] !== null ? autolinker.link(feature.properties['timestamp'].toLocaleString()).replace(/T.*/,''):'') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style___sitephotos_6_0() {
+            return {
+                pane: 'pane___sitephotos_6',
+        rotationAngle: 0.0,
+        rotationOrigin: 'center center',
+        icon: L.icon({
+            iconUrl: 'markers/shopping_photo.svg',
+            iconSize: [30, 30]
+        }),
+                interactive: true,
+            }
+        }
+        map.createPane('pane___sitephotos_6');
+        map.getPane('pane___sitephotos_6').style.zIndex = 406;
+        map.getPane('pane___sitephotos_6').style['mix-blend-mode'] = 'normal';
+        var layer___sitephotos_6 = new L.geoJson(json___sitephotos_6, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json___sitephotos_6',
+            layerName: 'layer___sitephotos_6',
+            pane: 'pane___sitephotos_6',
+            onEachFeature: pop___sitephotos_6,
+            pointToLayer: function (feature, latlng) {
+                var context = {
+                    feature: feature,
+                    variables: {}
+                };
+                return L.marker(latlng, style___sitephotos_6_0(feature));
+            },
+        });
+        var cluster___sitephotos_6 = new L.MarkerClusterGroup({showCoverageOnHover: false,
+            spiderfyDistanceMultiplier: 2});
+        cluster___sitephotos_6.addLayer(layer___sitephotos_6);
+
+        bounds_group.addLayer(layer___sitephotos_6);
+        cluster___sitephotos_6.addTo(map);
+        var baseMaps = {};
+        var mapDiv = document.getElementById('map');
+        
+		//L.control.layers(baseMaps,{'<img src="legend/sitephotos_6.png" /> Fotos': cluster___sitephotos_6,'<img src="legend/Untersuchungsraum_5.png" /> Untersuchungsraum': layer_Untersuchungsraum_5,'<img src="legend/trails_4.png" /> Trails': layer_trails_4, "Strava": layer_strava_2,"AV-Karte": layer_AVKarte_1,"Schummerung Gelaendemodell": layer_Image_Schummerung_Gelaendemodell_0,}).addTo(map);
+        
+		var row = document.createElement('div');
+        row.className="row";
+        row.id="all";
+		row.style.width="100%";
+		row.style.position="absolute";
+		row.style.bottom="0";
+		row.style.width="100%";
+        row.style.height = "90%";
+        var col1 = document.createElement('div');
+        col1.className="col9";
+        col1.id = "mapWindow";
+        col1.style.height = "100%";
+        col1.style.width = "80%";
+        col1.style.display = "inline-block";
+        var col2 = document.createElement('div');
+        col2.className="col3";
+        col2.id = "menu";
+        col2.style.display = "inline-block";	
+        mapDiv.parentNode.insertBefore(row, mapDiv);
+        document.getElementById("all").appendChild(col1);
+        document.getElementById("all").appendChild(col2);
+        col1.appendChild(mapDiv);
+        var Filters = {"Schwierigkeit": "int","Fussgeher Freq.": "int","Bodenerosion": "int","MTB Freq.": "int","Gefahrenstellen": "str"};
+        function filterFunc() {
+          map.eachLayer(function(lyr){
+          if ("options" in lyr && "dataVar" in lyr["options"]){
+            features = this[lyr["options"]["dataVar"]].features.slice(0);
+            try{
+              for (key in Filters){
+                keyS = key.replace(/[^a-zA-Z0-9_]/g, "")
+                if (Filters[key] == "str" || Filters[key] == "bool"){
+                  var selection = [];
+                  var options = document.getElementById("sel_" + keyS).options
+                  for (var i=0; i < options.length; i++) {
+                    if (options[i].selected) selection.push(options[i].value);
+                  }
+                    try{
+                      if (key in features[0].properties){
+                        for (i = features.length - 1;
+                          i >= 0; --i){
+                          if (selection.indexOf(
+                          features[i].properties[key])<0
+                          && selection.length>0) {
+                          features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                  }
+                }
+                if (Filters[key] == "int"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (parseInt(features[i].properties[key])
+                          < sliderVals[0]
+                          || parseInt(features[i].properties[key])
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "real"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (features[i].properties[key]
+                          < sliderVals[0]
+                          || features[i].properties[key]
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "date"
+                  || Filters[key] == "datetime"
+                  || Filters[key] == "time"){
+                  try{
+                    if (key in features[0].properties){
+                      HTMLkey = key.replace(/[&\/\\#,+()$~%.'":*?<>{} ]/g, '');
+                      startdate = document.getElementById("dat_" +
+                        HTMLkey + "_date1").value.replace(" ", "T");
+                      enddate = document.getElementById("dat_" +
+                        HTMLkey + "_date2").value.replace(" ", "T");
+                      for (i = features.length - 1; i >= 0; --i){
+                        if (features[i].properties[key] < startdate
+                          || features[i].properties[key] > enddate){
+                          features.splice(i,1);
+                        }
+                      }
+                    }
+                  } catch(err){
+                  }
+                }
+              }
+            } catch(err){
+            }
+          this[lyr["options"]["layerName"]].clearLayers();
+          this[lyr["options"]["layerName"]].addData(features);
+          }
+          })
+        }
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_Schwierigkeit = document.createElement("div");
+            div_Schwierigkeit.id = "div_Schwierigkeit";
+            div_Schwierigkeit.className = "slider";
+            document.getElementById("menu").appendChild(div_Schwierigkeit);
+            var lab_Schwierigkeit = document.createElement('div');
+            lab_Schwierigkeit.innerHTML  = 'Schwierigkeit: <span id="val_Schwierigkeit"></span>';
+            lab_Schwierigkeit.className = 'filterlabel';
+            document.getElementById("menu").appendChild(lab_Schwierigkeit);
+            var reset_Schwierigkeit = document.createElement('div');
+            reset_Schwierigkeit.innerHTML = 'Filter löschen';
+            reset_Schwierigkeit.className = 'filterlabel';
+            lab_Schwierigkeit.className = 'filterlabel';
+            reset_Schwierigkeit.onclick = function() {
+                sel_Schwierigkeit.noUiSlider.reset();
+            };
+            document.getElementById("menu").appendChild(reset_Schwierigkeit);
+            var sel_Schwierigkeit = document.getElementById('div_Schwierigkeit');
+            noUiSlider.create(sel_Schwierigkeit, {
+                connect: true,
+                start: [1, 3],
+                step: 1,
+                format: wNumb({
+                    decimals: 0,
+                    }),
+                range: {
+                min: 1,
+                max: 3
+                }
+            });
+            sel_Schwierigkeit.noUiSlider.on('update', function (values) {
+            filterVals =[];
+            for (value in values){
+            filterVals.push(parseInt(value))
+            }
+            val_Schwierigkeit = document.getElementById('val_Schwierigkeit');
+            val_Schwierigkeit.innerHTML = values.join(' - ');
+                filterFunc()
+            });
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_FussgeherFreq = document.createElement("div");
+            div_FussgeherFreq.id = "div_FussgeherFreq";
+            div_FussgeherFreq.className = "slider";
+            document.getElementById("menu").appendChild(div_FussgeherFreq);
+            var lab_FussgeherFreq = document.createElement('div');
+            lab_FussgeherFreq.innerHTML  = 'Fussgeher Freq.: <span id="val_FussgeherFreq"></span>';
+            lab_FussgeherFreq.className = 'filterlabel';
+            document.getElementById("menu").appendChild(lab_FussgeherFreq);
+            var reset_FussgeherFreq = document.createElement('div');
+            reset_FussgeherFreq.innerHTML = 'Filter löschen';
+            reset_FussgeherFreq.className = 'filterlabel';
+            lab_FussgeherFreq.className = 'filterlabel';
+            reset_FussgeherFreq.onclick = function() {
+                sel_FussgeherFreq.noUiSlider.reset();
+            };
+            document.getElementById("menu").appendChild(reset_FussgeherFreq);
+            var sel_FussgeherFreq = document.getElementById('div_FussgeherFreq');
+            noUiSlider.create(sel_FussgeherFreq, {
+                connect: true,
+                start: [1, 3],
+                step: 1,
+                format: wNumb({
+                    decimals: 0,
+                    }),
+                range: {
+                min: 1,
+                max: 3
+                }
+            });
+            sel_FussgeherFreq.noUiSlider.on('update', function (values) {
+            filterVals =[];
+            for (value in values){
+            filterVals.push(parseInt(value))
+            }
+            val_FussgeherFreq = document.getElementById('val_FussgeherFreq');
+            val_FussgeherFreq.innerHTML = values.join(' - ');
+                filterFunc()
+            });
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_Bodenerosion = document.createElement("div");
+            div_Bodenerosion.id = "div_Bodenerosion";
+            div_Bodenerosion.className = "slider";
+            document.getElementById("menu").appendChild(div_Bodenerosion);
+            var lab_Bodenerosion = document.createElement('div');
+            lab_Bodenerosion.innerHTML  = 'Bodenerosion: <span id="val_Bodenerosion"></span>';
+            lab_Bodenerosion.className = 'filterlabel';
+            document.getElementById("menu").appendChild(lab_Bodenerosion);
+            var reset_Bodenerosion = document.createElement('div');
+            reset_Bodenerosion.innerHTML = 'Filter löschen';
+            reset_Bodenerosion.className = 'filterlabel';
+            lab_Bodenerosion.className = 'filterlabel';
+            reset_Bodenerosion.onclick = function() {
+                sel_Bodenerosion.noUiSlider.reset();
+            };
+            document.getElementById("menu").appendChild(reset_Bodenerosion);
+            var sel_Bodenerosion = document.getElementById('div_Bodenerosion');
+            noUiSlider.create(sel_Bodenerosion, {
+                connect: true,
+                start: [1, 4],
+                step: 1,
+                format: wNumb({
+                    decimals: 0,
+                    }),
+                range: {
+                min: 1,
+                max: 4
+                }
+            });
+            sel_Bodenerosion.noUiSlider.on('update', function (values) {
+            filterVals =[];
+            for (value in values){
+            filterVals.push(parseInt(value))
+            }
+            val_Bodenerosion = document.getElementById('val_Bodenerosion');
+            val_Bodenerosion.innerHTML = values.join(' - ');
+                filterFunc()
+            });
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_MTBFreq = document.createElement("div");
+            div_MTBFreq.id = "div_MTBFreq";
+            div_MTBFreq.className = "slider";
+            document.getElementById("menu").appendChild(div_MTBFreq);
+            var lab_MTBFreq = document.createElement('div');
+            lab_MTBFreq.innerHTML  = 'MTB Freq.: <span id="val_MTBFreq"></span>';
+            lab_MTBFreq.className = 'filterlabel';
+            document.getElementById("menu").appendChild(lab_MTBFreq);
+            var reset_MTBFreq = document.createElement('div');
+            reset_MTBFreq.innerHTML = 'Filter löschen';
+            reset_MTBFreq.className = 'filterlabel';
+            lab_MTBFreq.className = 'filterlabel';
+            reset_MTBFreq.onclick = function() {
+                sel_MTBFreq.noUiSlider.reset();
+            };
+            document.getElementById("menu").appendChild(reset_MTBFreq);
+            var sel_MTBFreq = document.getElementById('div_MTBFreq');
+            noUiSlider.create(sel_MTBFreq, {
+                connect: true,
+                start: [1, 3],
+                step: 1,
+                format: wNumb({
+                    decimals: 0,
+                    }),
+                range: {
+                min: 1,
+                max: 3
+                }
+            });
+            sel_MTBFreq.noUiSlider.on('update', function (values) {
+            filterVals =[];
+            for (value in values){
+            filterVals.push(parseInt(value))
+            }
+            val_MTBFreq = document.getElementById('val_MTBFreq');
+            val_MTBFreq.innerHTML = values.join(' - ');
+                filterFunc()
+            });
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_Gefahrenstellen = document.createElement('div');
+            div_Gefahrenstellen.id = "div_Gefahrenstellen";
+            div_Gefahrenstellen.className= "filterselect";
+            document.getElementById("menu").appendChild(div_Gefahrenstellen);
+            sel_Gefahrenstellen = document.createElement('select');
+            sel_Gefahrenstellen.multiple = true;
+            sel_Gefahrenstellen.size = 2;
+            sel_Gefahrenstellen.id = "sel_Gefahrenstellen";
+			var Gefahrenstellen_options_str;
+            //var Gefahrenstellen_options_str = "<option value='' unselected></option>";
+            sel_Gefahrenstellen.onchange = function(){filterFunc()};
+            Gefahrenstellen_options_str  += '<option value="n">Nein</option>';
+            Gefahrenstellen_options_str  += '<option value="j">Ja</option>';
+            sel_Gefahrenstellen.innerHTML = Gefahrenstellen_options_str;
+            div_Gefahrenstellen.appendChild(sel_Gefahrenstellen);
+            var lab_Gefahrenstellen = document.createElement('div');
+            lab_Gefahrenstellen.innerHTML = 'Gefahrenstellen';
+            lab_Gefahrenstellen.className = 'filterlabel';
+            div_Gefahrenstellen.appendChild(lab_Gefahrenstellen);
+            var reset_Gefahrenstellen = document.createElement('div');
+            reset_Gefahrenstellen.innerHTML = 'Filter löschen';
+            reset_Gefahrenstellen.className = 'filterlabel';
+            reset_Gefahrenstellen.onclick = function() {
+                var options = document.getElementById("sel_Gefahrenstellen").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_Gefahrenstellen.appendChild(reset_Gefahrenstellen);
+			
+			/** BESITZ **/
+			function pop_besstr_filtered_dslvd_0(feature, layer) {
+				var popupContent = '<table>\
+						<tr>\
+							<th scope="row">Betriebsart</th>\
+							<td>' + (feature.properties['betriebsar'] !== null ? autolinker.link(feature.properties['betriebsar'].toLocaleString()) : '') + '</td>\
+						</tr>\
+					</table>';
+				layer.bindPopup(popupContent, {maxHeight: 400});
+			}
+
+			function style_besstr_filtered_dslvd_0_0(feature) {
+				switch(String(feature.properties['betriebsar'])) {
+					case 'Agm.':
+						return {
+					pane: 'pane_besstr_filtered_dslvd_0',
+					stroke: false, 
+					fill: true,
+					fillOpacity: 1,
+					fillColor: 'rgba(255,0,55,0.5)',
+					interactive: true,
+				}
+						break;
+					case 'Gemeindegut':
+						return {
+					pane: 'pane_besstr_filtered_dslvd_0',
+					stroke: false, 
+					fill: true,
+					fillOpacity: 1,
+					fillColor: 'rgba(226,255,1,0.4)',
+					interactive: true,
+				}
+						break;
+					case 'ÖBF':
+						return {
+					pane: 'pane_besstr_filtered_dslvd_0',
+					stroke: false, 
+					fill: true,
+					fillOpacity: 1,
+					fillColor: 'rgba(148,209,128,0.6)',
+					interactive: true,
+				}
+						break;
+					case 'Öffentlich-rechtl. Wald':
+						return {
+					pane: 'pane_besstr_filtered_dslvd_0',
+					stroke: false, 
+					fill: true,
+					fillOpacity: 1,
+					fillColor: 'rgba(148,209,245,0.6)',
+					interactive: true,
+				}
+						break;
+					case 'Stadt':
+						return {
+					pane: 'pane_besstr_filtered_dslvd_0',
+					stroke: false, 
+					fill: true,
+					fillOpacity: 1,
+					fillColor: 'rgba(226,255,1,0.6)',
+					interactive: true,
+				}
+						break;
+					case 'Gemeindegut-Agm. atyp.':
+						return {
+					pane: 'pane_besstr_filtered_dslvd_0',
+					stroke: false, 
+					fill: true,
+					fillOpacity: 1,
+					fillColor: 'rgba(255,166,184,0.5)',
+					interactive: true,
+				}
+						break;
+					case 'Gemeindevermögen':
+						return {
+					pane: 'pane_besstr_filtered_dslvd_0',
+					stroke: false, 
+					fill: true,
+					fillOpacity: 1,
+					fillColor: 'rgba(246,209,21,0.5)',
+					interactive: true,
+				}
+						break;
+					case 'Landeswald':
+						return {
+					pane: 'pane_besstr_filtered_dslvd_0',
+					stroke: false, 
+					fill: true,
+					fillOpacity: 1,
+					fillColor: 'rgba(42,209,165,0.4)',
+					interactive: true,
+				}
+						break;
+				}
+			}
+			map.createPane('pane_besstr_filtered_dslvd_0');
+			map.getPane('pane_besstr_filtered_dslvd_0').style.zIndex = 401;
+			map.getPane('pane_besstr_filtered_dslvd_0').style['mix-blend-mode'] = 'normal';
+			var layer_besstr_filtered_dslvd_0 = new L.geoJson(json_besstr_filtered_dslvd_0, {
+				attribution: '',
+				interactive: true,
+				dataVar: 'json_besstr_filtered_dslvd_0',
+				layerName: 'layer_besstr_filtered_dslvd_0',
+				pane: 'pane_besstr_filtered_dslvd_0',
+				onEachFeature: pop_besstr_filtered_dslvd_0,
+				style: style_besstr_filtered_dslvd_0_0,
+			});
+			bounds_group.addLayer(layer_besstr_filtered_dslvd_0);
+			map.addLayer(layer_besstr_filtered_dslvd_0);
+
+			L.control.layers(baseMaps,{'<img src="legend/sitephotos_6.png" /> Fotos': cluster___sitephotos_6,
+				'<img src="legend/Untersuchungsraum_5.png" /> Untersuchungsraum': layer_Untersuchungsraum_5,
+				'<img src="legend/trails_4.png" /> Trails': layer_trails_4, 
+				'Besitzstruktur<br /><table><tr><td style="text-align: center;"><img src="legend/besstr_filtered_dslvd_0_Agrargem0.png" /></td><td>Agrargem.</td></tr><tr><td style="text-align: center;"><img src="legend/besstr_filtered_dslvd_0_Gemeindegut1.png" /></td><td>Gemeindegut</td></tr><tr><td style="text-align: center;"><img src="legend/besstr_filtered_dslvd_0_ÖBF2.png" /></td><td>ÖBF</td></tr><tr><td style="text-align: center;"><img src="legend/besstr_filtered_dslvd_0_ÖffentlGut3.png" /></td><td>Öffentl. Gut</td></tr><tr><td style="text-align: center;"><img src="legend/besstr_filtered_dslvd_0_Stadt4.png" /></td><td>Stadt</td></tr><tr><td style="text-align: center;"><img src="legend/besstr_filtered_dslvd_0_GemeindegutAgm5.png" /></td><td>Gemeindegut-Agm.</td></tr><tr><td style="text-align: center;"><img src="legend/besstr_filtered_dslvd_0_Gemeindevermögen6.png" /></td><td>Gemeindevermögen</td></tr><tr><td style="text-align: center;"><img src="legend/besstr_filtered_dslvd_0_LandTirol7.png" /></td><td>Land Tirol</td></tr></table>': layer_besstr_filtered_dslvd_0,
+				"Strava": layer_strava_2,
+				"AV-Karte": layer_AVKarte_1,
+				"Schummerung Gelaendemodell": layer_Image_Schummerung_Gelaendemodell_0,
+				}).addTo(map);
+        </script>
+    </body>
+</html>

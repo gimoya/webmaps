@@ -1,0 +1,7 @@
+<!-- To be added at the end of the HTML script -->
+<script>
+const myImage = new Image(333, 194);
+myImage.src = 'LOGO_MTBTV_schwarz_transp.png';
+myImage.id = 'logo';
+document.body.appendChild(myImage);
+</script>
