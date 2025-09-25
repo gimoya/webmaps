@@ -1,22 +1,34 @@
 #!/bin/bash
 
+# =============================================================================
+# Git Quick Push Script
+# =============================================================================
+# Automates git add, commit, and push with optional legacy_trails processing
+# =============================================================================
+
 # Usage:
 #   ./git-quick-push.sh
 #   ./git-quick-push.sh "Your commit message here"
 
 MSG="${*:-latest updates}"
 
-# Check if legacy_trails directory exists and has changes
+# =============================================================================
+# Check for legacy_trails changes and offer reprojection
+# =============================================================================
+
 if [ -d "legacy_trails" ] && [ -n "$(git status --porcelain legacy_trails/)" ]; then
     echo ""
-    echo "WARNING: Changes detected in legacy_trails directory!"
+    echo "=========================================="
+    echo "WARNING: Changes detected in legacy_trails!"
+    echo "=========================================="
     echo ""
-    read -p "Do you want to run reorder-reproject.sh for legacy_trails before pushing? (y/n): " -n 1 -r
+    read -p "Do you want to run reorder-reproject.sh before pushing? (y/n): " -n 1 -r
     echo ""
     
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo "Running reorder-reproject.sh for legacy_trails..."
-        echo "IMPORTANT: Wait for the process to finish completely before continuing!"
+        echo ""
+        echo "Running reorder-reproject.sh..."
+        echo "IMPORTANT: Wait for the process to finish completely!"
         echo ""
         
         cd legacy_trails
@@ -32,17 +44,34 @@ if [ -d "legacy_trails" ] && [ -n "$(git status --porcelain legacy_trails/)" ]; 
     fi
 fi
 
+# =============================================================================
+# Git operations
+# =============================================================================
+
+echo ""
+echo "=========================================="
+echo "Starting git operations..."
+echo "=========================================="
+
+echo ""
 echo "Staging changes..."
 git add -A
 
-echo "Committing (\"$MSG\")..."
+echo ""
+echo "Committing: \"$MSG\""
 if git commit -m "$MSG" 2>/dev/null; then
-    echo "Committed successfully."
+    echo "SUCCESS: Committed successfully."
 else
-    echo "Nothing to commit or commit skipped; continuing."
+    echo "INFO: Nothing to commit or commit skipped; continuing."
 fi
 
-echo "Pushing..."
+echo ""
+echo "Pushing to origin/master..."
 git push -u origin master
 
-read -p "Press [Enter] to continue..."
+echo ""
+echo "=========================================="
+echo "Git operations completed!"
+echo "=========================================="
+
+read -p "Press [Enter] to exit..."
