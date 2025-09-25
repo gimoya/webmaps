@@ -20,14 +20,9 @@ if [ -d "legacy_trails" ] && [ -n "$(git status --porcelain legacy_trails/)" ]; 
         echo ""
         
         cd legacy_trails
-        if [ -f "reorder-reproject.sh" ]; then
-            ./reorder-reproject.sh
-            echo ""
-            echo "SUCCESS: reorder-reproject.sh completed!"
-        else
-            echo "ERROR: reorder-reproject.sh not found in legacy_trails directory!"
-            exit 1
-        fi
+        ./reorder-reproject.sh
+        echo ""
+        echo "SUCCESS: reorder-reproject.sh completed!"
         cd ..
         
         echo ""
