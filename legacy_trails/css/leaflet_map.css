@@ -1,0 +1,487 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Trade+Winds&display=swap');
+
+/*** General ***/
+
+html, body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+body {
+    padding-top: 0;
+    min-width: 320px;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    margin: 0;
+}
+
+header {
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: auto;
+    z-index: 1001;
+    background: rgba(115, 115, 115, 0.55);
+    padding-left: 10px;
+    padding-bottom: 5px;
+    text-align: left;
+}
+
+header h1 {
+    font-family: 'Trade Winds', cursive;
+    font-size: clamp(40px, 5.2vw, 65px);
+    letter-spacing: 0.2em;
+    line-height: 1.3;
+    color: #fff;
+    margin: 0;
+    padding: 5px;
+    overflow:visible;
+    text-shadow: 
+        3px 3px 0 #000;
+    display: inline-block;
+}
+
+@media (max-width: 480px) and (orientation: portrait) {
+    header h1 {
+        font-size: clamp(38px, 4.5vw, 50px);
+    }
+}
+
+main {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+#map {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    margin: 0;
+    padding: 0;
+}
+
+#info-div {
+    position: absolute;
+    top: 18vh;
+    left: 10px;
+    width: 32%;
+    height: 70vh;
+    background-color: white;
+    overflow-y: auto;
+    padding: 20px;
+    box-shadow: 
+        0 4px 20px rgba(0, 0, 0, 0.15),
+        inset 0 0 15px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+    border: 10px solid white;
+    border-radius: 6px;
+    color: #02a2dcb8;
+    transition: all 0.3s ease;
+    padding-bottom: 60px;
+    scrollbar-width: thin;
+    scrollbar-color: #888 #f1f1f1;
+    transform: translateX(0);
+    will-change: transform;
+    font-size: clamp(12px, 1vw, 16px);
+}
+
+#info-div.hidden {
+    transform: translateX(-100%);
+    pointer-events: none;
+}
+
+#info-div > th, td {
+	padding-right: 10px;
+}
+
+
+.leaflet-control-zoom {
+    margin-top: 18vh !important;
+}
+
+.leaflet-control-attribution {
+   font-size: 1.4em;
+}
+
+.leaflet-control-locate, .leaflet-bar button {
+   font-size: 12px;
+   font-family: unset;
+}
+
+.leaflet-popup-tip {
+    display:none;
+}
+
+.leaflet-popup-content {
+    line-height:1;
+}
+
+.leaflet-popup-content p {
+    margin: 1em 0;
+}
+
+.leaflet-touch .leaflet-bar button {
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+}
+
+.easy-button-button .button-state {
+    display: block;
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+* {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+@font-face {
+  font-family:"Rye";
+  src: url("../fonts/Rye-Regular.ttf") format("truetype");
+}
+
+.pop_cont_name {
+    font-weight: bold;
+    font-size: clamp(16px, 1.5vw, 24px);
+    word-break: break-word;
+}
+
+.pop_gpx_text {
+    font-size: clamp(14px, 1.2vw, 20px);
+    text-align: center;
+    border-radius: 3px;
+    background-color: #cdb50a;
+    padding: 10px;
+    word-break: break-word;
+}
+
+/* font awesome hack */
+.fa {
+    line-height: 30px!important;
+}
+
+.fa-info-circle {
+    color: #313131;  /* or any color you want */
+}
+
+.noselect {
+  -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Old versions of Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome, Opera and Firefox */
+}
+
+/*** popup contents ***/
+
+.elevation.lime-theme.leaflet-control {
+    font-size: 1.5em;
+}
+
+.trailPopupClass .leaflet-popup-content-wrapper {
+    padding: 5px;
+    text-align: left;
+    border-radius: 0px!important;
+    width: 300px;
+}	
+
+/*** KO-FI Styles ***/
+.kofi_reminder {
+	padding: 10px;
+	font-family: Helvetica, Arial, sans-serif;
+	font-size:2em;
+	transition:1s;
+	opacity:0;
+	visibility:hidden;
+	position:absolute;
+	top:0px;
+	left:0px;
+	width:100%;
+	height:100%;
+	background-color:rgb(200,200,200);
+}
+
+.kofi_img {
+  animation: shake 2s;
+  animation-iteration-count: infinite;
+}
+
+.kofi_button {
+	position:absolute;
+	bottom: 3%;
+	width:94%;
+    font-size: 2em;
+    text-align: center;
+    padding: 5px;
+	background-color:none;
+}
+
+.kofi_button button {
+	border-radius:5px ;
+	border-color:white;
+	padding: 5px;  
+    transition: 0.3s;
+}
+
+.kofi_button button:hover {
+   background-color: #cdb90a80;
+}
+
+#kofi_img_div {
+  height: 36px;
+  margin: 0px 15px 5px 0px;
+}
+
+#kofi_img_float {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  border: 0px;
+  height: 36px;
+  z-index: 99999;
+}
+
+@keyframes shake {
+  0% { transform: translate(1px, 1px) rotate(0deg); }
+  10% { transform: translate(-1px, -2px) rotate(-1deg); }
+  20% { transform: translate(-3px, 0px) rotate(1deg); }
+  30% { transform: translate(3px, 2px) rotate(0deg); }
+  40% { transform: translate(1px, -1px) rotate(1deg); }
+  50% { transform: translate(-1px, 2px) rotate(-1deg); }
+  60% { transform: translate(-3px, 1px) rotate(0deg); }
+  70% { transform: translate(3px, 1px) rotate(-1deg); }
+  80% { transform: translate(-1px, -1px) rotate(1deg); }
+  90% { transform: translate(1px, 2px) rotate(0deg); }
+  100% { transform: translate(1px, -2px) rotate(-1deg); }
+}
+
+
+.pt_labels {
+	font-size: 1.5em;
+	padding-top:0;
+	padding-bottom:0;
+}
+
+#gallery {
+    display: none;
+}
+
+.trails-in-view {
+    margin-top: 35px;
+    margin-bottom: 15px;
+}
+
+.trails-list {
+    margin-top: 10px;
+}
+
+.trail-item {
+    padding: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-radius: 5px;
+}
+
+.trail-item:last-child {
+    border-bottom: none;
+}
+
+.trail-item:hover {
+    background-color: #e6f3ff;
+}
+
+.trail-item:active {
+    background-color: #cce6ff;
+}
+
+.trail-item h3 {
+    font-size: clamp(16px, 1.5vw, 20px);
+    color: #FF5F1F;
+    word-break: break-word;
+    font-weight: bold;
+}
+
+.trail-item p {
+    margin: 0;
+    font-size: clamp(12px, 1vw, 14px);
+    color: #666;
+    word-break: break-word;
+}
+
+.trail-item.no-trails {
+    color: #666;
+    font-style: italic;
+    cursor: default;
+    background-color: transparent !important;
+}
+
+.info-div h2 {
+    padding-top: 10px;
+    color: #333;
+    font-size: clamp(14px, 1.5vw, 18px);
+}
+
+.info-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.info-buttons button {
+    margin-bottom: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: #9d9d9d;
+}
+
+.info-buttons button:hover {
+    color: #171717;
+}
+
+/* Webkit browsers (Chrome, Safari) */
+#info-div::-webkit-scrollbar {
+    width: 8px;
+}
+
+#info-div::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+#info-div::-webkit-scrollbar-thumb {
+    background: #888;
+}
+
+#info-div::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Firefox */
+#info-div {
+    scrollbar-width: thin;
+    scrollbar-color: #888 #f1f1f1;
+}
+
+#info-div .legend-content h2,
+#info-div .trails-list h2 {
+    padding-top: 5px;
+    color: #02b6f7b8;
+    font-size: clamp(20px, 2.2vw, 28px) !important;
+    margin-top: 0;
+}
+
+@media (orientation: portrait) {
+    #info-div {
+        width: 85%;
+        min-width: 300px;
+        top: 18vh;
+        left: 10px;
+        font-size: clamp(14px, 2vw, 18px);
+    }
+    .trail-item h3 {
+        font-size: clamp(18px, 2.2vw, 22px);
+    }
+    .trail-item p {
+        font-size: clamp(14px, 2vw, 16px);
+    }
+}
+
+@media (max-width: 768px) {
+    #info-div .legend-content h2,
+    #info-div .trails-list h2 {
+        font-size: clamp(22px, 2.8vw, 28px) !important;
+    }
+}
+
+@media (max-width: 480px) {
+    #info-div .legend-content h2,
+    #info-div .trails-list h2 {
+        font-size: clamp(24px, 3vw, 28px) !important;
+    }
+}
+
+.legend-content h3 {
+    font-size: clamp(18px, 1.4vw, 22px);
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.trail-item h3 {
+    font-size: clamp(16px, 1.5vw, 20px);
+    color: #FF5F1F;
+    word-break: break-word;
+    font-weight: bold;
+}
+
+@media (orientation: portrait) {
+    .legend-content h3 {
+        font-size: clamp(14px, 1.5vw, 16px);
+    }
+    .trail-item h3 {
+        font-size: clamp(18px, 2.2vw, 22px);
+    }
+}
+
+@media (max-width: 768px) and (orientation: landscape) {
+    main {
+        flex-direction: row;
+        height: calc(100vh - var(--navbar-brand-height, 70px));
+    }
+    
+    #info-div {
+        flex: 0 0 40vw;
+        max-height: none;
+        border-right: none;
+        border-top: none;
+    }
+    
+    #map {
+        flex: 1;
+        height: 100%;
+    }
+}
+
+@media (max-width: 600px) and (orientation: landscape) {
+    #info-div {
+        font-size: clamp(12px, 1.5vw, 14px);
+    }
+}
+
+@media (max-width: 768px) and (orientation: portrait) {
+    #info-div {
+        width: 85%;
+        min-width: 300px;
+        top: 18vh;
+        left: 10px;
+        font-size: clamp(14px, 2vw, 16px);
+    }
+    .trail-item h3 {
+        font-size: clamp(18px, 2.2vw, 22px);
+    }
+    .trail-item p {
+        font-size: clamp(14px, 2vw, 14px);
+    }
+}
+     

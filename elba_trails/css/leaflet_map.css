@@ -2,7 +2,7 @@
 
 html, body, #map {
     height: 100%;
-    width: 100vw;
+    width: 100%;
 }
 
 body{
@@ -30,6 +30,12 @@ body{
   margin-bottom: 0;
   padding: 0 15px;
   background: #4EB086;
+  border-bottom: none;
+}
+
+.navbar-fixed-top {
+  border-bottom: none;
+  box-shadow: none;
 }
 
 .navbar-default .navbar-brand,
@@ -47,6 +53,10 @@ body{
 
 .navbar-toggle {
   background-color: #fff;
+  margin-right: -5px;
+  width: 32px;
+  height: 32px;
+  padding: 8px;
 }
 
 ul.nav.navbar-nav.navbar-right a {
@@ -59,12 +69,6 @@ ul.nav.navbar-nav.navbar-right li a:hover {
   color: #000;
 }
 
-/*** Control font size of title on small screens ***/
-@media screen and (max-width: 400px) {
-  .navbar-default .navbar-brand {
-    font-size: 1em;
-  }
-}
 
 /*** Map popup Title***/
 
@@ -129,7 +133,7 @@ PAYPAL SECTION
   animation: pulse2 1.5s linear infinite;
 }
 
-@keyframes "pulse2" {
+@keyframes pulse2 {
   0% {
     -webkit-transform: scale(1.1);
     -moz-transform: scale(1.1);
@@ -168,7 +172,7 @@ PAYPAL SECTION
   }
 }
 
-@-webkit-keyframes "pulse2" {
+@-webkit-keyframes pulse2 {
   0% {
     -webkit-transform: scale(1.1);
     transform: scale(1.1);
@@ -183,7 +187,7 @@ PAYPAL SECTION
   }
 }
 
-@-ms-keyframes "pulse2" {
+@-ms-keyframes pulse2 {
   0% {
     -ms-transform: scale(1.1);
     transform: scale(1.1);

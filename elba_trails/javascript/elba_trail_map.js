@@ -31,10 +31,10 @@ if (trim(pw_prompt) == pw ) {
 
 /*** Add base maps with controls ***/
 var map = L.map('map', {
-  center: [42.808660, 10.375],
-  zoom: 12,
+  center: [42.8167, 10.3167],
+  zoom: 8,
   maxZoom: 18,
-  minZoom: 11,
+  minZoom: 5,
   zoomControl: false,
   attributionControl: false
 });
@@ -273,7 +273,12 @@ $.getJSON('z_trails_elba.geojson', function(json) {
 			layer.bindPopup(popupContent, {closeOnClick: true, className: 'trailPopupClass'});
 		}
 	}).addTo(map);
-	map.fitBounds(trails_json.getBounds(), {maxZoom: 14});
+	map.fitBounds(trails_json.getBounds(), {
+		maxZoom: 18,
+		animate: true,
+		duration: 2.0,
+		easeLinearity: 0.1
+	});
 });
 
 /*
