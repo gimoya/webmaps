@@ -42,15 +42,16 @@ var map = L.map('map', {
 
 var mapbox_Attr = 'Tiles &copy; <a href="google.com">Google Maps</a>, <a href="openstreetmap.org">OSM</a> | Design &copy; <a href="http://www.tiroltrailhead.com/guiding">Tirol Trailhead</a>';  
 var mapbox_satelliteUrl = '//mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
-var mapy_topoUrl = '//tile.opentopomap.org/{z}/{x}/{y}.png';
+var map_topoUrl = '//tile.opentopomap.org/{z}/{x}/{y}.png';
 
 var mapbox_satelliteLayer = L.tileLayer(mapbox_satelliteUrl, {
-  attribution: mapbox_Attr 
+  attribution: mapbox_Attr,
+  maxZoom: 18,  
 });
 
-var mapy_topoLayer = L.tileLayer(mapy_topoUrl, {
+var map_topoLayer = L.tileLayer(map_topoUrl, {
   attribution: mapbox_Attr,
-  maxZoom: 20,
+  maxZoom: 18,
   maxNativeZoom: 17  
 });
 
@@ -99,7 +100,7 @@ var toggle = L.easyButton({
 	title: 'Hintergrundkarte Luftbild/Topo',
 	onClick: function(control) {
 	  map.removeLayer(mapbox_satelliteLayer);
-	  map.addLayer(mapy_topoLayer);
+	  map.addLayer(map_topoLayer);
 	  control.state('basemap-outdoor');
 	}
   }, {
@@ -107,7 +108,7 @@ var toggle = L.easyButton({
 	icon: '<span class="custom-control">T</span>',
 	title: 'Hintergrundkarte Topo/Luftbild',		
 	onClick: function(control) {
-	  map.removeLayer(mapy_topoLayer);
+	  map.removeLayer(map_topoLayer);
 	  map.addLayer(mapbox_satelliteLayer);
 	  control.state('basemap-satellite');
 	}
