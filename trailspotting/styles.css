@@ -1,0 +1,207 @@
+body {
+  margin: 0;
+  padding: 20px;
+}
+
+#poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.floating-box, .gps-footer, #map-title {
+  font-family: 'Special Elite';
+}
+
+.floating-box {
+  position: relative;
+  float: left;
+  width: 400px;
+  min-width: 400px;
+  height: 550px;
+  margin: 20px;
+  box-sizing: border-box;
+  overflow: hidden;
+  background-color: rgb(248, 246, 246);
+}
+
+/* Responsive breakpoints maintaining consistent element size */
+@media screen and (max-width: 1300px) {
+  body {
+    padding: 15px;
+  }
+  
+  .floating-box {
+    margin: 15px;
+  }
+}
+
+@media screen and (max-width: 900px) {
+  body {
+    padding: 10px;
+  }
+  
+  .floating-box {
+    margin: 10px;
+  }
+}
+
+@media screen and (max-width: 850px) {
+  .floating-box {
+    width: calc(50% - 20px);
+    margin: 10px;
+  }
+}
+
+@media screen and (max-width: 500px) {
+  body {
+    padding: 5px;
+  }
+  
+  .floating-box {
+    width: calc(100% - 10px);
+    margin: 10px;
+    float: none;
+    display: block;
+  }
+  
+  #poster {
+    width: 100%;
+    height: auto;
+    float: none;
+  }
+  
+}
+
+.gps-footer {
+  position: absolute;
+  bottom: 0;
+}
+
+.floating-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.themap { 
+  flex: 1;
+  min-height: 250px;
+  width: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+#cycling-info-A, #cycling-info-B, #cycling-info-C, #cycling-info-D {
+  flex: 0 0 auto;
+}
+
+.leaflet-marker-pane img {
+    margin-left: -13px!important;
+    margin-top: -30px!important;
+    width: 22px!important;
+    height: 30px!important;
+	}
+
+#map-title {
+	position:absolute;
+	right:0;
+	top:0;
+	margin:10px;
+	padding:10px 10px 0px 10px;
+	z-index:9999;
+	font-size:38px;
+	background-color: rgba(210,210,210);
+}
+
+.timetable-iframe {
+	width: 100%;
+	height: 100%;
+	border: none;
+	background-color: rgb(248, 246, 246);
+}
+
+.timetable-title {
+	font-family: 'Special Elite';
+	font-size: 24px;
+	font-weight: bold;
+	text-align: center;
+	padding-top: 20px;
+	margin-bottom: 10px;
+	color: #333;
+}
+
+
+.cycling-info {
+	font-family: 'Special Elite';
+	font-size: 12px;
+	line-height: 1.4;
+	padding: 10px 10px 0 10px;
+	margin: 10px 0 0 0;
+	background-color: rgba(240, 240, 240, 0.9);
+	border: 1px solid #ccc;
+	border-radius: 5px;
+	min-height: 50px;
+}
+
+.segment-title {
+	font-weight: bold;
+	font-size: 14px;
+	margin-bottom: 5px;
+	color: #333;
+}
+
+.segment-details {
+	margin-bottom: 8px;
+	padding: 5px;
+	background-color: rgba(255, 255, 255, 0.7);
+	border-radius: 3px;
+}
+
+.numbered-marker {
+	border: 2px solid white;
+	border-radius: 50%;
+	width: 22px;
+	height: 22px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: bold;
+	font-size: 12px;
+	color: white;
+	text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.7);
+	position: relative;
+}
+
+.numbered-marker .marker-number {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	margin: 0;
+	padding: 0;
+	line-height: 1;
+}
+
+.numbered-marker.start {
+	background: green;
+}
+
+.numbered-marker.end {
+	background: red;
+}
+
+.marker-number {
+	font-family: Arial, sans-serif;
+	font-weight: bold;
+	font-size: 12px;
+	color: white;
+	margin: 0;
+	padding: 0;
+	line-height: 1;
+}
+
+.default-marker {
+	display: none;
+}

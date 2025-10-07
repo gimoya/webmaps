@@ -9,133 +9,16 @@
   <meta name="KC" content="">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   
-  <meta http-equiv="Content-Security-Policy" content="*">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; connect-src 'self' ws: wss: http: https:;">
   
   
   <link rel="preconnect" href="https://fonts.gstatic.com">
   <link href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Special+Elite&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
   
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol@0.76.0/dist/L.Control.Locate.min.css" />
 
-<style>
-
-body {
-  margin: 0;
-  padding: 20px;
-}
-
-#poster {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-#danger {
-	position: absolute;
-	left:0;
-	bottom:0;
-	width:100%;
-	z-index: 999;
-}
-    
-pre, .floating-box, .gps-footer, #map-title {
-  font-family: 'Special Elite';
-}
-
-.floating-box {
-  position: relative;
-  float: left;
-  width: 400px;
-  min-width: 400px;
-  height: 550px;
-  margin: 20px;
-  box-sizing: border-box;
-  overflow: hidden;
-  background-color: rgb(248, 246, 246);
-}
-
-/* Responsive breakpoints maintaining consistent element size */
-@media screen and (max-width: 1300px) {
-  body {
-    padding: 15px;
-  }
-  
-  .floating-box {
-    margin: 15px;
-  }
-}
-
-@media screen and (max-width: 900px) {
-  body {
-    padding: 10px;
-  }
-  
-  .floating-box {
-    margin: 10px;
-  }
-}
-
-@media screen and (max-width: 850px) {
-  .floating-box {
-    width: calc(50% - 20px);
-    margin: 10px;
-  }
-}
-
-@media screen and (max-width: 500px) {
-  body {
-    padding: 5px;
-  }
-  
-  .floating-box {
-    width: calc(100% - 10px);
-    margin: 10px;
-    float: none;
-    display: block;
-  }
-  
-  #poster {
-    width: 100%;
-    height: auto;
-    float: none;
-  }
-  
-}
-
-.gps-footer {
-  position: absolute;
-  bottom: 0;
-}
-
-.themap { 
-  height: 100%; 
-  width: 100%;
-  padding: 10px;
-  box-sizing: border-box;
-}
-
-.leaflet-marker-pane img {
-    margin-left: -13px!important;
-    margin-top: -30px!important;
-    width: 22px!important;
-    height: 30px!important;
-	}
-
-#map-title {
-	position:absolute;
-	right:0;
-	top:0;
-	margin:10px;
-	padding:10px 10px 0px 10px;
-	z-index:9999;
-	font-size:38px;
-	background-color: rgba(210,210,210);
-}
-
-
-</style>
 </head>
 <body>
 
@@ -148,347 +31,104 @@ pre, .floating-box, .gps-footer, #map-title {
 </div>
 
 <div class="floating-box">
-<PRE><span style="font-size:35px;">Choose your
-route..
-Choose your 
-pace..
-Catch your
-train.. 
-</span><span style="font-size:14px;">
-Trail(n)spotting - das heißt:
-Große MTB-Runde im Inntal mit
-den Öffis kombinieren und auf angenehme 
-Weise (vor allem in der kalten Jahreszeit;) 
-viele, viele Trail-Km heraus holen!
-😎🚴‍♂️💯</span>
-<span style="font-size:25px;">
-Die Challenge dabei?</span>
-<span style="font-size:14px;">
-Die Fahrzeiten so zu timen, dass du die
-Zugverbindungen mit minimalen Wartezeiten
-schaffst! 
-⌚🚉😅</span>
-<span style="font-size:20px;">
-..too late!? 
-well.. bollocks!!</span>
-</PRE>
+	<div><span style="font-size:35px;">Choose your route.. Choose your pace.. Catch your train..</span><br><br><span style="font-size:14px;"> Trail(n)spotting - das heißt: Große MTB-Runde im Inntal mit den Öffis kombinieren und auf angenehme Weise (vor allem in der kalten Jahreszeit;) viele, viele Trail-Km heraus holen! 😎🚴‍♂️💯</span><br><br><span style="font-size:25px;"> Die Challenge dabei?</span><br><br><span style="font-size:14px;"> Die Fahrzeiten so zu timen, dass du die Zugverbindungen mit minimalen Wartezeiten schaffst! ⌚🚉😅</span><br><br><span style="font-size:20px;"> ..too late!? well.. bollocks!!</span></div>
 </div>
 
 <!-- Define the map source as a variable -->
-<script>
-	const mapSource = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
-	const mapAttribution = 'Map data &copy; <a href="https://www.opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)';
-
-	// Reusable function to create a map with GPX files
-	function createMapWithGPX(mapId, gpxFiles, options = {}) {
-		// Default options
-		const defaults = {
-			minZoom: 10,
-			maxZoom: 17,
-			maxNativeZoom: 17,
-			lineColor: 'red',
-			lineOpacity: 0.75,
-			lineWeight: 2.8,
-			lineCap: 'round',
-			boundsPadding: 10
-		};
-		
-		// Merge user options with defaults
-		const config = { ...defaults, ...options };
-		
-		// Create the map
-		const map = L.map(mapId);
-		
-		// Add tile layer
-		L.tileLayer(mapSource, {
-			attribution: mapAttribution,
-			minZoom: config.minZoom,
-			maxZoom: config.maxZoom,
-			maxNativeZoom: config.maxNativeZoom
-		}).addTo(map);
-
-		// Ensure gpxFiles is an array
-		const files = Array.isArray(gpxFiles) ? gpxFiles : [gpxFiles];
-		
-		// Track loaded GPX files to fit bounds after all are loaded
-		let loadedCount = 0;
-		const totalFiles = files.length;
-		let allBounds = [];
-
-		// Add each GPX file
-		files.forEach(gpxFile => {
-			new L.GPX(gpxFile, {
-				async: true,
-				polyline_options: {
-					color: config.lineColor,
-					opacity: config.lineOpacity,
-					weight: config.lineWeight,
-					lineCap: config.lineCap
-				}
-			}).on('loaded', function(e) {
-				loadedCount++;
-				allBounds.push(e.target.getBounds());
-				
-				// When all files are loaded, fit bounds
-				if (loadedCount === totalFiles) {
-					// Combine all bounds
-					const combinedBounds = allBounds.reduce((acc, bounds) => {
-						return acc.extend(bounds);
-					}, allBounds[0]);
-					
-					const paddedBounds = combinedBounds.pad(config.boundsPadding);
-					map.fitBounds(paddedBounds);
-					map.setMaxBounds(paddedBounds);
-				}
-			}).addTo(map);
-		});
-
-		// Add scale control
-		L.control.scale().addTo(map);
-		
-		// Add GPS location control
-		L.control.locate({
-			position: 'bottomleft',
-			drawCircle: true,
-			follow: false,
-			setView: false,
-			keepCurrentZoomLevel: true
-		}).addTo(map);
-		
-		return map;
-	}
-</script>
+<script src="script.js"></script>
 
 <div class="floating-box">
 	<div class="themap" id="map_A">
 	<div id="map-title">A</div>
-		<script>
-			// Create map A with multiple GPX files
-			var map_A = createMapWithGPX('map_A', ['gps/A1.gpx', 'gps/A2.gpx']);
-		</script>
+	</div>
+	<div id="cycling-info-A">
+		<!-- Cycling segments will be populated by JavaScript -->
 	</div>
 </div>
-	
-<div class="floating-box">
-<PRE>
-<h1 style="margin-bottom:0px;">Züge Variante (A)</h1>
-------------------------------------
-IVB				J/M Bus
-------------------------------------
-Innsbruck		?
-Igls				?
-------------------------------------
-🚴‍♂️&uarr;358 m&rarr;15,0km	ca. 90'				
-------------------------------------
-ÖBB-Bhf.			REX
-------------------------------------
-Hall 			09:29
-Schwaz			09:40 (11')
-------------------------------------
-🚴‍♂️&uarr;1064m&rarr;25,1km	max. 148'		max. 208'
-------------------------------------
-ÖBB-Bhf.			S4-Telfs/Pf.	S5-Ötztal	
-------------------------------------
-Terfens/W.		12:08		12:38 		 
-Innsbruck		11:25 (17')	12:55 (17')
-------------------------------------
-</PRE>
-</div>
-	
+
 <div class="floating-box">
 	<div class="themap" id="map_B">
 	<div id="map-title">B</div>
-		<script>
-			// Create map B with single GPX file
-			var map_B = createMapWithGPX('map_B', 'gps/B__Trailspotting.gpx');
-		</script>
+	</div>
+	<div id="cycling-info-B">
+		<!-- Cycling segments will be populated by JavaScript -->
 	</div>
 </div>
-
-<div class="floating-box">
-<PRE>
-<h1 style="margin-bottom:0px;">Züge Variante (B)</h1>
-IVB				J Bus
-------------------------------------
-Innsbruck		?
-Igls				?
-------------------------------------
-🚴‍♂️&uarr;358m&rarr;15,0km	ca. 90'				
-------------------------------------
-ÖBB-Bhf.			S4-Kufstein
-------------------------------------
-Hall 			09:45
-Münster/W.		10:12 (27')
-------------------------------------
-🚴‍♂️&uarr;513m&rarr;17,1km	max. 90'		max. 114'
-------------------------------------
-ÖBB-Bhf.			S4-Telfs/Pf.	REX-Land.
-------------------------------------
-Brixlegg 		11:42		12:06
-Schwaz			11:58 (16')	12:19 (13')
-------------------------------------
-🚴‍♂️&uarr;1064m&rarr;25,1km	max. 160'		max. 169'
-------------------------------------
-ÖBB-Bhf.			S4-Telfs/Pf.	S5-Ötztal	
-------------------------------------
-Terfens/W.		14:38		15:08 		 
-Innsbruck		14:55 (17')	15:25 (17')
-------------------------------------
-</PRE>
-</div>
-
 
 <div class="floating-box">
 	<div class="themap" id="map_C">
 		<div id="map-title">C</div>
-		<script>
-			// Create map C with custom zoom settings
-			var map_C = createMapWithGPX('map_C', 'gps/C__Trailspotting.gpx');
-		</script>
+	</div>
+	<div id="cycling-info-C">
+		<!-- Cycling segments will be populated by JavaScript -->
 	</div>
 </div>
 
 <div class="floating-box">
-<PRE>
-<h1 style="margin-bottom:0px;">Züge Variante (C)</h1>
-IVB				J Bus
-------------------------------------
-Innsbruck		?
-Igls				?
-------------------------------------
-🚴‍♂️&uarr;358m&rarr;15,0km	ca. 90'				
-------------------------------------
-ÖBB-Bhf.			Bus 3,6,7
-------------------------------------
-Hall 			10:20
-Walderbrücke	10:35 (15')
-------------------------------------
-🚴‍♂️&uarr;490m&rarr;15,9km	max. 89'		max. 100'
-------------------------------------
-ÖBB-Bhf.			S5-Steinach	S4-Telfs/Pf.
-------------------------------------
-Hall 			12:04		12:15
-Innsbruck		12:13 (9')		12:25 (10')
-------------------------------------
-</PRE>
-</div>
-	
-<!--div class="floating-box">
-	<img id="danger" src="images/yellow-warning-tape.png" />
 	<div class="themap" id="map_D">
 		<div id="map-title">D</div>
-		<script>
-			var map_D = L.map('map_D');
-			L.tileLayer(mapSource, {
-			  attribution: mapAttribution,
-			  minZoom:11,
-			  maxZoom:15,
-			  maxNativeZoom:15
-			}).addTo(map_D);
-
-
-			var gpx_D = 'gps/D__Trailspotting.gpx'; // URL to your GPX file or the GPX itself
-			new L.GPX(gpx_D, {
-				async:true, 
-				polyline_options: {
-					color: 'red',
-					opacity: 0.75,
-					weight: 2.8,
-					lineCap: 'round'}
-				}).on('loaded', function(e) {
-				var bds = e.target.getBounds().pad(1);
-				map_D.fitBounds(bds);
-				map_D.setMaxBounds(bds);
-			}).addTo(map_D);
-			L.control.scale().addTo(map_D);			
-		</script>
 	</div>
-</div>	
-
+	<div id="cycling-info-D">
+		<!-- Cycling segments will be populated by JavaScript -->
+	</div>
+</div>
 
 <div class="floating-box">
-<img id="danger" src="images/yellow-warning-tape.png" />
-<PRE>
-<h1 style="margin-bottom:0px;">⚠ Züge Variante (D)</h1>
-ÖBB-Bhf.			REX
-------------------------------------
-Innsbruck		10:52
-Stams			11:17 (25')
-------------------------------------
-🚴‍♂️&uarr;900m&rarr;26,9km	ca. 180'				
-------------------------------------
-ÖBB-Bhf.			REX/S4/S5
-------------------------------------
-Telfs			ca. alle 15'
-Innsbruck		?
-------------------------------------
-</PRE>
-</div-->
-	
-</div>
-	<div class="floating-box">
-	<div class="themap" id="map_D">
-		<div id="map-title">D</div>
-		<script>
-			// Create map D with custom zoom settings
-			var map_D = createMapWithGPX('map_D', 'gps/D__Trailspotting.gpx');
-		</script>
-	</div>
-</div>
-	
-</div>
-	<div class="floating-box">
 	<div class="themap" id="map_DD">
 		<div id="map-title">DD</div>
-		<script>
-			// Create map DD with custom zoom and padding settings
-			var map_DD = createMapWithGPX('map_DD', 'gps/DD__Trailspotting.gpx');
-		</script>
 	</div>
 </div>
 
 <div class="floating-box">
-<PRE>
-<h1 style="margin-bottom:0px;">Züge Variante (D/DD)</h1>
-ÖBB-Bhf.			S6
-------------------------------------
-Innsbruck		11:08
-Reith			11:39 (31')
-------------------------------------
-🚴‍♂️&uarr;730m&rarr;24km	ca. 130'				
-------------------------------------
-ÖBB-Bhf.			S5
-------------------------------------
-Völs			13:53
-Innsbruck		14:01 (8')
-------------------------------------
-</PRE>
+	<div class="timetable-title">Innsbruck 🕐</div>
+	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#EDC78E82-79C6-449D-8E1EC831BE5148E9"></iframe>
 </div>
 
 <div class="floating-box">
-	<h3><PRE>Alle S-Bahnen und REX fahren 
-wochentags im 60' Takt!</PRE></h3>
+	<div class="timetable-title">Hall 🕐</div>
+	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#F81F57B8-E49E-4A37-86037AE366123492"></iframe>
+</div>
+
+<div class="floating-box">
+	<div class="timetable-title">Terfens/Weer 🕐</div>
+	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#FAEA6F93-159F-4D19-9D1ECBB979509660"></iframe>
+</div>
+
+<div class="floating-box">
+	<div class="timetable-title">Pill-Vomperbach 🕐</div>
+	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#21170453-6C70-4D56-83DB105174654A57"></iframe>
+</div>
+
+<div class="floating-box">
+	<div class="timetable-title">Schwaz 🕐</div>
+	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#90FD532A-01C0-454B-A43A854BDFE8348B"></iframe>
+</div>
+
+<div class="floating-box">
+	<div class="timetable-title">Brixlegg 🕐</div>
+	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#0CDB1A43-FAD5-422D-94F7184A3B32DBE7"></iframe>
+</div>
+
+<div class="floating-box">
+	<div class="timetable-title">Völs 🕐</div>
+	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#87531436-9B3A-4C1F-8B792A7848D01826"></iframe>
+</div>
+
+<div class="floating-box">
+	<h3>Alle S-Bahnen und REX fahren wochentags im 60' Takt!</h3>
+	<h3>Eine Fahrt mit Vorteilkarte kostet rd. 5 Euro, die Regio-Biking Tagskarte 2,60 Euro</h3>
 	<h1>GPX-Tracks:</h1>
 	<p><a href="gps/A__Trailspotting.gpx">A__Trailspotting.gpx</a></p>
-	<p><a href="gps/A__Trailspotting.gpx">AA__Trailspotting.gpx</a></p>
 	<p><a href="gps/B__Trailspotting.gpx">B__Trailspotting.gpx</a></p>
 	<p><a href="gps/C__Trailspotting.gpx">C__Trailspotting.gpx</a></p>
 	<p><a href="gps/D__Trailspotting.gpx">D__Trailspotting.gpx</a></p>
 	<p><a href="gps/DD__Trailspotting.gpx">DD__Trailspotting.gpx</a></p>
-	<PRE>
-
-
-	💚🚉
-	Mit den S-Bahnen und REX Zügen
-	gibt's natürlich noch unzählige
-	andere Möglichkeiten!
-	Werde kreativ!!
-	👌🤓	
-	</PRE>
+	<div>💚🚉 Mit den S-Bahnen und REX Zügen gibt's natürlich noch unzählige andere Möglichkeiten! Werde kreativ!! 👌🤓</div>
 	<div class="gps-footer">
 	Trail<span style="text-decoration: line-through;">Train</span>spotting
 	 &copy; <a href="http://www.tiroltrailhead.com">tiroltrailhead.com</a>
 	</div>
 </div>
+
 </body>
 </html>
