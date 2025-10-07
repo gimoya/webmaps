@@ -5,6 +5,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#02b6f7b8">
+  
+  <!-- PWA Meta Tags -->
+  <meta name="application-name" content="Legacy Trails Tirol">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Trails Tirol">
+  <meta name="mobile-web-app-capable" content="yes">
 
   <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
@@ -205,6 +212,21 @@
 		</main>
 		
 		<script type="text/javascript" src="javascript/trail_map.js"></script>
+		
+		<!-- PWA Service Worker Registration -->
+		<script>
+			if ('serviceWorker' in navigator) {
+				window.addEventListener('load', function() {
+					navigator.serviceWorker.register('/sw.js')
+						.then(function(registration) {
+							console.log('ServiceWorker registration successful');
+						})
+						.catch(function(err) {
+							console.log('ServiceWorker registration failed');
+						});
+				});
+			}
+		</script>
 		
 		<!-- KO-FI SCRIPTS --> 	
 		<script src='javascript/kofi-overlay-widget.js'></script>
