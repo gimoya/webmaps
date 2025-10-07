@@ -40,17 +40,17 @@
 </head>
 
 	<body>
+		<!-- Hidden checkbox for CSS-only info panel toggle -->
+		<input type="checkbox" id="info-toggle">
+		
 		<header>
 			<h1> Legacy💎Trails Tirol</h1>
 		</header>
 		<main>
-			<div id="info-div">
-				<div class="legend-content">	
-				<div class="info-buttons">
-					<button class="scroll-to-trails" title="Zur Liste der Trails"><i class="fas fa-arrow-down"></i></button>
-					<button class="close-info" title="Close"><i class="fas fa-times"></i></button>										
-				</div>			
-					<h2>Legende</h2>
+			<div class="info-wrapper">
+				<div id="info-div">
+					<div class="legend-content">			
+					<h2>Legende & Trails &#8595</h2>
 					<hr>
 					<h3>Flow</h3>
 					<figure class="table">
@@ -195,8 +195,10 @@
 					<hr>
 				</div>
 				<div class="trails-list">
-					<h2>Trail Liste</h2>
+					<h2>Trails im Ausschnitt</h2>
 				</div>
+				</div>
+				<button class="legend-label" onclick="document.getElementById('info-toggle').click()">Legende & Trails</button>
 			</div>
 			
 			<section id="map"></section>

@@ -154,51 +154,9 @@ var el = L.control.elevation({
 
 
 
-var legend = L.easyButton({
-  position: 'topright',
-  states: [{
-	stateName: 'legende',
-	icon: '<i class="fas fa-info-circle fa-lg"></i>',
-	title: 'Legende anzeigen',		
-	onClick: function(){
-		$( document ).ready(function() {
-			info_div = $('#info-div');
-			legend_content = $('#info-div .legend-content');
-			
-			if (info_div.is(':visible')) {
-				// If info div is visible, slide it to the left
-				info_div.addClass('hidden');
-				setTimeout(function() {
-					info_div.hide();
-					info_div.removeClass('hidden');
-					map.invalidateSize();
-				}, 300);
-			} else {
-				// If info div is hidden, show it and scroll to legend
-				info_div.show().addClass('hidden');
-				setTimeout(function() {
-					info_div.removeClass('hidden');
-					info_div.animate({
-						scrollTop: legend_content.offset().top - info_div.offset().top
-					}, 500);
-					map.invalidateSize();
-				}, 10);
-			}
-		});
-	}	
-  }]
-});	
+// Legend button removed - now using the legend label as trigger
 
-legend.addTo(map);
-
-// Add close button handler
-$( document ).ready(function() {
-    $('.close-info').on('click', function() {
-        $('#info-div').slideUp(200, function() {
-            map.invalidateSize();
-        });
-    });
-});
+// Legend label now uses onclick attribute - no additional JS needed
 
 // Add function to update trails in view
 function updateTrailsInView() {
@@ -252,17 +210,6 @@ function updateTrailsInView() {
     });
 }
 
-// Add scroll to trails functionality
-$( document ).ready(function() {
-    $('.scroll-to-trails').on('click', function() {
-        var trailsList = $('.trails-list');
-        if (trailsList.length) {
-            $('#info-div').animate({
-                scrollTop: trailsList.offset().top - $('#info-div').offset().top - 25
-            }, 500);
-        }
-    });
-});
 
 // Add event listeners for map movement
 map.on('moveend', updateTrailsInView);
@@ -557,7 +504,6 @@ map.on("click", function(e){
 	});
 	if (selected!== null) selected.setText(null);
 	/*** make info panel disappear ***/
-	$("#info-div").slideUp(200, function() {
-		map.invalidateSize();
-	});
+	document.getElementById('info-toggle').checked = false;
+	map.invalidateSize();
 });
