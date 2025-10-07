@@ -16,6 +16,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Special+Elite&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol@0.76.0/dist/L.Control.Locate.min.css" />
 
 <style>
 
@@ -139,30 +140,35 @@ pre, .floating-box, .gps-footer, #map-title {
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.4.0/gpx.min.js"></script>
+  <script src="https://unpkg.com/leaflet.locatecontrol@0.76.0/dist/L.Control.Locate.min.js"></script>
 
 <div class="floating-box">
 	<img id="poster" src="images/poster.png"/>
 </div>
 
 <div class="floating-box">
-<PRE><span style="font-size:55px;">Choose your
+<PRE><span style="font-size:35px;">Choose your
 route..
 Choose your 
 pace..
 Catch your
 train.. 
-</span>
-
-<span style="font-size:25px;">
-..too late!? 
-..well, bollocks.</span>
-<span style="font-size:14px;">
+</span><span style="font-size:14px;">
 Trail(n)spotting - das heißt:
-kombiniere deine MTB-Fahrt im Inntal mit
-den Öffis und hol' dir so (auf angenehme 
-Weise - vor allem in der kalten Jahreszeit;)
-viele, viele Trail-Km heraus!
-</span>
+Große MTB-Runde im Inntal mit
+den Öffis kombinieren und auf angenehme 
+Weise (vor allem in der kalten Jahreszeit;) 
+viele, viele Trail-Km heraus holen!
+😎🚴‍♂️💯</span>
+<span style="font-size:25px;">
+Die Challenge dabei?</span>
+<span style="font-size:14px;">
+Die Fahrzeiten so zu timen, dass du die Zugverbindungen
+mit minimalen Wartezeiten schaffst! 
+⌚🚉😅</span>
+<span style="font-size:20px;">
+..too late!? 
+well.. bollocks!!</span>
 </PRE>
 </div>
 
@@ -170,49 +176,93 @@ viele, viele Trail-Km heraus!
 <script>
 	const mapSource = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
 	const mapAttribution = 'Map data &copy; <a href="https://www.opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)';
+
+	// Reusable function to create a map with GPX files
+	function createMapWithGPX(mapId, gpxFiles, options = {}) {
+		// Default options
+		const defaults = {
+			minZoom: 10,
+			maxZoom: 17,
+			maxNativeZoom: 17,
+			lineColor: 'red',
+			lineOpacity: 0.75,
+			lineWeight: 2.8,
+			lineCap: 'round',
+			boundsPadding: 10
+		};
+		
+		// Merge user options with defaults
+		const config = { ...defaults, ...options };
+		
+		// Create the map
+		const map = L.map(mapId);
+		
+		// Add tile layer
+		L.tileLayer(mapSource, {
+			attribution: mapAttribution,
+			minZoom: config.minZoom,
+			maxZoom: config.maxZoom,
+			maxNativeZoom: config.maxNativeZoom
+		}).addTo(map);
+
+		// Ensure gpxFiles is an array
+		const files = Array.isArray(gpxFiles) ? gpxFiles : [gpxFiles];
+		
+		// Track loaded GPX files to fit bounds after all are loaded
+		let loadedCount = 0;
+		const totalFiles = files.length;
+		let allBounds = [];
+
+		// Add each GPX file
+		files.forEach(gpxFile => {
+			new L.GPX(gpxFile, {
+				async: true,
+				polyline_options: {
+					color: config.lineColor,
+					opacity: config.lineOpacity,
+					weight: config.lineWeight,
+					lineCap: config.lineCap
+				}
+			}).on('loaded', function(e) {
+				loadedCount++;
+				allBounds.push(e.target.getBounds());
+				
+				// When all files are loaded, fit bounds
+				if (loadedCount === totalFiles) {
+					// Combine all bounds
+					const combinedBounds = allBounds.reduce((acc, bounds) => {
+						return acc.extend(bounds);
+					}, allBounds[0]);
+					
+					const paddedBounds = combinedBounds.pad(config.boundsPadding);
+					map.fitBounds(paddedBounds);
+					map.setMaxBounds(paddedBounds);
+				}
+			}).addTo(map);
+		});
+
+		// Add scale control
+		L.control.scale().addTo(map);
+		
+		// Add GPS location control
+		L.control.locate({
+			position: 'topri',
+			drawCircle: true,
+			follow: false,
+			setView: false,
+			keepCurrentZoomLevel: true
+		}).addTo(map);
+		
+		return map;
+	}
 </script>
 
 <div class="floating-box">
 	<div class="themap" id="map_A">
 	<div id="map-title">A</div>
 		<script>
-			var map_A = L.map('map_A');
-			L.tileLayer(mapSource, {
-			  attribution: mapAttribution,
-			  minZoom:10,
-			  maxZoom:15,
-			  maxNativeZoom:15
-			}).addTo(map_A);
-
-			var gpx_A1 = 'gps/A1.gpx'; // URL to your GPX file or the GPX itself
-			new L.GPX(gpx_A1, {
-				async:true, 
-				polyline_options: {
-					color: 'red',
-					opacity: 0.75,
-					weight: 2.8,
-					lineCap: 'round'}
-			}).on('loaded', function(e) {
-				var bds = e.target.getBounds().pad(1);
-				map_A.fitBounds(bds);
-				map_A.setMaxBounds(bds);
-			}).addTo(map_A);
-
-			var gpx_A2 = 'gps/A2.gpx'; // URL to your GPX file or the GPX itself
-			new L.GPX(gpx_A2, {
-				async:true, 
-				polyline_options: {
-					color: 'red',
-					opacity: 0.75,
-					weight: 2.8,
-					lineCap: 'round'}
-			}).on('loaded', function(e) {
-				var bds = e.target.getBounds().pad(1);
-				map_A.fitBounds(bds);
-				map_A.setMaxBounds(bds);
-			}).addTo(map_A);
-			
-			L.control.scale().addTo(map_A);	
+			// Create map A with multiple GPX files
+			var map_A = createMapWithGPX('map_A', ['gps/A1.gpx', 'gps/A2.gpx']);
 		</script>
 	</div>
 </div>
@@ -247,28 +297,8 @@ Innsbruck		11:25 (17')	12:55 (17')
 	<div class="themap" id="map_B">
 	<div id="map-title">B</div>
 		<script>
-			var map_B = L.map('map_B');
-			L.tileLayer(mapSource, {
-			  attribution: mapAttribution,
-			  minZoom:10,
-			  maxZoom:15,
-			  maxNativeZoom:15
-			}).addTo(map_B);
-
-			var gpx_B = 'gps/B__Trailspotting.gpx'; // URL to your GPX file or the GPX itself
-			new L.GPX(gpx_B, {
-				async:true, 
-				polyline_options: {
-					color: 'red',
-					opacity: 0.75,
-					weight: 2.8,
-					lineCap: 'round'}
-				}).on('loaded', function(e) {
-				var bds = e.target.getBounds().pad(1);
-				map_B.fitBounds(bds);
-				map_B.setMaxBounds(bds);
-			}).addTo(map_B);
-			L.control.scale().addTo(map_B);
+			// Create map B with single GPX file
+			var map_B = createMapWithGPX('map_B', 'gps/B__Trailspotting.gpx');
 		</script>
 	</div>
 </div>
@@ -310,28 +340,8 @@ Innsbruck		14:55 (17')	15:25 (17')
 	<div class="themap" id="map_C">
 		<div id="map-title">C</div>
 		<script>
-			var map_C = L.map('map_C');
-			L.tileLayer(mapSource, {
-			  attribution: mapAttribution,
-			  minZoom:11,
-			  maxZoom:15,
-			  maxNativeZoom:15
-			}).addTo(map_C);
-
-			var gpx_C = 'gps/C__Trailspotting.gpx'; // URL to your GPX file or the GPX itself
-			new L.GPX(gpx_C, {
-				async:true, 
-				polyline_options: {
-					color: 'red',
-					opacity: 0.75,
-					weight: 2.8,
-					lineCap: 'round'}
-				}).on('loaded', function(e) {
-				var bds = e.target.getBounds().pad(1);
-				map_C.fitBounds(bds);
-				map_C.setMaxBounds(bds);
-			}).addTo(map_C);
-			L.control.scale().addTo(map_C);
+			// Create map C with custom zoom settings
+			var map_C = createMapWithGPX('map_C', 'gps/C__Trailspotting.gpx');
 		</script>
 	</div>
 </div>
@@ -418,28 +428,8 @@ Innsbruck		?
 	<div class="themap" id="map_D">
 		<div id="map-title">D</div>
 		<script>
-			var map_D = L.map('map_D');
-			L.tileLayer(mapSource, {
-			  attribution: mapAttribution,
-                          minZoom:11,
-                          maxZoom:15,
-						  maxNativeZoom:15
-			}).addTo(map_D);
-
-			var gpx_D = 'gps/D__Trailspotting.gpx'; // URL to your GPX file or the GPX itself
-			new L.GPX(gpx_D, {
-				async:true, 
-				polyline_options: {
-					color: 'red',
-					opacity: 0.75,
-					weight: 2.8,
-					lineCap: 'round'}
-				}).on('loaded', function(e) {
-				var bds = e.target.getBounds().pad(1);
-				map_D.fitBounds(bds);
-				map_D.setMaxBounds(bds);
-			}).addTo(map_D);
-			L.control.scale().addTo(map_D);
+			// Create map D with custom zoom settings
+			var map_D = createMapWithGPX('map_D', 'gps/D__Trailspotting.gpx');
 		</script>
 	</div>
 </div>
@@ -449,28 +439,8 @@ Innsbruck		?
 	<div class="themap" id="map_DD">
 		<div id="map-title">DD</div>
 		<script>
-			var map_DD = L.map('map_DD');
-			L.tileLayer(mapSource, {
-			  attribution: mapAttribution,
-                          minZoom:11,
-                          maxZoom:15,
-						  maxNativeZoom:15
-			}).addTo(map_DD);
-
-			var gpx_DD = 'gps/DD__Trailspotting.gpx'; // URL to your GPX file or the GPX itself
-			new L.GPX(gpx_DD, {
-				async:true, 
-				polyline_options: {
-					color: 'red',
-					opacity: 0.75,
-					weight: 2.8,
-					lineCap: 'round'}
-				}).on('loaded', function(e) {
-				var bds = e.target.getBounds().pad(1);
-				map_DD.fitBounds(bds);
-				map_DD.setMaxBounds(bds);
-			}).addTo(map_DD);
-			L.control.scale().addTo(map_DD);
+			// Create map DD with custom zoom and padding settings
+			var map_DD = createMapWithGPX('map_DD', 'gps/DD__Trailspotting.gpx');
 		</script>
 	</div>
 </div>
