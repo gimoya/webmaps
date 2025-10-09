@@ -24,13 +24,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.4.0/gpx.min.js"></script>
   <script src="https://unpkg.com/leaflet.locatecontrol@0.76.0/dist/L.Control.Locate.min.js"></script>
-  <script src="config.js"></script>
-
 <div class="poster-container">
 	<img id="poster" src="images/poster.png"/>
 </div>
 
-<div class="floating-box">
+<div class="floating-box" id="intro">
 	<div>
 		<span style="font-size:35px;">Choose your route.. Choose your pace.. Catch your train..</span>
 		<p>
@@ -46,117 +44,73 @@
 	</div>
 </div>
 
+<div class="floating-box" id="combined_selector_stats">
+	<div class="route-header">Deine Route</div>
+	<div class="route-selector">
+		<div class="route-wheel" id="route-wheel">
+			<!-- Route options will be populated by JavaScript -->
+		</div>
+	</div>
+	<div id="cycling-info-main">
+		<!-- Cycling segments will be populated by JavaScript -->
+	</div>
+</div>
+
+<div class="floating-box">
+	<div class="themap" id="map_main">
+		<div id="map-title">A</div>
+	</div>
+</div>
+
 <!-- Define the map source as a variable -->
+<script src="config.js"></script>
 <script src="script.js"></script>
 
-<div class="floating-box">
-	<div class="themap" id="map_A">
-	<div id="map-title">A</div>
-	</div>
-	<div id="cycling-info-A">
-		<!-- Cycling segments will be populated by JavaScript -->
-	</div>
-</div>
-
-<div class="floating-box">
-	<div class="themap" id="map_B">
-	<div id="map-title">B</div>
-	</div>
-	<div id="cycling-info-B">
-		<!-- Cycling segments will be populated by JavaScript -->
-	</div>
-</div>
-
-<div class="floating-box">
+<div class="floating-box timetable-box">
 	<div class="timetable-title">Innsbruck 🕐</div>
 	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#EDC78E82-79C6-449D-8E1EC831BE5148E9"></iframe>
+</div>
+
+<div class="floating-box timetable-box">
 	<div class="timetable-title">Hall 🕐</div>
 	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#F81F57B8-E49E-4A37-86037AE366123492"></iframe>
 </div>
 
-<div class="floating-box">
+<div class="floating-box timetable-box">
 	<div class="timetable-title">Schwaz 🕐</div>
 	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#90FD532A-01C0-454B-A43A854BDFE8348B"></iframe>
+</div>
+
+<div class="floating-box timetable-box">
 	<div class="timetable-title">Brixlegg 🕐</div>
 	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#0CDB1A43-FAD5-422D-94F7184A3B32DBE7"></iframe>
 </div>
 
-<div class="floating-box">
-	<div class="themap" id="map_C">
-		<div id="map-title">C</div>
-	</div>
-	<div id="cycling-info-C">
-		<!-- Cycling segments will be populated by JavaScript -->
-	</div>
-</div>
-
-<div class="floating-box">
-	<div class="themap" id="map_D">
-		<div id="map-title">D</div>
-	</div>
-	<div id="cycling-info-D">
-		<!-- Cycling segments will be populated by JavaScript -->
-	</div>
-</div>
-
-<div class="floating-box">
-	<div class="themap" id="map_E">
-		<div id="map-title">E</div>
-	</div>
-	<div id="cycling-info-E">
-		<!-- Cycling segments will be populated by JavaScript -->
-	</div>
-</div>
-
-<div class="floating-box">
-	<div class="themap" id="map_F">
-		<div id="map-title">F</div>
-	</div>
-	<div id="cycling-info-F">
-		<!-- Cycling segments will be populated by JavaScript -->
-	</div>
-</div>
-
-<div class="floating-box">
-	<div class="themap" id="map_G">
-		<div id="map-title">G</div>
-	</div>
-	<div id="cycling-info-G">
-		<!-- Cycling segments will be populated by JavaScript -->
-	</div>
-</div>
-
-<!-- 
-Route Z template (uncomment when adding new route)
-Cycling segments will be populated by JavaScript
-<div class="floating-box">
-	<div class="themap" id="map_Z">
-		<div id="map-title">Z</div>
-	</div>
-	<div id="cycling-info-Z">
-	</div>
-</div>
--->
-
-<div class="floating-box">
+<div class="floating-box timetable-box">
 	<div class="timetable-title">Terfens/Weer 🕐</div>
 	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#FAEA6F93-159F-4D19-9D1ECBB979509660"></iframe>
+</div>
+
+<div class="floating-box timetable-box">
 	<div class="timetable-title">Völs 🕐</div>
 	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#87531436-9B3A-4C1F-8B792A7848D01826"></iframe>
 </div>
 
-<div class="floating-box">
+<div class="floating-box timetable-box">
 	<div class="timetable-title">Mötz 🕐</div>
 	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#PLACEHOLDER_MOETZ"></iframe>
+</div>
+
+<div class="floating-box timetable-box">
 	<div class="timetable-title">Zirl 🕐</div>
 	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#PLACEHOLDER_ZIRL"></iframe>
 </div>
 
 <div class="floating-box">
-	<p><strong>FYI:</strong> Alle S-Bahnen und REX fahren wochentags im 60' Takt!</p>
+	<p><strong>Support für unsere Öffis!</strong>
 	<p>Eine <strong>Fahrt mit Vorteilkarte</strong> kostet rd. 5 Euro, die <strong>Regio-Biking Tagskarte</strong> 2,60 Euro</p>
-	<p>Für die Orientierung könnt ihr eure <strong>Smartphone-GPS Position</strong> in den Karten einblende!</p>
-	<p>Mit den S-Bahnen und REX Zügen gibt's natürlich noch unzählige andere Möglichkeiten! Werde kreativ!!</br>👌🤓</p>
+	<p>Für die Orientierung könnt ihr eure <strong>Smartphone-GPS Position</strong> in der Web-Karte oben einblenden!</p>
+	<p>Mit den S-Bahnen und REX Zügen gibt's natürlich noch unzählige andere Möglichkeiten! <strong>>> Sei kreativ!!</strong></br>👌🤓</p>
 	GPX-Tracks:<br>
 	<div class="gpx-download-container">
 		<div class="gpx-download-list" id="gpx-download-list">

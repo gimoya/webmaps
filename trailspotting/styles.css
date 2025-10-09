@@ -16,6 +16,102 @@ a, button, input, textarea, [contenteditable="true"] {
   user-select: text;
 }
 
+/* Combined route selector and stats */
+#combined_selector_stats {
+	position: relative;
+	float: left;
+	width: 350px;
+	min-width: 350px;
+	height: 500px;
+	margin: 0px 10px 10px 0px;
+	box-sizing: border-box;
+	overflow: hidden;
+	border-radius: 5px;
+	display: flex;
+	flex-direction: column;
+	border: 1px solid rgb(199, 199, 199);
+	background: linear-gradient(135deg, #aa4d02 0%, #ffbf65 100%);
+}
+
+.route-header {
+	font-size: 32px;
+	font-weight: bold;
+	color: white;
+	text-align: center;
+	padding: 10px 0px 0px 0px;
+	text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+	flex-shrink: 0;
+}
+
+.route-selector {
+	text-align: center;
+	width: 100%;
+	flex-shrink: 0;
+	margin-top: 30px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+}
+
+.route-wheel {
+	height: 120px;
+	overflow: hidden;
+	position: relative;
+	margin-bottom: 20px;
+	border: 1px solid rgba(255, 255, 255, 0.3);
+	border-radius: 5px;
+	background-color: rgba(255, 255, 255, 0.1);
+}
+
+.route-wheel-inner {
+	display: flex;
+	flex-direction: column;
+	animation: scrollVertical var(--scroll-duration, 15s) linear infinite;
+	padding: 10px;
+}
+
+.route-option {
+	display: block;
+	padding: 15px 5px 0px 5px;
+	margin: 2px 0;
+	text-decoration: none;
+	color: white;
+	background-color: rgba(255, 255, 255, 0.2);
+	border-radius: 3px;
+	transition: background-color 0.3s ease;
+	font-size: 48px;
+	font-weight: bold;
+	white-space: nowrap;
+	cursor: pointer;
+	text-align: center;
+}
+
+
+.route-option:hover {
+	background-color: rgba(255, 255, 255, 0.4);
+	color: white;
+}
+
+.route-option.active {
+	background-color: rgba(255, 255, 255, 0.8);
+	color: #333;
+	font-weight: bold;
+}
+
+/* Pause animation on hover */
+.route-wheel:hover .route-wheel-inner {
+	animation-play-state: paused;
+}
+
+#cycling-info-main {
+	flex: 1;
+	overflow-y: auto;
+	padding: 15px;
+	box-sizing: border-box;
+	height: auto;
+}
+
 /* Poster container */
 .poster-container {
 	position: relative;
@@ -271,4 +367,37 @@ a, button, input, textarea, [contenteditable="true"] {
 	user-select: none;
 	-webkit-touch-callout: none;
 	-webkit-tap-highlight-color: transparent;
+}
+
+/* Timetable boxes */
+.timetable-box {
+	width: 350px;
+	min-width: 350px;
+	height: 250px;
+	min-height: 250px;
+	margin: 0px 10px 10px 0px;
+	box-sizing: border-box;
+	overflow: hidden;
+	border-radius: 5px;
+	display: flex;
+	flex-direction: column;
+	border: 1px solid rgb(199, 199, 199);
+	background-color: rgb(245, 245, 245);
+}
+
+.timetable-box .timetable-title {
+	font-size: 20px;
+	font-weight: bold;
+	color: #333;
+	padding: 10px 15px 5px 15px;
+	margin: 0;
+	flex-shrink: 0;
+}
+
+.timetable-box .timetable-iframe {
+	flex: 1;
+	width: 100%;
+	border: none;
+	margin: 0;
+	padding: 0;
 }

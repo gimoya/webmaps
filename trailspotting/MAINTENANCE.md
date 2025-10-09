@@ -37,7 +37,7 @@ const ROUTE_CONFIG = {
 
 **B) Add station names:**
 ```javascript
-const STATION_NAMES = {
+const ROUTE_CONFIG = {
     'A': [
         {from: 'Aldrans', to: 'Hall'},
         {from: 'Schwaz', to: 'Terfens/Weer'}
@@ -100,7 +100,7 @@ No manual JavaScript calls needed anymore!
 3. No other changes needed
 
 ### If Station Names Changed
-1. Update the `STATION_NAMES` object in `config.js`
+1. Update the `ROUTE_CONFIG` object in `config.js`
 2. No other changes needed
 
 ## Configuration File
@@ -159,7 +159,7 @@ const ROUTE_CONFIG = {
 
 ### Station Names
 ```javascript
-const STATION_NAMES = {
+const ROUTE_CONFIG = {
     'A': [
         {from: 'Aldrans', to: 'Hall'},
         {from: 'Schwaz', to: 'Terfens/Weer'}

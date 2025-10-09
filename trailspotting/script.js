@@ -142,7 +142,7 @@ function renderCyclingSegments(route, containerId) {
 	html += `<div class="segment-title">Route ${route} - Cycling Segments</div>`;
 	
 	segments.forEach(seg => {
-		const stationInfo = STATION_NAMES[route] && STATION_NAMES[route][seg.segment - 1];
+		const stationInfo = ROUTE_CONFIG[route] && ROUTE_CONFIG[route].segments[seg.segment - 1];
 		const stationText = stationInfo ? `: ${stationInfo.from} → ${stationInfo.to}` : '';
 		
 		html += `<div class="segment-details">`;
@@ -182,6 +182,25 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 		maxZoom: config.maxZoom,
 		maxNativeZoom: config.maxNativeZoom
 	}).addTo(map);
+	
+	// Add locate control
+	L.control.locate({
+		position: 'bottomleft',
+		drawCircle: true,
+		follow: true,
+		setView: true,
+		keepCurrentZoomLevel: true,
+		markerStyle: {
+			weight: 2,
+			opacity: 0.8,
+			fillOpacity: 0.3
+		},
+		circleStyle: {
+			weight: 2,
+			opacity: 0.8,
+			fillOpacity: 0.3
+		}
+	}).addTo(map);
 
 	// Ensure gpxFiles is an array
 	const files = Array.isArray(gpxFiles) ? gpxFiles : [gpxFiles];
@@ -193,7 +212,6 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 
 	// Add each GPX file
 	files.forEach(gpxFile => {
-		console.log(`Loading GPX file: ${gpxFile} for map: ${mapId}`);
 		
 		// Add thicker background line underneath
 		new L.GPX(gpxFile, {
@@ -212,7 +230,6 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 		}).on('error', function(e) {
 			console.error(`GPX loading error for ${gpxFile}:`, e);
 		}).on('loaded', function(e) {
-			console.log(`GPX loaded successfully: ${gpxFile}`);
 			// Add thinner foreground line on top
 			new L.GPX(gpxFile, {
 				async: true,
@@ -260,28 +277,22 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 			
 			// Access the GPX data through _layers
 			if (gpxData._layers) {
-				console.log('GPX layers found:', Object.keys(gpxData._layers));
 				
 				// Iterate through all layers
 				Object.values(gpxData._layers).forEach((layer, layerIndex) => {
-					console.log(`Layer ${layerIndex}:`, layer);
 					
 					// Check if this layer has nested _layers (LayerGroup)
 					if (layer._layers) {
-						console.log(`Layer ${layerIndex} has nested layers:`, Object.keys(layer._layers));
 						
 						// Iterate through nested layers
 						Object.values(layer._layers).forEach((nestedLayer, nestedIndex) => {
-							console.log(`Nested layer ${nestedIndex}:`, nestedLayer);
 							
 							// Try to get latlngs from nested layer
 							if (nestedLayer._latlngs) {
 								const latlngs = nestedLayer._latlngs;
-								console.log(`Nested layer ${nestedIndex} latlngs:`, latlngs.length, 'points');
 								
 								// Check if it's a flat array of points (single segment)
 								if (Array.isArray(latlngs) && latlngs.length > 0 && latlngs[0].lat !== undefined) {
-									console.log('Single segment detected with', latlngs.length, 'points');
 									// Single segment with many points
 									totalSegments++;
 									totalStartPoints++;
@@ -292,7 +303,6 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 									const startPoint = latlngs[0];
 									const endPoint = latlngs[latlngs.length - 1];
 									
-									console.log('Adding markers for single segment:', startPoint, endPoint);
 									
 									// Add start point marker
 									L.marker([startPoint.lat, startPoint.lng], {
@@ -318,10 +328,8 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 								}
 								// Check if it's an array of segments
 								else if (Array.isArray(latlngs)) {
-									console.log('Multiple segments detected:', latlngs.length, 'segments');
 									latlngs.forEach((segment, segmentIndex) => {
 										if (Array.isArray(segment) && segment.length > 0) {
-											console.log(`Segment ${segmentIndex}:`, segment.length, 'points');
 											totalSegments++;
 											totalStartPoints++;
 											totalEndPoints++;
@@ -331,7 +339,6 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 											const startPoint = segment[0];
 											const endPoint = segment[segment.length - 1];
 											
-											console.log(`Adding markers for segment ${segmentIndex}:`, startPoint, endPoint);
 											
 											// Add start point marker
 											L.marker([startPoint.lat, startPoint.lng], {
@@ -362,12 +369,10 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 					}
 					// Handle direct layer structure (no nested layers)
 					else if (layer._latlngs) {
-						console.log(`Direct layer ${layerIndex} latlngs:`, layer._latlngs.length, 'points');
 						const latlngs = layer._latlngs;
 						
 						// Check if it's a flat array of points (single segment)
 						if (Array.isArray(latlngs) && latlngs.length > 0 && latlngs[0].lat !== undefined) {
-							console.log('Direct single segment detected with', latlngs.length, 'points');
 							// Single segment with many points
 							totalSegments++;
 							totalStartPoints++;
@@ -378,7 +383,6 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 							const startPoint = latlngs[0];
 							const endPoint = latlngs[latlngs.length - 1];
 							
-							console.log('Adding markers for direct single segment:', startPoint, endPoint);
 							
 							// Add start point marker
 							L.marker([startPoint.lat, startPoint.lng], {
@@ -404,10 +408,8 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 						}
 						// Check if it's an array of segments
 						else if (Array.isArray(latlngs)) {
-							console.log('Direct multiple segments detected:', latlngs.length, 'segments');
 							latlngs.forEach((segment, segmentIndex) => {
 								if (Array.isArray(segment) && segment.length > 0) {
-									console.log(`Direct segment ${segmentIndex}:`, segment.length, 'points');
 									totalSegments++;
 									totalStartPoints++;
 									totalEndPoints++;
@@ -417,7 +419,6 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 									const startPoint = segment[0];
 									const endPoint = segment[segment.length - 1];
 									
-									console.log(`Adding markers for direct segment ${segmentIndex}:`, startPoint, endPoint);
 									
 									// Add start point marker
 									L.marker([startPoint.lat, startPoint.lng], {
@@ -447,11 +448,9 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 				});
 			}
 			
-			console.log(`Map ${mapId} summary: ${totalSegments} segments, ${totalStartPoints} start points, ${totalEndPoints} end points, ${totalPoints} total points, ${pointCounter-1} markers added`);
 			
 			// When all files are loaded, fit bounds
 			if (loadedCount === totalFiles) {
-				console.log(`All ${totalFiles} files loaded for map ${mapId}, bounds:`, allBounds);
 				// Ensure map is properly sized before setting bounds
 				setTimeout(() => {
 					map.invalidateSize();
@@ -462,7 +461,6 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 						}, allBounds[0]);
 						
 						const paddedBounds = combinedBounds.pad(config.boundsPadding);
-						console.log(`Setting bounds for map ${mapId}:`, paddedBounds);
 						map.fitBounds(paddedBounds);
 						map.setMaxBounds(paddedBounds);
 					} else {
@@ -488,7 +486,7 @@ function populateGPXDownloadList() {
 	downloadList.innerHTML = '';
 	
 	// Add download links for all active routes
-	ROUTE_CONFIG.activeRoutes.forEach(route => {
+	APP_CONFIG.activeRoutes.forEach(route => {
 		const filename = `${route}${GPX_CONFIG.filePattern}`;
 		const filepath = `${GPX_CONFIG.tracksDirectory}${filename}`;
 		
@@ -498,7 +496,93 @@ function populateGPXDownloadList() {
 		downloadList.appendChild(link);
 	});
 	
-	console.log(`Populated GPX download list with ${ROUTE_CONFIG.activeRoutes.length} routes`);
+}
+
+// Global variables for single map system
+let currentMap = null;
+let currentRoute = 'A';
+
+// Function to populate route wheel dynamically
+function populateRouteWheel() {
+	const routeWheel = document.getElementById('route-wheel');
+	if (!routeWheel) return;
+	
+	// Create inner container for scrolling animation
+	const innerContainer = document.createElement('div');
+	innerContainer.className = 'route-wheel-inner';
+	
+	// Create route options from active routes
+	APP_CONFIG.activeRoutes.forEach(route => {
+		const option = document.createElement('div');
+		option.className = 'route-option';
+		option.dataset.route = route;
+		option.textContent = route;
+		option.addEventListener('click', () => {
+			switchRoute(route);
+		});
+		innerContainer.appendChild(option);
+	});
+	
+	// Clear existing content and add new inner container
+	routeWheel.innerHTML = '';
+	routeWheel.appendChild(innerContainer);
+	
+}
+
+// Function to show/hide timetable boxes based on route
+function updateTimetableBoxes(route) {
+	const routeStations = ROUTE_CONFIG[route] ? ROUTE_CONFIG[route].stations : [];
+	
+	// Hide all timetable boxes first
+	document.querySelectorAll('.timetable-box').forEach(box => {
+		box.style.display = 'none';
+	});
+	
+	// Show only boxes for stations in the current route
+	routeStations.forEach(stationName => {
+		// Find timetable boxes by checking if the title contains the station name
+		document.querySelectorAll('.timetable-box .timetable-title').forEach(title => {
+			if (title.textContent.includes(stationName)) {
+				title.closest('.timetable-box').style.display = 'block';
+			}
+		});
+	});
+}
+
+// Function to switch between routes
+function switchRoute(route) {
+	if (route === currentRoute) return;
+	
+	currentRoute = route;
+	
+	// Update route selector UI
+	document.querySelectorAll('.route-option').forEach(option => {
+		option.classList.remove('active');
+		if (option.dataset.route === route) {
+			option.classList.add('active');
+		}
+	});
+	
+	// Update timetable boxes visibility
+	updateTimetableBoxes(route);
+	
+	// Update map title
+	document.getElementById('map-title').textContent = route;
+	
+	// Load new route data
+	const filename = `${GPX_CONFIG.tracksDirectory}${route}${GPX_CONFIG.filePattern}`;
+	const routeOptions = APP_CONFIG.routeOverrides[route] || {};
+	
+	// Load cycling segments for new route
+	loadCyclingSegments(route, 'cycling-info-main', filename).then(() => {
+		// Create new map
+		if (currentMap) {
+			currentMap.remove();
+		}
+		currentMap = createMapWithGPX('map_main', filename, routeOptions);
+	}).catch(error => {
+		console.error(`Error loading route ${route}:`, error);
+	});
 }
 
 // Initialize the application when DOM is loaded
@@ -509,26 +593,38 @@ document.addEventListener('DOMContentLoaded', function() {
 	// Populate GPX download list dynamically
 	populateGPXDownloadList();
 	
-	// Load all cycling segments first, then create maps
-	const cyclingPromises = ROUTE_CONFIG.activeRoutes.map(route => {
-		const filename = `${GPX_CONFIG.tracksDirectory}${route}${GPX_CONFIG.filePattern}`;
-		return loadCyclingSegments(route, `cycling-info-${route}`, filename);
-	});
+	// Populate route wheel dynamically
+	populateRouteWheel();
 	
-	// Wait for all cycling segments to load, then create maps
-	Promise.all(cyclingPromises).then(() => {
-		// All cycling info is now loaded, create maps
-		ROUTE_CONFIG.activeRoutes.forEach(route => {
-			const filename = `${GPX_CONFIG.tracksDirectory}${route}${GPX_CONFIG.filePattern}`;
-			const routeOptions = ROUTE_CONFIG.routeOverrides[route] || {};
-			createMapWithGPX(`map_${route}`, filename, routeOptions);
-		});
+	// Set initial active state for first route
+	const firstRoute = APP_CONFIG.activeRoutes[0];
+	if (firstRoute) {
+		document.querySelector(`[data-route="${firstRoute}"]`).classList.add('active');
+		currentRoute = firstRoute;
+	}
+	
+	// Initialize with first route from config
+	const initialRoute = APP_CONFIG.activeRoutes[0] || 'A';
+	const filename = `${GPX_CONFIG.tracksDirectory}${initialRoute}${GPX_CONFIG.filePattern}`;
+	const routeOptions = APP_CONFIG.routeOverrides[initialRoute] || {};
+	
+	// Update timetable boxes visibility for initial route
+	updateTimetableBoxes(initialRoute);
+	
+	// Update map title
+	document.getElementById('map-title').textContent = initialRoute;
+	
+	// Load cycling segments for initial route
+	loadCyclingSegments(initialRoute, 'cycling-info-main', filename).then(() => {
+		// Create initial map
+		currentMap = createMapWithGPX('map_main', filename, routeOptions);
+	}).catch(error => {
+		console.error(`Error loading initial route ${initialRoute}:`, error);
 	});
 	
 	// Debug iframe loading
 	const iframes = document.querySelectorAll('.timetable-iframe');
 	iframes.forEach((iframe, index) => {
-		iframe.onload = () => console.log(`Iframe ${index + 1} loaded successfully`);
 		iframe.onerror = (e) => console.error(`Iframe ${index + 1} failed to load:`, e);
 	});
 });

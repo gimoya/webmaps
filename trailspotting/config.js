@@ -5,36 +5,79 @@
 
 /*
  * ==================
- * STATION NAMES CONFIGURATION
+ * ROUTE START/END CONFIGURATION
  * ==================
  */
 
-const STATION_NAMES = {
-	'A': [
-		{from: 'Aldrans', to: 'Hall'},
-		{from: 'Schwaz', to: 'Terfens/Weer'}
-	],
-	'B': [
-		{from: 'Igls', to: 'Hall'},
-		{from: 'Münster/Wiesin', to: 'Brixlegg'},
-		{from: 'Schwaz', to: 'Terfens/Weer'}
-	],
-	'C': [
-		{from: 'Igls', to: 'Hall'},
-		{from: 'Walderbrücke', to: 'Hall'}
-	],
-	'D': [
-		{from: 'Reith', to: 'Völs'}
-	],
-	'E': [
-		{from: 'Reith', to: 'Innsbruck'}
-	],
-	'F': [
-		{from: 'Reith', to: 'Zirl'}
-	],
-	'G': [
-		{from: 'Mötz', to: 'Telfs'}
-	]
+const ROUTE_CONFIG = {
+	'A': {
+		segments: [
+			{from: 'Aldrans', to: 'Hall'},
+			{from: 'Schwaz', to: 'Terfens/Weer'}
+		],
+		stations: [
+			'Innsbruck',
+			'Hall',
+			'Terfens/Weer'
+		]
+	},
+	'B': {
+		segments: [
+			{from: 'Aldrans', to: 'Hall'},
+			{from: 'Münster/Wiesing', to: 'Brixlegg'},
+			{from: 'Schwaz', to: 'Terfens/Weer'}
+		],
+		stations: [
+			'Innsbruck',
+			'Hall',
+			'Brixlegg',
+			'Terfens/Weer'
+		]
+	},
+	'C': {
+		segments: [
+			{from: 'Aldrans', to: 'Hall'},
+			{from: 'Walderbrücke', to: 'Hall'}
+		],
+		stations: [
+			'Hall'
+		]
+	},
+	'D': {
+		segments: [
+			{from: 'Reith', to: 'Völs'}
+		],
+		stations: [
+			'Innsbruck',
+			'Völs'
+		]
+	},
+	'E': {
+		segments: [
+			{from: 'Reith', to: 'Innsbruck'}
+		],
+		stations: [
+			'Innsbruck'
+		]
+	},
+	'F': {
+		segments: [
+			{from: 'Reith', to: 'Zirl'}
+		],
+		stations: [
+			'Innsbruck',
+			'Zirl'
+		]
+	},
+	'G': {
+		segments: [
+			{from: 'Mötz', to: 'Telfs'}
+		],
+		stations: [
+			'Innsbruck',
+			'Telfs'
+		]
+	}
 };
 
 /*
@@ -43,7 +86,7 @@ const STATION_NAMES = {
  * ==================
  */
 
-const ROUTE_CONFIG = {
+const APP_CONFIG = {
 	/*
 	 * Active routes (add new routes here)
 	 */
@@ -110,7 +153,7 @@ const GPX_CONFIG = {
 	/*
 	 * Animation settings
 	 */
-	scrollDuration: 15,  /* seconds per cycle */
+	scrollDuration: 8,  /* seconds per cycle */
 	containerHeight: 100, /* pixels */
 	
 	/*
