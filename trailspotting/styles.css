@@ -373,8 +373,8 @@ a, button, input, textarea, [contenteditable="true"] {
 .timetable-box {
 	width: 350px;
 	min-width: 350px;
-	height: 250px;
-	min-height: 250px;
+	height: 245px;
+	min-height: 245px;
 	margin: 0px 10px 10px 0px;
 	box-sizing: border-box;
 	overflow: hidden;
