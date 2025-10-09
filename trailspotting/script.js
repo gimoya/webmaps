@@ -1,31 +1,14 @@
 // Trailspotting Map Application JavaScript
 // External JavaScript file for GPX loading and cycling segment display
 
-const mapSource = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
-const mapAttribution = 'Map data &copy; <a href="https://www.opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)';
+// ============================================================================
+// APPLICATION DATA
+// ============================================================================
 
 // Store GPX metadata for each route
 const gpxMetadata = {};
 
-// Original station names from CSV (for display purposes)
-const stationNames = {
-	'A': [
-		{from: 'Igls', to: 'Hall'},
-		{from: 'Schwaz', to: 'Terfens/Wiesing'}
-	],
-	'B': [
-		{from: 'Igls', to: 'Hall'},
-		{from: 'Münster/W', to: 'Brixlegg'},
-		{from: 'Schwaz', to: 'Terfens/Weer'}
-	],
-	'C': [
-		{from: 'Igls', to: 'Hall'},
-		{from: 'Walderbrücke', to: 'Hall'}
-	],
-	'D': [
-		{from: 'Reith', to: 'Völs'}
-	]
-};
+// Configuration constants are loaded from config.js
 
 // Function to load cycling segments and return a Promise
 function loadCyclingSegments(route, containerId, gpxFile) {
@@ -159,7 +142,7 @@ function renderCyclingSegments(route, containerId) {
 	html += `<div class="segment-title">Route ${route} - Cycling Segments</div>`;
 	
 	segments.forEach(seg => {
-		const stationInfo = stationNames[route] && stationNames[route][seg.segment - 1];
+		const stationInfo = STATION_NAMES[route] && STATION_NAMES[route][seg.segment - 1];
 		const stationText = stationInfo ? `: ${stationInfo.from} → ${stationInfo.to}` : '';
 		
 		html += `<div class="segment-details">`;
@@ -174,16 +157,16 @@ function renderCyclingSegments(route, containerId) {
 
 // Reusable function to create a map with GPX files
 function createMapWithGPX(mapId, gpxFiles, options = {}) {
-	// Default options
+	// Default options from configuration
 	const defaults = {
-		minZoom: 10,
-		maxZoom: 17,
-		maxNativeZoom: 17,
-		lineColor: 'green',
-		lineOpacity: 0.9,
-		lineWeight: 4.5,
+		minZoom: MAP_CONFIG.defaultMinZoom,
+		maxZoom: MAP_CONFIG.defaultMaxZoom,
+		maxNativeZoom: MAP_CONFIG.defaultMaxNativeZoom,
+		lineColor: MAP_CONFIG.trackColors.foreground,
+		lineOpacity: MAP_CONFIG.trackColors.foregroundOpacity,
+		lineWeight: MAP_CONFIG.trackColors.foregroundWeight,
 		lineCap: 'round',
-		boundsPadding: 10
+		boundsPadding: MAP_CONFIG.defaultBoundsPadding
 	};
 	
 	// Merge user options with defaults
@@ -192,10 +175,9 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 	// Create the map
 	const map = L.map(mapId);
 	
-	
 	// Add tile layer
-	L.tileLayer(mapSource, {
-		attribution: mapAttribution,
+	L.tileLayer(MAP_CONFIG.mapSource, {
+		attribution: MAP_CONFIG.mapAttribution,
 		minZoom: config.minZoom,
 		maxZoom: config.maxZoom,
 		maxNativeZoom: config.maxNativeZoom
@@ -211,13 +193,15 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 
 	// Add each GPX file
 	files.forEach(gpxFile => {
-		// Add thicker orange line underneath
+		console.log(`Loading GPX file: ${gpxFile} for map: ${mapId}`);
+		
+		// Add thicker background line underneath
 		new L.GPX(gpxFile, {
 			async: true,
 			polyline_options: {
-				color: 'orange',
-				opacity: 0.8,
-				weight: 6.0,
+				color: MAP_CONFIG.trackColors.background,
+				opacity: MAP_CONFIG.trackColors.backgroundOpacity,
+				weight: MAP_CONFIG.trackColors.backgroundWeight,
 				lineCap: 'round'
 			},
 			marker_options: {
@@ -225,14 +209,17 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 				endIconUrl: null,
 				shadowUrl: null
 			}
+		}).on('error', function(e) {
+			console.error(`GPX loading error for ${gpxFile}:`, e);
 		}).on('loaded', function(e) {
-			// Add thinner green line on top
+			console.log(`GPX loaded successfully: ${gpxFile}`);
+			// Add thinner foreground line on top
 			new L.GPX(gpxFile, {
 				async: true,
 				polyline_options: {
-					color: 'green',
-					opacity: 0.9,
-					weight: 3.0,
+					color: MAP_CONFIG.trackColors.foreground,
+					opacity: MAP_CONFIG.trackColors.foregroundOpacity,
+					weight: MAP_CONFIG.trackColors.foregroundWeight,
 					lineCap: 'round'
 				},
 				marker_options: {
@@ -312,8 +299,8 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 										icon: L.divIcon({
 											className: 'numbered-marker start',
 											html: `<div class="marker-number">${pointCounter}</div>`,
-											iconSize: [22, 22],
-											iconAnchor: [11, 11]
+											iconSize: [MAP_CONFIG.markerSize, MAP_CONFIG.markerSize],
+											iconAnchor: [MAP_CONFIG.markerSize/2, MAP_CONFIG.markerSize/2]
 										})
 									}).addTo(map);
 									pointCounter++;
@@ -323,8 +310,8 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 										icon: L.divIcon({
 											className: 'numbered-marker end',
 											html: `<div class="marker-number">${pointCounter}</div>`,
-											iconSize: [22, 22],
-											iconAnchor: [11, 11]
+											iconSize: [MAP_CONFIG.markerSize, MAP_CONFIG.markerSize],
+											iconAnchor: [MAP_CONFIG.markerSize/2, MAP_CONFIG.markerSize/2]
 										})
 									}).addTo(map);
 									pointCounter++;
@@ -351,8 +338,8 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 												icon: L.divIcon({
 													className: 'numbered-marker start',
 													html: `<div class="marker-number">${pointCounter}</div>`,
-													iconSize: [22, 22],
-													iconAnchor: [11, 11]
+													iconSize: [MAP_CONFIG.markerSize, MAP_CONFIG.markerSize],
+													iconAnchor: [MAP_CONFIG.markerSize/2, MAP_CONFIG.markerSize/2]
 												})
 											}).addTo(map);
 											pointCounter++;
@@ -362,8 +349,8 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 												icon: L.divIcon({
 													className: 'numbered-marker end',
 													html: `<div class="marker-number">${pointCounter}</div>`,
-													iconSize: [22, 22],
-													iconAnchor: [11, 11]
+													iconSize: [MAP_CONFIG.markerSize, MAP_CONFIG.markerSize],
+													iconAnchor: [MAP_CONFIG.markerSize/2, MAP_CONFIG.markerSize/2]
 												})
 											}).addTo(map);
 											pointCounter++;
@@ -464,17 +451,23 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 			
 			// When all files are loaded, fit bounds
 			if (loadedCount === totalFiles) {
+				console.log(`All ${totalFiles} files loaded for map ${mapId}, bounds:`, allBounds);
 				// Ensure map is properly sized before setting bounds
 				setTimeout(() => {
 					map.invalidateSize();
 					
-					const combinedBounds = allBounds.reduce((acc, bounds) => {
-						return acc.extend(bounds);
-					}, allBounds[0]);
-					
-					const paddedBounds = combinedBounds.pad(config.boundsPadding);
-					map.fitBounds(paddedBounds);
-					map.setMaxBounds(paddedBounds);
+					if (allBounds.length > 0) {
+						const combinedBounds = allBounds.reduce((acc, bounds) => {
+							return acc.extend(bounds);
+						}, allBounds[0]);
+						
+						const paddedBounds = combinedBounds.pad(config.boundsPadding);
+						console.log(`Setting bounds for map ${mapId}:`, paddedBounds);
+						map.fitBounds(paddedBounds);
+						map.setMaxBounds(paddedBounds);
+					} else {
+						console.warn(`No bounds available for map ${mapId}`);
+					}
 				}, 200);
 			}
 		}).addTo(map);
@@ -483,24 +476,53 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 	return map;
 }
 
+// Function to populate GPX download list dynamically
+function populateGPXDownloadList() {
+	const downloadList = document.getElementById('gpx-download-list');
+	if (!downloadList) {
+		console.warn('GPX download list container not found');
+		return;
+	}
+	
+	// Clear existing content
+	downloadList.innerHTML = '';
+	
+	// Add download links for all active routes
+	ROUTE_CONFIG.activeRoutes.forEach(route => {
+		const filename = `${route}${GPX_CONFIG.filePattern}`;
+		const filepath = `${GPX_CONFIG.tracksDirectory}${filename}`;
+		
+		const link = document.createElement('a');
+		link.href = filepath;
+		link.textContent = filename;
+		downloadList.appendChild(link);
+	});
+	
+	console.log(`Populated GPX download list with ${ROUTE_CONFIG.activeRoutes.length} routes`);
+}
+
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+	// Set CSS custom properties from configuration
+	document.documentElement.style.setProperty('--scroll-duration', `${GPX_CONFIG.scrollDuration}s`);
+	
+	// Populate GPX download list dynamically
+	populateGPXDownloadList();
+	
 	// Load all cycling segments first, then create maps
-	const cyclingPromises = [
-		loadCyclingSegments('A', 'cycling-info-A', 'gps/A__Trailspotting.gpx'),
-		loadCyclingSegments('B', 'cycling-info-B', 'gps/B__Trailspotting.gpx'),
-		loadCyclingSegments('C', 'cycling-info-C', 'gps/C__Trailspotting.gpx'),
-		loadCyclingSegments('D', 'cycling-info-D', 'gps/D__Trailspotting.gpx')
-	];
+	const cyclingPromises = ROUTE_CONFIG.activeRoutes.map(route => {
+		const filename = `${GPX_CONFIG.tracksDirectory}${route}${GPX_CONFIG.filePattern}`;
+		return loadCyclingSegments(route, `cycling-info-${route}`, filename);
+	});
 	
 	// Wait for all cycling segments to load, then create maps
 	Promise.all(cyclingPromises).then(() => {
 		// All cycling info is now loaded, create maps
-		createMapWithGPX('map_A', ['gps/A__Trailspotting.gpx']);
-		createMapWithGPX('map_B', 'gps/B__Trailspotting.gpx');
-		createMapWithGPX('map_C', 'gps/C__Trailspotting.gpx');
-		createMapWithGPX('map_D', 'gps/D__Trailspotting.gpx');
-		createMapWithGPX('map_DD', 'gps/DD__Trailspotting.gpx');
+		ROUTE_CONFIG.activeRoutes.forEach(route => {
+			const filename = `${GPX_CONFIG.tracksDirectory}${route}${GPX_CONFIG.filePattern}`;
+			const routeOptions = ROUTE_CONFIG.routeOverrides[route] || {};
+			createMapWithGPX(`map_${route}`, filename, routeOptions);
+		});
 	});
 	
 	// Debug iframe loading

@@ -8,7 +8,54 @@ Updates the metadata in each GPX file with calculated statistics.
 import xml.etree.ElementTree as ET
 import os
 import math
+import re
 from typing import Tuple, List, Dict
+
+def load_config_from_js() -> Dict[str, float]:
+    """
+    Load configuration values from config.js file.
+    Returns a dictionary with configuration values.
+    """
+    config_file = 'config.js'
+    config = {
+        'avgSpeed': 20.0,
+        'elevationPenalty': 1.0,
+        'pauseTimePer60min': 5.0
+    }
+    
+    if not os.path.exists(config_file):
+        print(f"Warning: {config_file} not found, using default values")
+        return config
+    
+    try:
+        with open(config_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Extract avgSpeed
+        avg_speed_match = re.search(r'avgSpeed:\s*([\d.]+)', content)
+        if avg_speed_match:
+            config['avgSpeed'] = float(avg_speed_match.group(1))
+        
+        # Extract elevationPenalty
+        elevation_penalty_match = re.search(r'elevationPenalty:\s*([\d.]+)', content)
+        if elevation_penalty_match:
+            config['elevationPenalty'] = float(elevation_penalty_match.group(1))
+        
+        # Extract pauseTimePer60min
+        pause_time_match = re.search(r'pauseTimePer60min:\s*([\d.]+)', content)
+        if pause_time_match:
+            config['pauseTimePer60min'] = float(pause_time_match.group(1))
+        
+        print(f"Loaded config from {config_file}:")
+        print(f"  Speed: {config['avgSpeed']} km/h")
+        print(f"  Elevation penalty: {config['elevationPenalty']} min/10m")
+        print(f"  Pause time: {config['pauseTimePer60min']} min/60min")
+        
+    except Exception as e:
+        print(f"Error reading {config_file}: {e}")
+        print("Using default values")
+    
+    return config
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """
@@ -28,11 +75,18 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     r = 6371000
     return c * r
 
-def calculate_segment_stats(trkseg) -> Dict[str, float]:
+def calculate_segment_stats(trkseg, avg_km_per_hour: float = 10.0, time_penalty_per_10m_elev: float = 1.0, pause_time_per_60min: float = 5.0) -> Dict[str, float]:
     """
     Calculate statistics for a single track segment.
+    
+    Args:
+        trkseg: GPX track segment element
+        avg_km_per_hour: Average speed in km/h for duration calculation (default: 10.0)
+        time_penalty_per_10m_elev: Time penalty in minutes per 10m elevation gain (default: 1.0)
+    
     Returns: distance (km), elevation_gain (m), elevation_loss (m), duration (minutes)
     """
+    # Get track points
     trkpts = trkseg.findall('trkpt')
     
     if len(trkpts) < 2:
@@ -71,12 +125,12 @@ def calculate_segment_stats(trkseg) -> Dict[str, float]:
         else:
             elevation_loss += abs(diff)
     
-    # Calculate duration based on 10 km/h average speed
-    # Add time penalty for elevation gain (1 minute per 10m gain)
+    # Calculate duration based on average speed, elevation penalty, and pause time
     distance_km = total_distance / 1000
-    base_duration = (distance_km / 10) * 60  # minutes
-    elevation_penalty = (elevation_gain / 10) * 1  # 1 minute per 10m gain
-    total_duration = base_duration + elevation_penalty
+    base_duration = (distance_km / avg_km_per_hour) * 60  # minutes
+    elevation_penalty = (elevation_gain / 10) * time_penalty_per_10m_elev  # penalty per 10m gain
+    pause_time = (base_duration / 60) * pause_time_per_60min  # pause time per 60min of riding
+    total_duration = base_duration + elevation_penalty + pause_time
     
     # Format duration as HH:MM
     hours = int(total_duration // 60)
@@ -90,15 +144,89 @@ def calculate_segment_stats(trkseg) -> Dict[str, float]:
         'duration': duration_str
     }
 
-def update_gpx_metadata(gpx_file: str) -> None:
+def clean_gpx_element(element):
+    """
+    Recursively clean GPX element by removing unnecessary tags and extensions.
+    Keeps only essential GPX elements: trkpt, lat, lon, ele, name, desc, trkseg, trk.
+    """
+    # Elements to keep (essential GPX elements)
+    keep_elements = {'trkpt', 'lat', 'lon', 'ele', 'name', 'desc', 'trkseg', 'trk', 'gpx', 'metadata', 'author', 'link'}
+    
+    # Remove extensions and unnecessary elements
+    elements_to_remove = []
+    for child in element:
+        tag_name = child.tag.split('}')[-1] if '}' in child.tag else child.tag  # Remove namespace prefix
+        
+        if tag_name not in keep_elements:
+            elements_to_remove.append(child)
+        else:
+            # Recursively clean child elements
+            clean_gpx_element(child)
+    
+    # Remove unwanted elements
+    for elem in elements_to_remove:
+        element.remove(elem)
+    
+    # Remove extension attributes
+    if hasattr(element, 'attrib'):
+        attrs_to_remove = []
+        for attr_name in element.attrib:
+            if 'extension' in attr_name.lower() or 'xmlns' in attr_name.lower():
+                attrs_to_remove.append(attr_name)
+        for attr in attrs_to_remove:
+            del element.attrib[attr]
+
+def remove_namespaces(element):
+    """
+    Recursively remove namespace prefixes from element tags and attributes.
+    """
+    # Remove namespace prefix from tag name
+    if '}' in element.tag:
+        element.tag = element.tag.split('}')[-1]
+    
+    # Remove namespace prefixes from attributes
+    if hasattr(element, 'attrib'):
+        attrs_to_remove = []
+        new_attrs = {}
+        for attr_name, attr_value in element.attrib.items():
+            if '}' in attr_name:
+                # Remove namespace prefix from attribute name
+                new_name = attr_name.split('}')[-1]
+                new_attrs[new_name] = attr_value
+                attrs_to_remove.append(attr_name)
+        
+        # Remove old namespaced attributes and add new ones
+        for attr in attrs_to_remove:
+            del element.attrib[attr]
+        element.attrib.update(new_attrs)
+    
+    # Recursively process children
+    for child in element:
+        remove_namespaces(child)
+
+def update_gpx_metadata(gpx_file: str, avg_km_per_hour: float = 10.0, time_penalty_per_10m_elev: float = 1.0, pause_time_per_60min: float = 5.0) -> None:
     """
     Update GPX file with calculated statistics in segment metadata.
+    Also cleans the GPX file by removing unnecessary tags and extensions.
+    
+    Args:
+        gpx_file: Path to GPX file
+        avg_km_per_hour: Average speed in km/h for duration calculation (default: 10.0)
+        time_penalty_per_10m_elev: Time penalty in minutes per 10m elevation gain (default: 1.0)
     """
     print(f"Processing {gpx_file}...")
     
     # Parse GPX file
     tree = ET.parse(gpx_file)
     root = tree.getroot()
+    
+    # Clean the GPX file by removing unnecessary elements
+    print("  Cleaning GPX file (removing extensions and unnecessary tags)...")
+    clean_gpx_element(root)
+    
+    # Remove namespaces from all elements
+    print("  Removing namespaces from GPX elements...")
+    remove_namespaces(root)
     
     # Find all track segments
     trksegs = root.findall('.//trkseg')
@@ -107,7 +235,7 @@ def update_gpx_metadata(gpx_file: str) -> None:
     # Update each segment
     for i, trkseg in enumerate(trksegs):
         # Calculate statistics
-        stats = calculate_segment_stats(trkseg)
+        stats = calculate_segment_stats(trkseg, avg_km_per_hour, time_penalty_per_10m_elev, pause_time_per_60min)
         
         # Remove existing metadata if present
         name = trkseg.find('name')
@@ -141,15 +269,26 @@ def update_gpx_metadata(gpx_file: str) -> None:
     tree.write(gpx_file, encoding='utf-8', xml_declaration=True)
     print(f"  Updated {len(trksegs)} segments with calculated statistics")
 
-def main():
+def main(avg_km_per_hour: float = 15.0, time_penalty_per_10m_elev: float = 1.0, pause_time_per_60min: float = 5.0):
     """
     Main function to process all GPX files in the current directory.
+    
+    Args:
+        avg_km_per_hour: Average speed in km/h for duration calculation (default: 15.0)
+        time_penalty_per_10m_elev: Time penalty in minutes per 10m elevation gain (default: 1.0)
+        pause_time_per_60min: Pause time in minutes per 60 minutes of riding (default: 5.0)
     """
     print("GPX Statistics Calculator")
     print("=" * 50)
     
-    # Find all GPX files in gps directory
-    gps_dir = 'gps'
+    # Load configuration from config.js
+    config = load_config_from_js()
+    avg_km_per_hour = config['avgSpeed']
+    time_penalty_per_10m_elev = config['elevationPenalty']
+    pause_time_per_60min = config['pauseTimePer60min']
+    
+    # Find all GPX files in tracks directory
+    gps_dir = 'tracks'
     if not os.path.exists(gps_dir):
         print(f"Error: {gps_dir} directory not found!")
         return
@@ -171,17 +310,22 @@ def main():
     for gpx_file in sorted(gpx_files):
         filepath = os.path.join(gps_dir, gpx_file)
         try:
-            update_gpx_metadata(filepath)
+            update_gpx_metadata(filepath, avg_km_per_hour, time_penalty_per_10m_elev, pause_time_per_60min)
         except Exception as e:
             print(f"  Error processing {gpx_file}: {e}")
         print()
     
-    print("Done! All GPX files updated with calculated statistics.")
+    print("Done! All GPX files updated with calculated statistics and cleaned.")
     print("\nStatistics calculated:")
     print("- Distance: Total track distance in kilometers")
     print("- Elevation gain/loss: Total elevation change in meters")
-    print("- Duration: Estimated time based on 10 km/h + elevation penalty (HH:MM format)")
-    print("  (1 minute penalty per 10m elevation gain)")
+    print(f"- Duration: Estimated time based on {avg_km_per_hour} km/h + elevation penalty + pause time (HH:MM format)")
+    print(f"  ({time_penalty_per_10m_elev} minute penalty per 10m elevation gain)")
+    print(f"  ({pause_time_per_60min} minute pause time per 60 minutes of riding)")
+    print("\nGPX files cleaned:")
+    print("- Removed extensions and unnecessary XML tags")
+    print("- Kept only essential GPX elements (trkpt, lat, lon, ele, name, desc, trkseg, trk)")
+    print("- Removed namespace attributes and extension attributes")
 
 if __name__ == "__main__":
     main()

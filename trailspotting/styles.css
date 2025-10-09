@@ -1,8 +1,22 @@
+/* Base styles */
 body {
   margin: 0;
   padding: 10px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
+/* Allow text selection for links and buttons */
+a, button, input, textarea, [contenteditable="true"] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Poster container */
 .poster-container {
 	position: relative;
 	float: left;
@@ -17,7 +31,7 @@ body {
 	flex-direction: column;
 	border: 1px solid rgb(199, 199, 199);
 	background-color: rgb(255, 115, 0);
-  }
+}
 
 .poster {
   width: 100%;
@@ -27,6 +41,7 @@ body {
   margin-top: 10px;
 }
 
+/* Floating boxes */
 .floating-box, .gps-footer, #map-title {
   font-family: 'Special Elite';
   padding: 10px;
@@ -47,13 +62,7 @@ body {
   flex-direction: column;
 }
 
-.gps-footer {
-  font-size: 10px;
-  position: absolute;
-  left: 0px;
-  bottom: -0px;
-}
-
+/* Maps */
 .themap { 
   flex: 1;
   min-height: 250px;
@@ -62,17 +71,6 @@ body {
   box-sizing: border-box;
   border-radius: 5px;
 }
-
-#cycling-info-A, #cycling-info-B, #cycling-info-C, #cycling-info-D {
-  flex: 0 0 auto;
-}
-
-.leaflet-marker-pane img {
-    margin-left: -13px!important;
-    margin-top: -30px!important;
-    width: 22px!important;
-    height: 30px!important;
-	}
 
 #map-title {
 	position:absolute;
@@ -88,23 +86,10 @@ body {
 	border-radius: 5px;
 }
 
-.timetable-iframe {
-	width: 100%;
-	height: 100%;
-	border: none;
-	background-color: rgb(248, 246, 246);
+/* Cycling info */
+[id^="cycling-info-"] {
+  flex: 0 0 auto;
 }
-
-.timetable-title {
-	font-family: 'Special Elite';
-	font-size: 24px;
-	font-weight: bold;
-	text-align: center;
-	padding-top: 20px;
-	margin-bottom: 10px;
-	color: #333;
-}
-
 
 .cycling-info {
 	font-family: 'Special Elite';
@@ -130,6 +115,90 @@ body {
 	padding: 5px;
 	background-color: rgba(255, 255, 255, 0.7);
 	border-radius: 3px;
+}
+
+/* Timetables */
+.timetable-iframe {
+	width: 100%;
+	height: 48%;
+	border: none;
+	background-color: rgb(248, 246, 246);
+	margin-bottom: 2%;
+}
+
+.timetable-title {
+	font-family: 'Special Elite';
+	font-size: 20px;
+	font-weight: bold;
+	text-align: center;
+	margin-bottom: 5px;
+	color: #333;
+}
+
+/* GPX Download List with Vertical Scrolling Animation */
+.gpx-download-container {
+	height: 100px;
+	overflow: hidden;
+	position: relative;
+	margin: 10px 0;
+	border: 1px solid #ccc;
+	border-radius: 5px;
+	background-color: rgba(240, 240, 240, 0.9);
+}
+
+.gpx-download-list {
+	display: flex;
+	flex-direction: column;
+	animation: scrollVertical var(--scroll-duration, 15s) linear infinite;
+	padding: 10px;
+}
+
+.gpx-download-list a {
+	display: block;
+	padding: 5px 10px;
+	margin: 2px 0;
+	text-decoration: none;
+	color: #333;
+	background-color: rgba(255, 255, 255, 0.7);
+	border-radius: 3px;
+	transition: background-color 0.3s ease;
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.gpx-download-list a:hover {
+	background-color: rgba(255, 255, 255, 1);
+	color: #000;
+}
+
+@keyframes scrollVertical {
+	0% {
+		transform: translateY(0);
+	}
+	100% {
+		transform: translateY(-100%);
+	}
+}
+
+/* Pause animation on hover */
+.gpx-download-container:hover .gpx-download-list {
+	animation-play-state: paused;
+}
+
+/* Footer */
+.gps-footer {
+  font-size: 10px;
+  position: absolute;
+  left: 0px;
+  bottom: -15px;
+}
+
+/* Leaflet map styles */
+.leaflet-marker-pane img {
+    margin-left: -13px!important;
+    margin-top: -30px!important;
+    width: 22px!important;
+    height: 30px!important;
 }
 
 .numbered-marker {
@@ -178,4 +247,28 @@ body {
 
 .default-marker {
 	display: none;
+}
+
+/* Disable text selection on map controls */
+.leaflet-control-container * {
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	-webkit-touch-callout: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* Specifically target Leaflet control elements */
+.leaflet-control-zoom,
+.leaflet-control-layers,
+.leaflet-control-scale,
+.leaflet-control-attribution,
+.leaflet-control-locate {
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	-webkit-touch-callout: none;
+	-webkit-tap-highlight-color: transparent;
 }

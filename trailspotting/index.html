@@ -21,17 +21,29 @@
 
 </head>
 <body>
-
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.4.0/gpx.min.js"></script>
   <script src="https://unpkg.com/leaflet.locatecontrol@0.76.0/dist/L.Control.Locate.min.js"></script>
+  <script src="config.js"></script>
 
 <div class="poster-container">
 	<img id="poster" src="images/poster.png"/>
 </div>
 
 <div class="floating-box">
-	<div><span style="font-size:35px;">Choose your route.. Choose your pace.. Catch your train..</span><br><br><span style="font-size:14px;"> Trail(n)spotting - das heißt: Große MTB-Runde im Inntal mit den Öffis kombinieren und auf angenehme Weise (vor allem in der kalten Jahreszeit;) viele, viele Trail-Km heraus holen! 😎🚴‍♂️💯</span><br><br><span style="font-size:25px;"> Die Challenge dabei?</span><br><br><span style="font-size:14px;"> Die Fahrzeiten so zu timen, dass du die Zugverbindungen mit minimalen Wartezeiten schaffst! ⌚🚉😅</span><br><br><span style="font-size:20px;"> ..too late!? well.. bollocks!!</span></div>
+	<div>
+		<span style="font-size:35px;">Choose your route.. Choose your pace.. Catch your train..</span>
+		<p>
+			<strong>Trail(n)spotting</strong> - das heißt: Große MTB-Runde im Inntal mit den Öffis kombinieren und auf angenehme Weise (vor allem in der kalten Jahreszeit;) viele Trail-Km sammeln!</br>😎🚴‍♂️💯</p>
+		<p>	
+			<span style="font-size:20px;">
+			Die Challenge dabei?</span>
+			</p>
+		<p>1, 2, 3, 4.. Connecting the Dots! ..und dabei die Fahrzeiten am Trail so zu timen, dass du die Zugverbindungen für die Transfers mit minimalen Wartezeiten schaffst!<br>⌚🚉😅</p>
+		<p><span style="font-size:20px;">
+			..too late!? well, bollocks!</span>
+		</p>
+	</div>
 </div>
 
 <!-- Define the map source as a variable -->
@@ -56,6 +68,20 @@
 </div>
 
 <div class="floating-box">
+	<div class="timetable-title">Innsbruck 🕐</div>
+	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#EDC78E82-79C6-449D-8E1EC831BE5148E9"></iframe>
+	<div class="timetable-title">Hall 🕐</div>
+	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#F81F57B8-E49E-4A37-86037AE366123492"></iframe>
+</div>
+
+<div class="floating-box">
+	<div class="timetable-title">Schwaz 🕐</div>
+	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#90FD532A-01C0-454B-A43A854BDFE8348B"></iframe>
+	<div class="timetable-title">Brixlegg 🕐</div>
+	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#0CDB1A43-FAD5-422D-94F7184A3B32DBE7"></iframe>
+</div>
+
+<div class="floating-box">
 	<div class="themap" id="map_C">
 		<div id="map-title">C</div>
 	</div>
@@ -74,61 +100,73 @@
 </div>
 
 <div class="floating-box">
-	<div class="themap" id="map_DD">
-		<div id="map-title">DD</div>
+	<div class="themap" id="map_E">
+		<div id="map-title">E</div>
+	</div>
+	<div id="cycling-info-E">
+		<!-- Cycling segments will be populated by JavaScript -->
 	</div>
 </div>
 
-<!--div class="floating-box">
-	<div class="timetable-title">Innsbruck 🕐</div>
-	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#EDC78E82-79C6-449D-8E1EC831BE5148E9"></iframe>
+<div class="floating-box">
+	<div class="themap" id="map_F">
+		<div id="map-title">F</div>
+	</div>
+	<div id="cycling-info-F">
+		<!-- Cycling segments will be populated by JavaScript -->
+	</div>
 </div>
 
 <div class="floating-box">
-	<div class="timetable-title">Hall 🕐</div>
-	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#F81F57B8-E49E-4A37-86037AE366123492"></iframe>
+	<div class="themap" id="map_G">
+		<div id="map-title">G</div>
+	</div>
+	<div id="cycling-info-G">
+		<!-- Cycling segments will be populated by JavaScript -->
+	</div>
 </div>
+
+<!-- 
+Route Z template (uncomment when adding new route)
+Cycling segments will be populated by JavaScript
+<div class="floating-box">
+	<div class="themap" id="map_Z">
+		<div id="map-title">Z</div>
+	</div>
+	<div id="cycling-info-Z">
+	</div>
+</div>
+-->
 
 <div class="floating-box">
 	<div class="timetable-title">Terfens/Weer 🕐</div>
 	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#FAEA6F93-159F-4D19-9D1ECBB979509660"></iframe>
-</div>
-
-<div class="floating-box">
-	<div class="timetable-title">Pill-Vomperbach 🕐</div>
-	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#21170453-6C70-4D56-83DB105174654A57"></iframe>
-</div>
-
-<div class="floating-box">
-	<div class="timetable-title">Schwaz 🕐</div>
-	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#90FD532A-01C0-454B-A43A854BDFE8348B"></iframe>
-</div>
-
-<div class="floating-box">
-	<div class="timetable-title">Brixlegg 🕐</div>
-	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#0CDB1A43-FAD5-422D-94F7184A3B32DBE7"></iframe>
-</div>
-
-<div class="floating-box">
 	<div class="timetable-title">Völs 🕐</div>
 	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#87531436-9B3A-4C1F-8B792A7848D01826"></iframe>
-</div-->
+</div>
 
 <div class="floating-box">
-	<h3>Alle S-Bahnen und REX fahren wochentags im 60' Takt!</h3>
-	<h3>Eine Fahrt mit Vorteilkarte kostet rd. 5 Euro, die Regio-Biking Tagskarte 2,60 Euro</h3>
-	<h1>GPX-Tracks:</h1>
-	<a href="gps/A__Trailspotting.gpx">A__Trailspotting.gpx</a><br>
-	<a href="gps/B__Trailspotting.gpx">B__Trailspotting.gpx</a><br>
-	<a href="gps/C__Trailspotting.gpx">C__Trailspotting.gpx</a><br>
-	<a href="gps/D__Trailspotting.gpx">D__Trailspotting.gpx</a><br>
-	<a href="gps/DD__Trailspotting.gpx">DD__Trailspotting.gpx</a><br>
-	<div>💚🚉 Mit den S-Bahnen und REX Zügen gibt's natürlich noch unzählige andere Möglichkeiten! Werde kreativ!! 👌🤓</div>
+	<div class="timetable-title">Mötz 🕐</div>
+	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#PLACEHOLDER_MOETZ"></iframe>
+	<div class="timetable-title">Zirl 🕐</div>
+	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#PLACEHOLDER_ZIRL"></iframe>
+</div>
+
+<div class="floating-box">
+	<p><strong>FYI:</strong> Alle S-Bahnen und REX fahren wochentags im 60' Takt!</p>
+	<p>Eine <strong>Fahrt mit Vorteilkarte</strong> kostet rd. 5 Euro, die <strong>Regio-Biking Tagskarte</strong> 2,60 Euro</p>
+	<p>Für die Orientierung könnt ihr eure <strong>Smartphone-GPS Position</strong> in den Karten einblende!</p>
+	<p>Mit den S-Bahnen und REX Zügen gibt's natürlich noch unzählige andere Möglichkeiten! Werde kreativ!!</br>👌🤓</p>
+	GPX-Tracks:<br>
+	<div class="gpx-download-container">
+		<div class="gpx-download-list" id="gpx-download-list">
+			<!-- GPX download links will be populated by JavaScript -->
+		</div>
+	</div>
 	<div class="gps-footer">
 	Trail<span style="text-decoration: line-through;">Train</span>spotting
 	 &copy; <a href="http://www.tiroltrailhead.com">tiroltrailhead.com</a>
-	</div>
+	 </p>
 </div>
-
 </body>
 </html>
