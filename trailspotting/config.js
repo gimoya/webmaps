@@ -40,6 +40,7 @@ const ROUTE_CONFIG = {
 			{from: 'Walderbrücke', to: 'Hall'}
 		],
 		stations: [
+			'Innsbruck',
 			'Hall'
 		]
 	},
@@ -77,6 +78,15 @@ const ROUTE_CONFIG = {
 			'Innsbruck',
 			'Telfs'
 		]
+	},
+	'H': {
+		segments: [
+			{from: 'Ötztal Bhf.', to: 'Haiming'}
+		],
+		stations: [
+			'Innsbruck',
+			'Haiming'
+		]
 	}
 };
 
@@ -90,7 +100,7 @@ const APP_CONFIG = {
 	/*
 	 * Active routes (add new routes here)
 	 */
-	activeRoutes: ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
+	activeRoutes: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
 	
 	/*
 	 * Route-specific overrides

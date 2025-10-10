@@ -26,7 +26,7 @@ In `config.js`, make these two updates:
 ```javascript
 const ROUTE_CONFIG = {
     // Active routes (add new routes here)
-    activeRoutes: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],  // Add 'H' here
+    activeRoutes: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],  // All routes including H
     
     // Route-specific overrides
     routeOverrides: {
@@ -63,10 +63,8 @@ const ROUTE_CONFIG = {
     'G': [
         {from: 'Mötz', to: 'Telfs'}
     ],
-    // Add new route here
     'H': [
-        {from: 'StartStation', to: 'EndStation'},
-        {from: 'AnotherStart', to: 'AnotherEnd'}
+        {from: 'Ötztal Bhf.', to: 'Haiming'}
     ]
 };
 ```
@@ -111,10 +109,10 @@ All configuration is now centralized in `config.js` for easy editing:
 ```javascript
 const STATS_CONFIG = {
     // Average cycling speed in km/h
-    avgSpeed: 20.0,
+    avgSpeed: 22.0,
     
     // Time penalty in minutes per 10m elevation gain
-    elevationPenalty: 2.0,
+    elevationPenalty: 1.0,
     
     // Pause time in minutes per 60 minutes of riding
     pauseTimePer60min: 10.0
@@ -147,7 +145,7 @@ const MAP_CONFIG = {
 ### Route Configuration
 ```javascript
 const ROUTE_CONFIG = {
-    activeRoutes: ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
+    activeRoutes: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
     
     // Route-specific overrides
     routeOverrides: {
@@ -185,7 +183,8 @@ trailspotting/
     ├── D__Trailspotting.gpx
     ├── E__Trailspotting.gpx
     ├── F__Trailspotting.gpx
-    └── G__Trailspotting.gpx
+    ├── G__Trailspotting.gpx
+    └── H__Trailspotting.gpx
 ```
 
 ## Current Routes
@@ -197,6 +196,7 @@ trailspotting/
 - **Route E**: Reith → Innsbruck
 - **Route F**: Reith → Zirl
 - **Route G**: Mötz → Telfs
+- **Route H**: Ötztal Bhf. → Haiming
 
 ## Key Features
 
