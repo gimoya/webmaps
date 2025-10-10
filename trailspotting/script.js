@@ -622,9 +622,98 @@ document.addEventListener('DOMContentLoaded', function() {
 		console.error(`Error loading initial route ${initialRoute}:`, error);
 	});
 	
-	// Debug iframe loading
+	// Handle iframe loading with timeout
 	const iframes = document.querySelectorAll('.timetable-iframe');
 	iframes.forEach((iframe, index) => {
-		iframe.onerror = (e) => console.error(`Iframe ${index + 1} failed to load:`, e);
+		let timeoutId;
+		let hasLoaded = false;
+		
+		// Set timeout for 10 seconds
+		timeoutId = setTimeout(() => {
+			if (!hasLoaded) {
+				// Replace iframe with error message
+				const parentBox = iframe.closest('.timetable-box');
+				if (parentBox) {
+					const title = parentBox.querySelector('.timetable-title');
+					const stationName = title ? title.textContent.replace(' 🕐', '') : 'Station';
+					
+					// Create error message div
+					const errorDiv = document.createElement('div');
+					errorDiv.className = 'timetable-error';
+					errorDiv.style.cssText = `
+						display: flex;
+						align-items: center;
+						justify-content: center;
+						height: 200px;
+						background-color: #f5f5f5;
+						border: 1px solid #ddd;
+						border-radius: 5px;
+						color: #666;
+						font-size: 14px;
+						text-align: center;
+						padding: 20px;
+						box-sizing: border-box;
+					`;
+					errorDiv.innerHTML = `
+						<div>
+							<div style="font-size: 18px; margin-bottom: 10px;">🚫</div>
+							<div><strong>Service not avail. at the moment</strong></div>
+							<div style="font-size: 12px; margin-top: 5px;">${stationName} timetable</div>
+						</div>
+					`;
+					
+					// Replace iframe with error message
+					iframe.parentNode.replaceChild(errorDiv, iframe);
+				}
+			}
+		}, 10000); // 10 seconds
+		
+		// Clear timeout when iframe loads successfully
+		iframe.onload = () => {
+			hasLoaded = true;
+			clearTimeout(timeoutId);
+		};
+		
+		// Handle iframe errors
+		iframe.onerror = (e) => {
+			hasLoaded = true; // Prevent timeout from firing
+			clearTimeout(timeoutId);
+			console.error(`Iframe ${index + 1} failed to load:`, e);
+			
+			// Replace iframe with error message
+			const parentBox = iframe.closest('.timetable-box');
+			if (parentBox) {
+				const title = parentBox.querySelector('.timetable-title');
+				const stationName = title ? title.textContent.replace(' 🕐', '') : 'Station';
+				
+				// Create error message div
+				const errorDiv = document.createElement('div');
+				errorDiv.className = 'timetable-error';
+				errorDiv.style.cssText = `
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					height: 200px;
+					background-color: #f5f5f5;
+					border: 1px solid #ddd;
+					border-radius: 5px;
+					color: #666;
+					font-size: 14px;
+					text-align: center;
+					padding: 20px;
+					box-sizing: border-box;
+				`;
+				errorDiv.innerHTML = `
+					<div>
+						<div style="font-size: 18px; margin-bottom: 10px;">🚫</div>
+						<div><strong>Service not avail. at the moment</strong></div>
+						<div style="font-size: 12px; margin-top: 5px;">${stationName} timetable</div>
+					</div>
+				`;
+				
+				// Replace iframe with error message
+				iframe.parentNode.replaceChild(errorDiv, iframe);
+			}
+		};
 	});
 });
