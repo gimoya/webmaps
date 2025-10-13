@@ -13,7 +13,7 @@ const urlsToCache = [
   '/javascript/L.Control.Locate.js',
   '/javascript/kofi-overlay-widget.js',
   '/my_trails_z.geojson',
-  '/favicon/site.webmanifest',
+  '/favicon/manifest.json',
   '/favicon/android-chrome-192x192.png',
   '/favicon/android-chrome-512x512.png'
 ];
