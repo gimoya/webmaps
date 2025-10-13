@@ -2,12 +2,12 @@
   "name": "Legacy Trails Tirol",
   "short_name": "Trails Tirol",
   "description": "Mountain bike trails and routes in Tirol, Austria",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#02b6f7b8",
   "orientation": "any",
-  "scope": "/",
+  "scope": "./",
   "icons": [
     {
       "src": "favicon/android-chrome-192x192.png",
