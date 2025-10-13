@@ -1,21 +1,21 @@
 // Service Worker for Legacy Trails Tirol PWA - Performance Caching Only
 const CACHE_NAME = 'legacy-trails-v1';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/css/leaflet_map.css',
-  '/css/leaflet.elevation-0.0.4.css',
-  '/css/L.Control.Locate.min.css',
-  '/javascript/trail_map.js',
-  '/javascript/leaflet.elevation-0.0.4.min.js',
-  '/javascript/leaflet.togpx.js',
-  '/javascript/leaflet.textpath.js',
-  '/javascript/L.Control.Locate.js',
-  '/javascript/kofi-overlay-widget.js',
-  '/my_trails_z.geojson',
-  '/favicon/manifest.json',
-  '/favicon/android-chrome-192x192.png',
-  '/favicon/android-chrome-512x512.png'
+  './',
+  './index.html',
+  './css/leaflet_map.css',
+  './css/leaflet.elevation-0.0.4.css',
+  './css/L.Control.Locate.min.css',
+  './javascript/trail_map.js',
+  './javascript/leaflet.elevation-0.0.4.min.js',
+  './javascript/leaflet.togpx.js',
+  './javascript/leaflet.textpath.js',
+  './javascript/L.Control.Locate.js',
+  './javascript/kofi-overlay-widget.js',
+  './my_trails_z.geojson',
+  './manifest.json',
+  './favicon/android-chrome-192x192.png',
+  './favicon/android-chrome-512x512.png'
 ];
 
 // Install event - cache static resources for faster loading
