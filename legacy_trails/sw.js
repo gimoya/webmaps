@@ -1,5 +1,5 @@
 // Service Worker for Legacy Trails Tirol PWA - Performance Caching Only
-const CACHE_NAME = 'legacy-trails-v1';
+const CACHE_NAME = 'legacy-trails-v2';
 const urlsToCache = [
   './',
   './index.html',
@@ -24,7 +24,16 @@ self.addEventListener('install', function(event) {
     caches.open(CACHE_NAME)
       .then(function(cache) {
         console.log('Caching static resources for faster loading');
-        return cache.addAll(urlsToCache);
+        return cache.addAll(urlsToCache).catch(function(error) {
+          console.error('Failed to cache some resources:', error);
+          // Cache resources individually to identify which ones fail
+          return Promise.all(urlsToCache.map(function(url) {
+            return cache.add(url).catch(function(err) {
+              console.error('Failed to cache:', url, err);
+              return null;
+            });
+          }));
+        });
       })
   );
 });
