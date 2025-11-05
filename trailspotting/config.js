@@ -87,7 +87,27 @@ const ROUTE_CONFIG = {
 			'Innsbruck',
 			'Haiming'
 		]
+	},
+	'I': {
+		segments: [
+			{from: 'Aldrans/Fagslung', to: 'Hall'},
+			{from: 'Gnadenwald', to: 'Fritzens/Wattens Bhf.'}
+		],
+		stations: [
+			'Innsbruck',
+			'Fritzens/Wattens'
+		]
+	},
+	'J': {
+		segments: [
+			{from: 'Hungerburg', to: 'Neu-Rum'}
+		],
+		stations: [
+			'Innsbruck',
+			'Neu-Rum'
+		]
 	}
+
 };
 
 /*
@@ -100,7 +120,7 @@ const APP_CONFIG = {
 	/*
 	 * Active routes (add new routes here)
 	 */
-	activeRoutes: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
+	activeRoutes: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'],
 	
 	/*
 	 * Route-specific overrides
