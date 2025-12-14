@@ -124,7 +124,7 @@ const ROUTE_CONFIG = {
 		],
 		stations: [
 			'Innsbruck Marktplatz',
-			'Neu-Rum'
+			'Rum'
 		]
 	},
 	'K': {
