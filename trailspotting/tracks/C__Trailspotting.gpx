@@ -11,7 +11,7 @@
     <name>C_conservative_clean</name>
     <trkseg>
       <name>Segment 1</name>
-      <desc>distance: 9.0km, elevation_gain: 344.0m, elevation_loss: 610.0m, estimated_duration: 01:05</desc>
+      <desc>distance: 9.0km, elevation_gain: 344.0m, elevation_loss: 610.0m, estimated_duration: 01:07</desc>
       <trkpt lat="47.247642" lon="11.451347">
         <ele>828</ele>
         </trkpt>
@@ -1086,7 +1086,7 @@
     </trkseg>
     <trkseg>
       <name>Segment 2</name>
-      <desc>distance: 16.0km, elevation_gain: 614.0m, elevation_loss: 825.0m, estimated_duration: 01:53</desc>
+      <desc>distance: 16.0km, elevation_gain: 614.0m, elevation_loss: 825.0m, estimated_duration: 01:57</desc>
       <trkpt lat="47.307597" lon="11.521967">
         <ele>771.11</ele>
       </trkpt>

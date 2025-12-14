@@ -34,11 +34,11 @@ a, button, input, textarea, [contenteditable="true"] {
 }
 
 .route-header {
-	font-size: 32px;
+	font-size: 34px;
 	font-weight: bold;
 	color: white;
 	text-align: center;
-	padding: 10px 0px 0px 0px;
+	padding: 20px 0px 0px 0px;
 	text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 	flex-shrink: 0;
 }
@@ -47,7 +47,7 @@ a, button, input, textarea, [contenteditable="true"] {
 	text-align: center;
 	width: 100%;
 	flex-shrink: 0;
-	margin-top: 30px;
+	margin-top: 15px;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -55,36 +55,50 @@ a, button, input, textarea, [contenteditable="true"] {
 }
 
 .route-wheel {
-	height: 120px;
+	min-height: 150px;
+	height: auto;
+	width: 90%;
 	overflow: hidden;
 	position: relative;
-	margin-bottom: 20px;
 	border: 1px solid rgba(255, 255, 255, 0.3);
 	border-radius: 5px;
 	background-color: rgba(255, 255, 255, 0.1);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
 }
 
 .route-wheel-inner {
 	display: flex;
-	flex-direction: column;
-	animation: scrollVertical var(--scroll-duration, 15s) linear infinite;
-	padding: 10px;
+	flex-direction: row;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+	gap: 6px;
+	padding: 8px;
+	user-select: none;
+	width: 100%;
+	box-sizing: border-box;
 }
 
 .route-option {
-	display: block;
-	padding: 15px 5px 0px 5px;
-	margin: 2px 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 10px 4px 0px 4px;
 	text-decoration: none;
 	color: white;
 	background-color: rgba(255, 255, 255, 0.2);
 	border-radius: 3px;
 	transition: background-color 0.3s ease;
-	font-size: 48px;
+	font-size: 32px;
 	font-weight: bold;
-	white-space: nowrap;
+	line-height: 1;
 	cursor: pointer;
-	text-align: center;
+	user-select: none;
+	min-width: 50px;
+	box-sizing: border-box;
 }
 
 
@@ -99,10 +113,6 @@ a, button, input, textarea, [contenteditable="true"] {
 	font-weight: bold;
 }
 
-/* Pause animation on hover */
-.route-wheel:hover .route-wheel-inner {
-	animation-play-state: paused;
-}
 
 #cycling-info-main {
 	flex: 1;
@@ -140,11 +150,13 @@ a, button, input, textarea, [contenteditable="true"] {
 /* Floating boxes */
 .floating-box, .gps-footer, #map-title {
   font-family: 'Special Elite';
+  font-size: clamp(12px, 1.2vw, 14px);
   padding: 10px;
 }
 
 .floating-box {
   margin: 0px 10px 10px 0px;
+  line-height: 1.25;
   position: relative;
   float: left;
   width: 350px;
@@ -156,6 +168,11 @@ a, button, input, textarea, [contenteditable="true"] {
   border-radius: 5px;
   display: flex;
   flex-direction: column;
+}
+
+.half-floating-box {
+  height: 245px;
+  min-height: 245px;
 }
 
 /* Maps */
@@ -233,19 +250,21 @@ a, button, input, textarea, [contenteditable="true"] {
 
 /* GPX Download List with Vertical Scrolling Animation */
 .gpx-download-container {
-	height: 100px;
+	height: 60%;
 	overflow: hidden;
 	position: relative;
 	margin: 10px 0;
 	border: 1px solid #ccc;
 	border-radius: 5px;
 	background-color: rgba(240, 240, 240, 0.9);
+	opacity: 0;
+	animation: fadeInGpx 3s ease-in 8s forwards;
 }
 
 .gpx-download-list {
 	display: flex;
 	flex-direction: column;
-	animation: scrollVertical var(--scroll-duration, 15s) linear infinite;
+	animation: scrollVertical 8s linear infinite;
 	padding: 10px;
 }
 
@@ -276,6 +295,24 @@ a, button, input, textarea, [contenteditable="true"] {
 	}
 }
 
+@keyframes scrollHorizontal {
+	0% {
+		transform: translateX(0);
+	}
+	100% {
+		transform: translateX(-100%);
+	}
+}
+
+@keyframes fadeInGpx {
+	0% {
+		opacity: 0;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+
 /* Pause animation on hover */
 .gpx-download-container:hover .gpx-download-list {
 	animation-play-state: paused;
@@ -286,7 +323,7 @@ a, button, input, textarea, [contenteditable="true"] {
   font-size: 10px;
   position: absolute;
   left: 0px;
-  bottom: -15px;
+  bottom: -5px;
 }
 
 /* Leaflet map styles */
@@ -300,8 +337,8 @@ a, button, input, textarea, [contenteditable="true"] {
 .numbered-marker {
 	border: 2px solid white;
 	border-radius: 50%;
-	width: 22px;
-	height: 22px;
+	width: var(--marker-size, 20px);
+	height: var(--marker-size, 20px);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -324,11 +361,11 @@ a, button, input, textarea, [contenteditable="true"] {
 }
 
 .numbered-marker.start {
-	background: green;
+	background: var(--marker-color-start, green);
 }
 
 .numbered-marker.end {
-	background: red;
+	background: var(--marker-color-end, red);
 }
 
 .marker-number {
@@ -371,17 +408,6 @@ a, button, input, textarea, [contenteditable="true"] {
 
 /* Timetable boxes */
 .timetable-box {
-	width: 350px;
-	min-width: 350px;
-	height: 245px;
-	min-height: 245px;
-	margin: 0px 10px 10px 0px;
-	box-sizing: border-box;
-	overflow: hidden;
-	border-radius: 5px;
-	display: flex;
-	flex-direction: column;
-	border: 1px solid rgb(199, 199, 199);
 	background-color: rgb(245, 245, 245);
 }
 

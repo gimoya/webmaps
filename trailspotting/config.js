@@ -8,6 +8,25 @@
  * ROUTE START/END CONFIGURATION
  * ==================
  */
+/*
+ * ==================
+ * ROUTE CONFIGURATION
+ * ==================
+ */
+
+const APP_CONFIG = {
+	/*
+	 * Active routes (add new routes here)
+	 */
+	activeRoutes: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'],
+	
+	/*
+	 * Route-specific overrides
+	 */
+	routeOverrides: {
+		'B': { minZoom: 9 }  /* Example: Route B has different minZoom */
+	}
+};
 
 const ROUTE_CONFIG = {
 	'A': {
@@ -16,7 +35,7 @@ const ROUTE_CONFIG = {
 			{from: 'Schwaz', to: 'Terfens/Weer'}
 		],
 		stations: [
-			'Innsbruck',
+			'Innsbruck Sillpark',
 			'Hall',
 			'Terfens/Weer'
 		]
@@ -28,7 +47,7 @@ const ROUTE_CONFIG = {
 			{from: 'Schwaz', to: 'Terfens/Weer'}
 		],
 		stations: [
-			'Innsbruck',
+			'Innsbruck Sillpark',
 			'Hall',
 			'Brixlegg',
 			'Terfens/Weer'
@@ -40,7 +59,7 @@ const ROUTE_CONFIG = {
 			{from: 'Walderbrücke', to: 'Hall'}
 		],
 		stations: [
-			'Innsbruck',
+			'Innsbruck Sillpark',
 			'Hall'
 		]
 	},
@@ -49,7 +68,7 @@ const ROUTE_CONFIG = {
 			{from: 'Reith', to: 'Völs'}
 		],
 		stations: [
-			'Innsbruck',
+			'Innsbruck BHF',
 			'Völs'
 		]
 	},
@@ -58,7 +77,7 @@ const ROUTE_CONFIG = {
 			{from: 'Reith', to: 'Innsbruck'}
 		],
 		stations: [
-			'Innsbruck'
+			'Innsbruck BHF'
 		]
 	},
 	'F': {
@@ -66,7 +85,7 @@ const ROUTE_CONFIG = {
 			{from: 'Reith', to: 'Zirl'}
 		],
 		stations: [
-			'Innsbruck',
+			'Innsbruck BHF',
 			'Zirl'
 		]
 	},
@@ -75,26 +94,27 @@ const ROUTE_CONFIG = {
 			{from: 'Mötz', to: 'Telfs'}
 		],
 		stations: [
-			'Innsbruck',
+			'Innsbruck BHF',
 			'Telfs'
 		]
 	},
 	'H': {
 		segments: [
-			{from: 'Ötztal Bhf.', to: 'Haiming'}
+			{from: 'Ötztal Bhf.', to: 'Ötztal Bhf.'}
 		],
 		stations: [
-			'Innsbruck',
-			'Haiming'
+			'Innsbruck BHF',
+			'Ötztal BHF'
 		]
 	},
 	'I': {
 		segments: [
 			{from: 'Aldrans/Fagslung', to: 'Hall'},
-			{from: 'Gnadenwald', to: 'Fritzens/Wattens Bhf.'}
+			{from: 'Gnadenwald', to: 'Fritzens/Wattens'}
 		],
 		stations: [
-			'Innsbruck',
+			'Innsbruck Sillpark',
+			'Hall',
 			'Fritzens/Wattens'
 		]
 	},
@@ -103,30 +123,30 @@ const ROUTE_CONFIG = {
 			{from: 'Hungerburg', to: 'Neu-Rum'}
 		],
 		stations: [
-			'Innsbruck',
+			'Innsbruck Marktplatz',
 			'Neu-Rum'
 		]
-	}
-
-};
-
-/*
- * ==================
- * ROUTE CONFIGURATION
- * ==================
- */
-
-const APP_CONFIG = {
-	/*
-	 * Active routes (add new routes here)
-	 */
-	activeRoutes: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'],
-	
-	/*
-	 * Route-specific overrides
-	 */
-	routeOverrides: {
-		'B': { minZoom: 9 }  /* Example: Route B has different minZoom */
+	},
+	'K': {
+		segments: [
+			{from: 'Aldrans', to: 'Innsbruck-DEZ'},
+			{from: 'Sistrans', to: 'Innsbruck-Mitte'}
+		],
+		stations: [
+			'Innsbruck Sillpark',
+			'Innsbruck SOS-Kinderorf'
+		]
+	},
+	'L': {
+		segments: [
+			{from: 'Mötz', to: 'Telfs'},
+			{from: 'Buchener Höhe', to: 'Telfs BHF'}
+		],
+		stations: [
+			'Innsbruck BHF',
+			'Telfs Sagl M-Preis',
+			'Telfs BHF'
+		]
 	}
 };
 
@@ -166,7 +186,7 @@ const MAP_CONFIG = {
 	/*
 	 * Marker styling
 	 */
-	markerSize: 22,
+	markerSize: 20,
 	markerColors: {
 		start: 'green',
 		end: 'red'
@@ -180,12 +200,6 @@ const MAP_CONFIG = {
  */
 
 const GPX_CONFIG = {
-	/*
-	 * Animation settings
-	 */
-	scrollDuration: 8,  /* seconds per cycle */
-	containerHeight: 100, /* pixels */
-	
 	/*
 	 * File naming pattern
 	 */
@@ -213,5 +227,5 @@ const STATS_CONFIG = {
 	/*
 	 * Pause time in minutes per 60 minutes of riding
 	 */
-	pauseTimePer60min: 5.0
+	pauseTimePer60min: 10.0
 };

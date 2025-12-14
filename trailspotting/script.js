@@ -425,8 +425,8 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 										icon: L.divIcon({
 											className: 'numbered-marker start',
 											html: `<div class="marker-number">${pointCounter}</div>`,
-											iconSize: [22, 22],
-											iconAnchor: [11, 11]
+											iconSize: [MAP_CONFIG.markerSize, MAP_CONFIG.markerSize],
+											iconAnchor: [MAP_CONFIG.markerSize/2, MAP_CONFIG.markerSize/2]
 										})
 									}).addTo(map);
 									pointCounter++;
@@ -436,8 +436,8 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 										icon: L.divIcon({
 											className: 'numbered-marker end',
 											html: `<div class="marker-number">${pointCounter}</div>`,
-											iconSize: [22, 22],
-											iconAnchor: [11, 11]
+											iconSize: [MAP_CONFIG.markerSize, MAP_CONFIG.markerSize],
+											iconAnchor: [MAP_CONFIG.markerSize/2, MAP_CONFIG.markerSize/2]
 										})
 									}).addTo(map);
 									pointCounter++;
@@ -507,7 +507,7 @@ function populateRouteWheel() {
 	const routeWheel = document.getElementById('route-wheel');
 	if (!routeWheel) return;
 	
-	// Create inner container for scrolling animation
+	// Create inner container
 	const innerContainer = document.createElement('div');
 	innerContainer.className = 'route-wheel-inner';
 	
@@ -526,27 +526,105 @@ function populateRouteWheel() {
 	// Clear existing content and add new inner container
 	routeWheel.innerHTML = '';
 	routeWheel.appendChild(innerContainer);
-	
 }
 
 // Function to show/hide timetable boxes based on route
 function updateTimetableBoxes(route) {
 	const routeStations = ROUTE_CONFIG[route] ? ROUTE_CONFIG[route].stations : [];
+	const allBoxes = document.querySelectorAll('.timetable-box');
+	const allTitles = document.querySelectorAll('.timetable-box .timetable-title');
 	
 	// Hide all timetable boxes first
-	document.querySelectorAll('.timetable-box').forEach(box => {
+	allBoxes.forEach(box => {
 		box.style.display = 'none';
 	});
 	
-	// Show only boxes for stations in the current route
-	routeStations.forEach(stationName => {
-		// Find timetable boxes by checking if the title contains the station name
-		document.querySelectorAll('.timetable-box .timetable-title').forEach(title => {
-			if (title.textContent.includes(stationName)) {
-				title.closest('.timetable-box').style.display = 'block';
+	// Show only boxes for stations in the current route and lazy load their iframes
+	allTitles.forEach(title => {
+		const titleText = title.textContent;
+		const isMatchingStation = routeStations.some(stationName => titleText.includes(stationName));
+		
+		if (isMatchingStation) {
+			const timetableBox = title.closest('.timetable-box');
+			timetableBox.style.display = 'block';
+			
+			const iframe = timetableBox.querySelector('.timetable-iframe');
+			if (iframe && !iframe.dataset.loaded) {
+				loadTimetableIframe(iframe);
 			}
-		});
+		}
 	});
+}
+
+// Helper function to create error message for failed iframe
+function createTimetableError(stationName) {
+	const errorDiv = document.createElement('div');
+	errorDiv.className = 'timetable-error';
+	errorDiv.style.cssText = `
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		height: 200px;
+		background-color: #f5f5f5;
+		border: 1px solid #ddd;
+		border-radius: 5px;
+		color: #666;
+		font-size: 14px;
+		text-align: center;
+		padding: 20px;
+		box-sizing: border-box;
+	`;
+	errorDiv.innerHTML = `
+		<div>
+			<div style="font-size: 18px; margin-bottom: 10px;">🚫</div>
+			<div><strong>Service not avail. at the moment</strong></div>
+			<div style="font-size: 12px; margin-top: 5px;">${stationName} timetable</div>
+		</div>
+	`;
+	return errorDiv;
+}
+
+// Function to lazy load a timetable iframe
+function loadTimetableIframe(iframe) {
+	const originalSrc = iframe.dataset.src || iframe.src;
+	if (!originalSrc) return;
+	
+	iframe.dataset.loaded = 'loading';
+	
+	let timeoutId;
+	let hasLoaded = false;
+	
+	iframe.src = originalSrc;
+	
+	const showError = () => {
+		const parentBox = iframe.closest('.timetable-box');
+		if (parentBox) {
+			const title = parentBox.querySelector('.timetable-title');
+			const stationName = title ? title.textContent.replace(' 🕐', '') : 'Station';
+			const errorDiv = createTimetableError(stationName);
+			iframe.parentNode.replaceChild(errorDiv, iframe);
+		}
+	};
+	
+	timeoutId = setTimeout(() => {
+		if (!hasLoaded) {
+			showError();
+		}
+	}, 10000);
+	
+	iframe.onload = () => {
+		hasLoaded = true;
+		iframe.dataset.loaded = 'loaded';
+		clearTimeout(timeoutId);
+	};
+	
+	iframe.onerror = (e) => {
+		hasLoaded = true;
+		iframe.dataset.loaded = 'error';
+		clearTimeout(timeoutId);
+		console.error('Iframe failed to load:', e);
+		showError();
+	};
 }
 
 // Function to switch between routes
@@ -589,6 +667,9 @@ function switchRoute(route) {
 document.addEventListener('DOMContentLoaded', function() {
 	// Set CSS custom properties from configuration
 	document.documentElement.style.setProperty('--scroll-duration', `${GPX_CONFIG.scrollDuration}s`);
+	document.documentElement.style.setProperty('--marker-size', `${MAP_CONFIG.markerSize}px`);
+	document.documentElement.style.setProperty('--marker-color-start', MAP_CONFIG.markerColors.start);
+	document.documentElement.style.setProperty('--marker-color-end', MAP_CONFIG.markerColors.end);
 	
 	// Populate GPX download list dynamically
 	populateGPXDownloadList();
@@ -603,12 +684,22 @@ document.addEventListener('DOMContentLoaded', function() {
 		currentRoute = firstRoute;
 	}
 	
+	// Initialize lazy loading for iframes - store src and remove to prevent immediate loading
+	const iframes = document.querySelectorAll('.timetable-iframe');
+	iframes.forEach((iframe) => {
+		// Store the src in data attribute and remove it to prevent immediate loading
+		if (iframe.src) {
+			iframe.dataset.src = iframe.src;
+			iframe.removeAttribute('src');
+		}
+	});
+	
 	// Initialize with first route from config
 	const initialRoute = APP_CONFIG.activeRoutes[0] || 'A';
 	const filename = `${GPX_CONFIG.tracksDirectory}${initialRoute}${GPX_CONFIG.filePattern}`;
 	const routeOptions = APP_CONFIG.routeOverrides[initialRoute] || {};
 	
-	// Update timetable boxes visibility for initial route
+	// Update timetable boxes visibility for initial route (this will trigger lazy loading)
 	updateTimetableBoxes(initialRoute);
 	
 	// Update map title
@@ -620,100 +711,5 @@ document.addEventListener('DOMContentLoaded', function() {
 		currentMap = createMapWithGPX('map_main', filename, routeOptions);
 	}).catch(error => {
 		console.error(`Error loading initial route ${initialRoute}:`, error);
-	});
-	
-	// Handle iframe loading with timeout
-	const iframes = document.querySelectorAll('.timetable-iframe');
-	iframes.forEach((iframe, index) => {
-		let timeoutId;
-		let hasLoaded = false;
-		
-		// Set timeout for 10 seconds
-		timeoutId = setTimeout(() => {
-			if (!hasLoaded) {
-				// Replace iframe with error message
-				const parentBox = iframe.closest('.timetable-box');
-				if (parentBox) {
-					const title = parentBox.querySelector('.timetable-title');
-					const stationName = title ? title.textContent.replace(' 🕐', '') : 'Station';
-					
-					// Create error message div
-					const errorDiv = document.createElement('div');
-					errorDiv.className = 'timetable-error';
-					errorDiv.style.cssText = `
-						display: flex;
-						align-items: center;
-						justify-content: center;
-						height: 200px;
-						background-color: #f5f5f5;
-						border: 1px solid #ddd;
-						border-radius: 5px;
-						color: #666;
-						font-size: 14px;
-						text-align: center;
-						padding: 20px;
-						box-sizing: border-box;
-					`;
-					errorDiv.innerHTML = `
-						<div>
-							<div style="font-size: 18px; margin-bottom: 10px;">🚫</div>
-							<div><strong>Service not avail. at the moment</strong></div>
-							<div style="font-size: 12px; margin-top: 5px;">${stationName} timetable</div>
-						</div>
-					`;
-					
-					// Replace iframe with error message
-					iframe.parentNode.replaceChild(errorDiv, iframe);
-				}
-			}
-		}, 10000); // 10 seconds
-		
-		// Clear timeout when iframe loads successfully
-		iframe.onload = () => {
-			hasLoaded = true;
-			clearTimeout(timeoutId);
-		};
-		
-		// Handle iframe errors
-		iframe.onerror = (e) => {
-			hasLoaded = true; // Prevent timeout from firing
-			clearTimeout(timeoutId);
-			console.error(`Iframe ${index + 1} failed to load:`, e);
-			
-			// Replace iframe with error message
-			const parentBox = iframe.closest('.timetable-box');
-			if (parentBox) {
-				const title = parentBox.querySelector('.timetable-title');
-				const stationName = title ? title.textContent.replace(' 🕐', '') : 'Station';
-				
-				// Create error message div
-				const errorDiv = document.createElement('div');
-				errorDiv.className = 'timetable-error';
-				errorDiv.style.cssText = `
-					display: flex;
-					align-items: center;
-					justify-content: center;
-					height: 200px;
-					background-color: #f5f5f5;
-					border: 1px solid #ddd;
-					border-radius: 5px;
-					color: #666;
-					font-size: 14px;
-					text-align: center;
-					padding: 20px;
-					box-sizing: border-box;
-				`;
-				errorDiv.innerHTML = `
-					<div>
-						<div style="font-size: 18px; margin-bottom: 10px;">🚫</div>
-						<div><strong>Service not avail. at the moment</strong></div>
-						<div style="font-size: 12px; margin-top: 5px;">${stationName} timetable</div>
-					</div>
-				`;
-				
-				// Replace iframe with error message
-				iframe.parentNode.replaceChild(errorDiv, iframe);
-			}
-		};
 	});
 });

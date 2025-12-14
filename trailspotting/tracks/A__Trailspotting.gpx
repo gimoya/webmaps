@@ -12,7 +12,7 @@
     <name>A_clean</name>
     <trkseg>
       <name>Segment 1</name>
-      <desc>distance: 8.0km, elevation_gain: 298.0m, elevation_loss: 565.0m, estimated_duration: 00:57</desc>
+      <desc>distance: 8.0km, elevation_gain: 298.0m, elevation_loss: 565.0m, estimated_duration: 00:59</desc>
       <trkpt lat="47.247667" lon="11.451444">
         <ele>827.75</ele>
         </trkpt>
@@ -1024,7 +1024,7 @@
     </trkseg>
     <trkseg>
       <name>Segment 2</name>
-      <desc>distance: 16.0km, elevation_gain: 883.0m, elevation_loss: 867.0m, estimated_duration: 02:24</desc>
+      <desc>distance: 16.0km, elevation_gain: 883.0m, elevation_loss: 867.0m, estimated_duration: 02:27</desc>
       <trkpt lat="47.349389" lon="11.702129">
         <ele>537.25</ele>
         </trkpt>

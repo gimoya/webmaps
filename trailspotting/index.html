@@ -1,151 +1,208 @@
-<!doctype html>
+	<!doctype html>
 
-<html lang="de">
-<head>
-  <meta charset="utf-8">
+	<html lang="de">
+	<head>
+	<meta charset="utf-8">
 
-  <title>Trailspotting</title>
-  <meta name="description" content="Trailspotting Strava MTB">
-  <meta name="KC" content="">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; connect-src 'self' ws: wss: http: https:;">
-  
-  
-  <link rel="preconnect" href="https://fonts.gstatic.com">
-  <link href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Special+Elite&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-  
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol@0.76.0/dist/L.Control.Locate.min.css" />
+	<title>Trailspotting</title>
+	<meta name="description" content="Trailspotting Strava MTB">
+	<meta name="KC" content="">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	
+	<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; connect-src 'self' ws: wss: http: https:;">
+	
+	
+	<link rel="preconnect" href="https://fonts.gstatic.com">
+	<link href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Special+Elite&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="styles.css">
+	
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/leaflet.css" />
+	<link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol@0.76.0/dist/L.Control.Locate.min.css" />
 
-</head>
-<body>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/leaflet.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.4.0/gpx.min.js"></script>
-  <script src="https://unpkg.com/leaflet.locatecontrol@0.76.0/dist/L.Control.Locate.min.js"></script>
-<div class="poster-container">
-	<img id="poster" src="images/poster.png"/>
-</div>
-
-<div class="floating-box" id="intro">
-	<div>
-		<span style="font-size:35px;">Choose your route.. Choose your pace.. Catch your train..</span>
-		<p>
-			<strong>Trail(n)spotting</strong> - das heißt: Große MTB-Runde im Inntal mit den Öffis kombinieren und auf angenehme Weise (vor allem in der kalten Jahreszeit;) viele Trail-Km sammeln!</br>😎🚴‍♂️💯</p>
-		<p>	
-			<span style="font-size:20px;">
-			Die Challenge dabei?</span>
-			</p>
-		<p>1, 2, 3, 4.. Connecting the Dots! ..und dabei die Fahrzeiten am Trail so zu timen, dass du die Zugverbindungen für die Transfers mit minimalen Wartezeiten schaffst!<br>⌚🚉😅</p>
-		<p><span style="font-size:20px;">
-			..too late!? well, bollocks!</span>
-		</p>
+	</head>
+	<body>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/leaflet.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.4.0/gpx.min.js"></script>
+	<script src="https://unpkg.com/leaflet.locatecontrol@0.76.0/dist/L.Control.Locate.min.js"></script>
+	<div class="poster-container">
+		<img id="poster" src="images/poster.png"/>
 	</div>
-</div>
 
-<div class="floating-box" id="combined_selector_stats">
-	<div class="route-header">Deine Route</div>
-	<div class="route-selector">
-		<div class="route-wheel" id="route-wheel">
-			<!-- Route options will be populated by JavaScript -->
+	<div class="floating-box" id="intro">
+		<div>
+			<span style="font-size:32px; line-height: 1;">Choose your route.. Choose your pace.. Catch your train..</span>
+			<p>
+				<strong>Trail(n)spotting</strong> heißt MTB-Runden im Inntal mit den Öffis kombinieren und dabei feine Trail-Km sammeln!</br>😎🚴‍♂️💯</p>
+			<p>In der kalten Jahreszeit natürlich besonders angenehm, wenn man dazwischen drin in Zug und Bus aufwärmen und gleichzeitig "leere km" überwinden kann!</br>🚉💨🥶</p>
+			<p>	
+				<span style="font-size:21px;">
+				Die Challenge dabei?</span>
+				</p>
+			<p>1, 2, 3, 4.. Connecting the Dots! ..und dabei die Fahrzeiten am Trail so zu timen, dass du die Zugverbindungen für die Transfers mit minimalen Wartezeiten schaffst!<br>🦸‍♀️⌚🦸‍♀️</p>
+			<p><span style="font-size:21px;">
+				..too late!? well, bollocks!</span></br>
+				🤷‍♀️💩🤷‍♀️ 
+			</p>
 		</div>
 	</div>
-	<div id="cycling-info-main">
-		<!-- Cycling segments will be populated by JavaScript -->
+
+	<div class="floating-box" id="combined_selector_stats">
+		<div class="route-header">🚴‍♂️Routen🚌</div>
+		<div class="route-selector">
+			<div class="route-wheel" id="route-wheel">
+				<!-- Route options will be populated by JavaScript -->
+			</div>
+		</div>
+		<div id="cycling-info-main">
+			<!-- Cycling segments will be populated by JavaScript -->
+		</div>
 	</div>
-</div>
 
-<div class="floating-box">
-	<div class="themap" id="map_main">
-		<div id="map-title">A</div>
+	<div class="floating-box">
+		<div class="themap" id="map_main">
+			<div id="map-title">A</div>
+		</div>
 	</div>
-</div>
 
-<!-- Define the map source as a variable -->
-<script src="config.js"></script>
-<script src="script.js"></script>
+	<!-- Define the map source as a variable -->
+	<script src="config.js"></script>
+	<script src="script.js"></script>
 
-<div class="floating-box timetable-box">
-	<div class="timetable-title">Innsbruck 🕐</div>
-	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#EDC78E82-79C6-449D-8E1EC831BE5148E9"></iframe>
-</div>
+	<!-- Timetable boxes -->
+	<!-- SILLPARK -->
+	<div class="floating-box half-floating-box timetable-box">
+		<div class="timetable-title">Innsbruck Sillpark 🕐</div>
+		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#4F9D9CE5-A2E0-4ED2-BC40A88C63075217"></iframe>
+	</div>
 
-<div class="floating-box timetable-box">
-	<div class="timetable-title">Hall 🕐</div>
-	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#F81F57B8-E49E-4A37-86037AE366123492"></iframe>
-</div>
+	<!-- IBK BHF -->
+	<div class="floating-box half-floating-box timetable-box">
+		<div class="timetable-title">Innsbruck BHF 🕐</div>
+		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#FD637831-93EA-4DD7-BB75DD34A82DF0D2"></iframe>
+	</div>
 
-<div class="floating-box timetable-box">
-	<div class="timetable-title">Schwaz 🕐</div>
-	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#90FD532A-01C0-454B-A43A854BDFE8348B"></iframe>
-</div>
+	<!-- IBK MARKTPLATZ -->
+	<div class="floating-box half-floating-box timetable-box">
+		<div class="timetable-title">Innsbruck Marktplatz 🕐</div>
+		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#AEA613A7-DCEC-495E-8A06E4762239436C"></iframe>
+	</div>
 
-<div class="floating-box timetable-box">
-	<div class="timetable-title">Brixlegg 🕐</div>
-	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#0CDB1A43-FAD5-422D-94F7184A3B32DBE7"></iframe>
-</div>
+	<!-- IBK SOS-KINDERORF -->
+	<div class="floating-box half-floating-box timetable-box">
+		<div class="timetable-title">Innsbruck SOS-Kinderorf 🕐</div>
+		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#9E7E563D-5BB9-49EE-A9D52C5A747B1EF7"></iframe>
+	</div>
 
-<div class="floating-box timetable-box">
-	<div class="timetable-title">Terfens/Weer 🕐</div>
-	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#FAEA6F93-159F-4D19-9D1ECBB979509660"></iframe>
-</div>
+	<!-- HALL -->
+	<div class="floating-box half-floating-box timetable-box">
+		<div class="timetable-title">Hall 🕐</div>
+		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#F81F57B8-E49E-4A37-86037AE366123492"></iframe>
+	</div>
 
-<div class="floating-box timetable-box">
-	<div class="timetable-title">Völs 🕐</div>
-	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#87531436-9B3A-4C1F-8B792A7848D01826"></iframe>
-</div>
+	<!-- SCHWAZ BHF -->
+	<div class="floating-box half-floating-box timetable-box">
+		<div class="timetable-title">Schwaz 🕐</div>
+		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#75AB8984-F0F6-469B-9C619AF32864216B"></iframe>
+	</div>
 
-<div class="floating-box timetable-box">
-	<div class="timetable-title">Zirl 🕐</div>
-	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#D8AF7C04-B80D-4F7F-AA90817FDE9C192D"></iframe>
-</div>
+	<!-- SCHWAZ TERMINAL -->
+	<div class="floating-box half-floating-box timetable-box">
+		<div class="timetable-title">Schwaz Terminal 🕐</div>
+		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#542EDD76-647C-432D-AEAEF44D2900B096"></iframe>
+	</div>
 
-<div class="floating-box timetable-box">
-	<div class="timetable-title">Telfs 🕐</div>
-	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#F1E103A3-7259-4721-B36726EF8523F024"></iframe>
-</div>
+	<!-- BRIXLEGG -->
+	<div class="floating-box half-floating-box timetable-box">
+		<div class="timetable-title">Brixlegg 🕐</div>
+		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#0CDB1A43-FAD5-422D-94F7184A3B32DBE7"></iframe>
+	</div>
 
-	<div class="floating-box timetable-box">
+	<!-- TERFENS/WEER -->
+	<div class="floating-box half-floating-box timetable-box">
+		<div class="timetable-title">Terfens/Weer 🕐</div>
+		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#FAEA6F93-159F-4D19-9D1ECBB979509660"></iframe>
+	</div>
+
+	<!-- VÖLS -->
+	<div class="floating-box half-floating-box timetable-box">
+		<div class="timetable-title">Völs 🕐</div>
+		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#87531436-9B3A-4C1F-8B792A7848D01826"></iframe>
+	</div>
+
+	<!-- ZIRL -->
+	<div class="floating-box half-floating-box timetable-box">
+		<div class="timetable-title">Zirl 🕐</div>
+		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#D8AF7C04-B80D-4F7F-AA90817FDE9C192D"></iframe>
+	</div>
+
+	<!-- TELFS BHF -->
+	<div class="floating-box half-floating-box timetable-box">
+		<div class="timetable-title">Telfs BHF 🕐</div>
+		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#F1E103A3-7259-4721-B36726EF8523F024"></iframe>
+	</div>
+
+	<!-- MÖTZ BHF -->
+	<div class="floating-box half-floating-box timetable-box">
 		<div class="timetable-title">Mötz 🕐</div>
 		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#411012F1-BBBF-437D-A4A0484EBB6BFD82"></iframe>
 	</div>
 
-<div class="floating-box timetable-box">
-	<div class="timetable-title">Ötztal Bhf. 🕐</div>
-	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#9E7E563D-5BB9-49EE-A9D52C5A747B1EF7"></iframe>
-</div>
+	<!-- ÖTZTAL BHF -->
+	<div class="floating-box half-floating-box timetable-box">
+		<div class="timetable-title">Ötztal BHF 🕐</div>
+		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#9E7E563D-5BB9-49EE-A9D52C5A747B1EF7"></iframe>
+	</div>
 
-<div class="floating-box timetable-box">
-	<div class="timetable-title">Haiming 🕐</div>
-	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#FDD5C5EC-A1A4-42D7-8F2F0A43C169D4FD"></iframe>
-</div>
+	<!-- HAIMING BHF -->
+	<div class="floating-box half-floating-box timetable-box">
+		<div class="timetable-title">Haiming 🕐</div>
+		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#FDD5C5EC-A1A4-42D7-8F2F0A43C169D4FD"></iframe>
+	</div>
 
-<div class="floating-box timetable-box">
-	<div class="timetable-title">Fritzens/Wattens 🕐</div>
-	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#FRITZENS-WATTENS"></iframe>
-</div>
+	<!-- FRITZENS/WATTENS BHF -->
+	<div class="floating-box half-floating-box timetable-box">
+		<div class="timetable-title">Fritzens/Wattens 🕐</div>
+		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#6ECB3026-EB71-4CF7-A9A7E75347C30C40"></iframe>
+	</div>
 
-<div class="floating-box timetable-box">
-	<div class="timetable-title">Neu-Rum 🕐</div>
-	<iframe class="timetable-iframe" src="https://timeview.vvt.at/#NEU-RUM"></iframe>
-</div>
+	<!-- RUM BHF -->
+	<div class="floating-box half-floating-box timetable-box">
+		<div class="timetable-title">Rum 🕐</div>
+		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#1DB9D318-6C51-4337-83043F57DD976718"></iframe>
+	</div>
 
-<div class="floating-box">
-	<p><strong>Support für unsere Öffis!</strong>
-	<p>Eine <strong>Fahrt mit Vorteilkarte</strong> kostet rd. 5 Euro, die <strong>Regio-Biking Tagskarte</strong> 2,60 Euro</p>
-	<p>Für die Orientierung könnt ihr eure <strong>Smartphone-GPS Position</strong> in der Web-Karte oben einblenden!</p>
-	<p>Mit den S-Bahnen und REX Zügen gibt's natürlich noch unzählige andere Möglichkeiten! <strong>>> Sei kreativ!!</strong></br>👌🤓</p>
-	GPX-Tracks:<br>
-	<div class="gpx-download-container">
-		<div class="gpx-download-list" id="gpx-download-list">
-			<!-- GPX download links will be populated by JavaScript -->
+	<!-- JENBACH BHF -->
+	<div class="floating-box half-floating-box timetable-box">
+		<div class="timetable-title">Jenbach 🕐</div>
+		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#B396AD85-AE18-4CE7-8657CAF7FFB7B8C7"></iframe>
+	</div>
+
+	<!-- KEMATEN BHF -->
+	<div class="floating-box half-floating-box timetable-box">
+		<div class="timetable-title">Kematen 🕐</div>
+		<iframe class="timetable-iframe" src="https://timeview.vvt.at/#2B49C93A-AACD-4F27-9A5181FA8C8115827"></iframe>
+	</div>
+
+	<div class="floating-box half-floating-box">
+		<h3>Öffi Support</h3>
+		Eine Zugfahrt mit Vorteilskarte! kostet rd. 5 Euro. Die Regio-Biking Tagskarte kostet 2,60 Euro.
+		<h3>Tipp</h3>
+		Für die Orientierung könnt ihr eure <strong>Smartphone-GPS 🧭 Position</strong> in der Web-Karte oben einblenden!
+	</div>
+
+	<div class="floating-box half-floating-box">
+		<div style="flex: 1; overflow-y: auto;">
+			<h3>GPX-Tracks:</h3>
+			<div class="gpx-download-container">
+				<div class="gpx-download-list" id="gpx-download-list">
+					<!-- GPX download links will be populated by JavaScript -->
+				</div>
+			</div>
+		</div>
+		<div class="gps-footer">
+			Trail<span style="text-decoration: line-through;">Train</span>spotting
+			&copy; <a href="http://www.tiroltrailhead.com">tiroltrailhead.com</a>
 		</div>
 	</div>
-	<div class="gps-footer">
-	Trail<span style="text-decoration: line-through;">Train</span>spotting
-	 &copy; <a href="http://www.tiroltrailhead.com">tiroltrailhead.com</a>
-	 </p>
-</div>
-</body>
-</html>
+	</body>
+	</html>
