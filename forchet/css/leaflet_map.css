@@ -106,3 +106,36 @@ ul.nav.navbar-nav.navbar-right li a:hover {
     border-radius: 0px!important;
 	width: 300px;
 }
+
+.poiPopupClass .leaflet-popup-content-wrapper {
+    padding: 5px;
+    text-align: left;
+    border-radius: 0px!important;
+	width: 200px;
+}
+
+.poiPopupClass .leaflet-popup-tip {
+    border-radius: 0px!important;
+}
+
+/*** Leaflet Controls - Non-selectable ***/
+
+.leaflet-control,
+.leaflet-control-zoom,
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out,
+.leaflet-control-attribution,
+.leaflet-control-layers,
+.leaflet-bar,
+.leaflet-bar a,
+.leaflet-easy-button-button,
+.leaflet-control-locate,
+.leaflet-control-elevation,
+.custom-control {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}

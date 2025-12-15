@@ -31,8 +31,6 @@ if (trim(pw_prompt) == pw ) {
 /*** Add base maps with controls ***/
 var map = L.map('map', {
   zoom: 12,
-  maxZoom: 16,
-  minZoom: 11,
   zoomControl: false,
   attributionControl: false
 });
@@ -58,8 +56,8 @@ var toggle = L.easyButton({
 	onClick: function(control) {
 	  map.removeLayer(mapbox_satelliteLayer);
 	  map.addLayer(mapbox_outdoorLayer);
-	  if (map.getZoom() > 16) {
-		map.setZoom(16);
+	  if (map.getZoom() >= 16) {
+		map.setZoom(15);
 	  }
 	  control.state('basemap-outdoor');
 	},
@@ -79,7 +77,7 @@ var mapbox_satelliteLayer = L.tileLayer(mapbox_satelliteUrl, {
 
 var mapbox_outdoorLayer = L.tileLayer(mapbox_outdoorUrl, {
   attribution: mapbox_Attr,
-  maxZoom: 16
+  maxZoom: 17
 });
 
 mapbox_outdoorLayer.addTo(map);	
@@ -214,8 +212,8 @@ $.getJSON('z_trails_forchet.geojson', function(json) {
 		
 		onEachFeature: function(feature, layer) {
 			
-			var stPt = [ feature.geometry.coordinates[0][1], feature.geometry.coordinates[0][0],  ]; // need to flip xy-coords!
-			var endPt = [ feature.geometry.coordinates[feature.geometry.coordinates.length - 1][1], feature.geometry.coordinates[feature.geometry.coordinates.length - 1][0] ];
+			var stPt = L.GeoJSON.coordsToLatLng(feature.geometry.coordinates[0]);
+			var endPt = L.GeoJSON.coordsToLatLng(feature.geometry.coordinates[feature.geometry.coordinates.length - 1]);
 			
 			// Add Start and End Markers to each Feature 
 			new L.circleMarker(stPt, {
@@ -287,16 +285,19 @@ var POIs_Icon = L.icon({
 	});
 
 for (i = 0; i < POIs.features.length; i++) { 
+	var popupContent = '<div id="pop_cont_name">' + POIs.features[i].properties.name + '</div><div id="pop_cont_descr">' + POIs.features[i].properties.description + '</div>';
+	
 	new L.marker(L.GeoJSON.coordsToLatLng(POIs.features[i].geometry.coordinates), {
 				icon: POIs_Icon,
 				zIndexOffset: 10000,
 				riseOnHover: true,
 				pane: 'ptsPane'})
-			.bindPopup('<div id="pop_cont_name">' + POIs.features[i].properties.name + '</div><div id="pop_cont_descr">' + POIs.features[i].properties.description + '</div>', 
+			.bindPopup(popupContent, 
 				{
 					closeButton: true,
 					autoClose: false,
-					direction: 'right'
+					direction: 'right',
+					className: 'poiPopupClass'
 				}
 			)
 			.addTo(map);
