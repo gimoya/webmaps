@@ -125,14 +125,17 @@ L.control.locate({
 /*** Trail Style-Helper Functions ***/
 
 function highlight (layer) {	// will be used on hover
-	layer.setStyle({
-		weight: 4,
-		dashArray: '',
-		opacity: 0.95
-	});
-	if (!L.Browser.ie && !L.Browser.opera) {
-		layer.bringToFront();
-	}	
+	var mainLayer = findMatchingLayer(layer, trails_json);
+	if (mainLayer) {
+		mainLayer.setStyle({
+			weight: 4,       // wider line
+			dashArray: '',
+			opacity: 0.95      // slightly more opaque
+		});
+		if (!L.Browser.ie && !L.Browser.opera) {
+			mainLayer.bringToFront();
+		}
+	}
 }
 
 function styleLines(feature) {	// deafult style used for constructor of json
@@ -142,6 +145,25 @@ function styleLines(feature) {	// deafult style used for constructor of json
 		opacity: 0.8,
 		lineJoin: 'round',  //miter | round | bevel 
     };
+}
+
+function styleClickLayer(feature) {	// style for click layer
+    return {
+		color: '#000000',
+		weight: 8,  // double the width for better clickability
+		opacity: 0.4, // semi-transparent
+		lineJoin: 'round',
+    };
+}
+
+function findMatchingLayer(clickLayer, trailsLayer) {
+    var matchingLayer = null;
+    trailsLayer.eachLayer(function(layer) {
+        if (layer.feature.properties.name === clickLayer.feature.properties.name) {
+            matchingLayer = layer;
+        }
+    });
+    return matchingLayer;
 }
 
 
@@ -154,51 +176,63 @@ var trails_json;
 var selected = null;
 
 function dehighlight (layer) { 	// will be used inside select function
-  if (selected === null || selected._leaflet_id !== layer._leaflet_id) {
-	  trails_json.resetStyle(layer);
-	  layer.setText(null);
-  }
+    if (selected === null || (selected && selected.feature.properties.name !== layer.feature.properties.name)) {
+        var mainLayer = findMatchingLayer(layer, trails_json);
+        if (mainLayer) {
+            trails_json.resetStyle(mainLayer);
+            mainLayer.setText(null);
+        }
+    }
 }
 
 function select (layer) {  // ..use inside onClick Function doClickStuff() to select and style clicked feature 
-  if (selected !== null) {
-	var previous = selected;
-  }
-	map.fitBounds(layer.getBounds());
-	selected = layer;
-	if (previous) {
-	  dehighlight(previous);
-	}
+    if (selected !== null) {
+        var previous = selected;
+    }
+    var mainLayer = findMatchingLayer(layer, trails_json);
+    if (mainLayer) {
+        map.fitBounds(mainLayer.getBounds());
+        selected = mainLayer;
+        if (previous) {
+            dehighlight(previous);
+        }
+    }
 }
 
 function doClickStuff(e) {
-	
-	lyr = e.target;
-	ftr = e.target.feature;
-	
-	select(lyr);
-	lyr.setText('- - - ►             ', { repeat: true, offset: 11, attributes: {fill:  '#FF5F1F', 'font-weight': 'bold', 'font-size': '12'} });
-	
-	/*** Elevation Control ***/
-		
-	if (typeof el !== 'undefined') {
-		// the variable is defined
-		el.clear();
-		map.removeControl(el);
-	};	
-	
-	L.DomEvent.stopPropagation(e);
-    el.addData(ftr, lyr);
-    map.addControl(el);	
-	
-	/*** make all non-selected trails opaque, after resetting styles (ftr selected before)***/ 
-	
-	trails_json.eachLayer(function(layer){ if(selected._leaflet_id !== layer._leaflet_id) {
-		dehighlight(layer);
-		layer.setStyle({opacity: 0.4})
-		}
-	});
-	
+    lyr = e.target;
+    ftr = e.target.feature;
+    
+    var mainLayer = findMatchingLayer(lyr, trails_json);
+    if (mainLayer) {
+        select(lyr);
+        mainLayer.setText('- - - ►             ', { repeat: true, offset: 11, attributes: {fill:  '#FF5F1F', 'font-weight': 'bold', 'font-size': '12'} });
+        
+        /*** Elevation Control ***/
+        if (typeof el !== 'undefined') {
+            el.clear();
+            map.removeControl(el);
+        };	
+        
+        L.DomEvent.stopPropagation(e);
+        el.addData(ftr, mainLayer);
+        map.addControl(el);	
+        
+        /*** make all non-selected trails opaque, after resetting styles (ftr selected before)***/ 
+        trails_json.eachLayer(function(layer){ 
+            if(selected && selected.feature.properties.name !== layer.feature.properties.name) {
+                dehighlight(layer);
+                layer.setStyle({opacity: 0.4})
+            }
+        });
+
+        // Open popup at click location
+        var popup = mainLayer.getPopup();
+        if (popup) {
+            popup.setLatLng(e.latlng);
+            popup.openOn(map);
+        }
+    }
 }
 
 /*** Add Trails ***/
@@ -209,10 +243,16 @@ map.getPane('ptsPane').style.zIndex = 600;
 
 $.getJSON('z_trails_forchet.geojson', function(json) {
 	
+	// Create click layer first (will be underneath)
+	var click_layer = L.geoJson(json, {
+		style: styleClickLayer,
+		interactive: true,
+	}).addTo(map);
+	
+	// Create main layer on top
 	trails_json = L.geoJson(json, {
-		
-		style: 	styleLines,
-		
+		style: styleLines,
+		interactive: false, // disable interaction on main layer
 		onEachFeature: function(feature, layer) {
 			
 			var stPt = L.GeoJSON.coordsToLatLng(feature.geometry.coordinates[0]);
@@ -243,19 +283,8 @@ $.getJSON('z_trails_forchet.geojson', function(json) {
 					permanent: false, 
 					direction: 'right'
 				})
-				.addTo(map)	
+				.addTo(map);
 			
-			// on events
-			layer.on({		
-				'mouseover': function (e) {
-					highlight(e.target);
-				},
-				'mouseout': function (e) {
-					dehighlight(e.target);
-				},
-				'click': doClickStuff
-			});			
-	
 			/*** add a popup to each feature and.. ***/ 	
 			/*** ..set GPX link ***/
 			var bb = new Blob([togpx(feature)], {type: 'application/gpx+xml'});
@@ -267,6 +296,24 @@ $.getJSON('z_trails_forchet.geojson', function(json) {
 			layer.bindPopup(popupContent, {closeOnClick: true, className: 'trailPopupClass'});
 		}
 	}).addTo(map);
+	
+	// Add event handlers to click layer
+	click_layer.eachLayer(function(layer) {
+		layer.on({
+			'mouseover': function (e) {
+				if (selected === null || (selected && selected.feature.properties.name !== e.target.feature.properties.name)) {
+					highlight(e.target);
+				}
+			},
+			'mouseout': function (e) {
+				if (selected === null || (selected && selected.feature.properties.name !== e.target.feature.properties.name)) {
+					dehighlight(e.target);
+				}
+			},
+			'click': doClickStuff
+		});
+	});
+	
 	map.fitBounds(trails_json.getBounds(), {maxZoom: 16});
 });
 
