@@ -32,8 +32,6 @@ if (trim(pw_prompt) == pw ) {
 /*** Set Up Map ***/
 var map = L.map('map', {
   zoom: 12,
-  maxZoom: 18,
-  minZoom: 11,
   zoomControl: false,
   attributionControl: false
 });
@@ -41,8 +39,12 @@ var map = L.map('map', {
 /*** Set Up Base Map Layers ***/
 
 var mapbox_Attr = 'Tiles &copy; <a href="google.com">Google Maps</a>, <a href="openstreetmap.org">OSM</a> | Design &copy; <a href="http://www.tiroltrailhead.com/guiding">Tirol Trailhead</a>';  
+
 var mapbox_satelliteUrl = '//mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
-var map_topoUrl = '//tile.opentopomap.org/{z}/{x}/{y}.png';
+
+var maptiler_key = 'luZxg9l38dVBSQGjrelS';
+
+var map_topoUrl = `https://api.maptiler.com/maps/outdoor-v4/{z}/{x}/{y}.png?key=${maptiler_key}`;
 
 var mapbox_satelliteLayer = L.tileLayer(mapbox_satelliteUrl, {
   attribution: mapbox_Attr,
@@ -50,9 +52,12 @@ var mapbox_satelliteLayer = L.tileLayer(mapbox_satelliteUrl, {
 });
 
 var map_topoLayer = L.tileLayer(map_topoUrl, {
-  attribution: mapbox_Attr,
+  tileSize: 512,
+  zoomOffset: -1,
+  minZoom: 1,
   maxZoom: 18,
-  maxNativeZoom: 17  
+  attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>',
+  crossOrigin: true
 });
 
 /*** Setting Default Base Map ***/
@@ -116,6 +121,7 @@ var toggle = L.easyButton({
 });
 
 toggle.addTo(map);
+
 
 /*** Add Location Control ***/
 
