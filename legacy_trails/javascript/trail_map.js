@@ -31,7 +31,7 @@ if (trim(pw_prompt) == pw ) {
 
 /*** Set Up Map ***/
 var map = L.map('map', {
-  zoom: 12,
+  zoom: 15,
   zoomControl: false,
   attributionControl: false
 });
