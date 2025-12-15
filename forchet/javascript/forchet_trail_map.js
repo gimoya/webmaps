@@ -31,7 +31,7 @@ if (trim(pw_prompt) == pw ) {
 /*** Add base maps with controls ***/
 var map = L.map('map', {
   zoom: 12,
-  maxZoom: 18,
+  maxZoom: 16,
   minZoom: 11,
   zoomControl: false,
   attributionControl: false
@@ -58,6 +58,9 @@ var toggle = L.easyButton({
 	onClick: function(control) {
 	  map.removeLayer(mapbox_satelliteLayer);
 	  map.addLayer(mapbox_outdoorLayer);
+	  if (map.getZoom() > 16) {
+		map.setZoom(16);
+	  }
 	  control.state('basemap-outdoor');
 	},
   }]
@@ -70,11 +73,13 @@ var mapbox_satelliteUrl = 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
 var mapbox_outdoorUrl = 'http://c.tile.opentopomap.org/{z}/{x}/{y}.png';
 
 var mapbox_satelliteLayer = L.tileLayer(mapbox_satelliteUrl, {
-  attribution: mapbox_Attr 
+  attribution: mapbox_Attr,
+  maxZoom: 18
 });
 
 var mapbox_outdoorLayer = L.tileLayer(mapbox_outdoorUrl, {
-  attribution: mapbox_Attr 
+  attribution: mapbox_Attr,
+  maxZoom: 16
 });
 
 mapbox_outdoorLayer.addTo(map);	
