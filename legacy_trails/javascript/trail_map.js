@@ -446,7 +446,10 @@ $.getJSON('my_trails_z.geojson', function(json) {
 		layer.bindPopup(popupContent, {closeOnClick: true, className: 'trailPopupClass'});
 	});
 	
-	map.fitBounds(trails_json.getBounds(), {maxZoom: 15});
+	// Center map on trails and set zoom level
+	var bounds = trails_json.getBounds();
+	var center = bounds.getCenter();
+	map.setView(center, 16);
 });
 
 /*** Add event listener for click events on document ***/
