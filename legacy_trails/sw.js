@@ -1,5 +1,8 @@
-// Service Worker for Legacy Trails Tirol PWA - Performance Caching Only
+// Service Worker for Legacy Trails Tirol PWA - Performance Caching with Tile Cache Limit
 const CACHE_NAME = 'legacy-trails-v2';
+const TILE_CACHE_NAME = 'legacy-trails-tiles';
+const MAX_CACHE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+
 const urlsToCache = [
   './',
   './index.html',
@@ -38,17 +41,127 @@ self.addEventListener('install', function(event) {
   );
 });
 
-// Fetch event - serve cached resources when available, but always fetch map tiles fresh
+// Calculate cache size
+async function getCacheSize(cacheName) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  let totalSize = 0;
+  
+  for (const key of keys) {
+    const response = await cache.match(key);
+    if (response) {
+      const blob = await response.blob();
+      totalSize += blob.size;
+    }
+  }
+  
+  return totalSize;
+}
+
+// Evict oldest tiles when cache exceeds limit (LRU strategy)
+async function evictOldTiles() {
+  const cache = await caches.open(TILE_CACHE_NAME);
+  const keys = await cache.keys();
+  
+  if (keys.length === 0) return;
+  
+  // Get all requests with their timestamps (stored in response headers)
+  const entries = await Promise.all(keys.map(async (request) => {
+    const response = await cache.match(request);
+    const blob = await response.blob();
+    const timestamp = response.headers.get('sw-cache-time') || 0;
+    return { request, size: blob.size, timestamp: parseInt(timestamp) };
+  }));
+  
+  // Sort by timestamp (oldest first)
+  entries.sort((a, b) => a.timestamp - b.timestamp);
+  
+  // Calculate current size
+  let currentSize = entries.reduce((sum, entry) => sum + entry.size, 0);
+  
+  // Remove oldest entries until under limit
+  for (const entry of entries) {
+    if (currentSize <= MAX_CACHE_SIZE * 0.9) break; // Keep 10% buffer
+    
+    await cache.delete(entry.request);
+    currentSize -= entry.size;
+    console.log('Evicted tile from cache:', entry.request.url);
+  }
+}
+
+// Check if URL is a map tile
+function isMapTile(url) {
+  return url.includes('tile') || 
+         url.includes('google.com/vt') || 
+         url.includes('opentopomap') ||
+         url.includes('maptiler.com/maps') ||
+         url.includes('/{z}/') ||
+         /\/(\d+)\/(\d+)\/(\d+)/.test(url); // Matches tile coordinate pattern
+}
+
+// Fetch event - cache tiles with size limit, serve static resources from cache
 self.addEventListener('fetch', function(event) {
-  // Always fetch map tiles and external resources fresh
-  if (event.request.url.includes('tile') || 
-      event.request.url.includes('google.com') || 
-      event.request.url.includes('opentopomap') ||
-      event.request.url.includes('unpkg.com') ||
-      event.request.url.includes('cdnjs.cloudflare.com') ||
-      event.request.url.includes('ajax.googleapis.com') ||
-      event.request.url.includes('maxcdn.bootstrapcdn.com') ||
-      event.request.url.includes('kit.fontawesome.com')) {
+  const url = event.request.url;
+  
+  // Handle map tiles with caching and size limit
+  if (isMapTile(url)) {
+    event.respondWith(
+      caches.open(TILE_CACHE_NAME).then(async function(cache) {
+        // Try cache first
+        const cachedResponse = await cache.match(event.request);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        
+        // Fetch from network
+        try {
+          const response = await fetch(event.request);
+          
+          if (response.ok) {
+            // Clone response to cache
+            const responseToCache = response.clone();
+            
+            // Add timestamp header for LRU eviction
+            const headers = new Headers(responseToCache.headers);
+            headers.set('sw-cache-time', Date.now().toString());
+            const modifiedResponse = new Response(responseToCache.body, {
+              status: responseToCache.status,
+              statusText: responseToCache.statusText,
+              headers: headers
+            });
+            
+            // Check cache size before adding
+            const currentSize = await getCacheSize(TILE_CACHE_NAME);
+            const responseSize = (await response.blob()).size;
+            
+            if (currentSize + responseSize <= MAX_CACHE_SIZE) {
+              await cache.put(event.request, modifiedResponse);
+            } else {
+              // Evict old tiles and try again
+              await evictOldTiles();
+              const newSize = await getCacheSize(TILE_CACHE_NAME);
+              if (newSize + responseSize <= MAX_CACHE_SIZE) {
+                await cache.put(event.request, modifiedResponse);
+              }
+            }
+          }
+          
+          return response;
+        } catch (error) {
+          console.error('Failed to fetch tile:', error);
+          throw error;
+        }
+      })
+    );
+    return;
+  }
+  
+  // For external CDN resources, always fetch fresh
+  if (url.includes('unpkg.com') || 
+      url.includes('cdnjs.cloudflare.com') || 
+      url.includes('ajax.googleapis.com') || 
+      url.includes('maxcdn.bootstrapcdn.com') || 
+      url.includes('kit.fontawesome.com')) {
     return fetch(event.request);
   }
   
@@ -68,7 +181,7 @@ self.addEventListener('activate', function(event) {
     caches.keys().then(function(cacheNames) {
       return Promise.all(
         cacheNames.map(function(cacheName) {
-          if (cacheName !== CACHE_NAME) {
+          if (cacheName !== CACHE_NAME && cacheName !== TILE_CACHE_NAME) {
             console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
