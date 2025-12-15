@@ -31,6 +31,7 @@ if (trim(pw_prompt) == pw ) {
 /*** Add base maps with controls ***/
 var map = L.map('map', {
   zoom: 12,
+  maxZoom: 18,
   zoomControl: false,
   attributionControl: false
 });
