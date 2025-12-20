@@ -16,10 +16,10 @@ const STATIONS_CONFIG = {
 		iframeUrl: 'https://timeview.vvt.at/#FD637831-93EA-4DD7-BB75DD34A82DF0D2'
 	},
 	'Innsbruck Marktplatz': {
-		iframeUrl: 'https://timeview.vvt.at/#AEA613A7-DCEC-495E-8A06E4762239436C'
+		iframeUrl: 'https://timeview.vvt.at/#B97652F9-451A-44BA-A1D0B4875F7CBB47'
 	},
 	'Innsbruck SOS-Kinderorf': {
-		iframeUrl: 'https://timeview.vvt.at/#BC2C57D3-A1A4-4EBD-91252119256D1FCF'
+		iframeUrl: 'https://timeview.vvt.at/#591B7C3F-9327-482D-A7D2E97D14C67FE4'
 	},
 	'Hall BHF': {
 		iframeUrl: 'https://timeview.vvt.at/#F81F57B8-E49E-4A37-86037AE366123492'
@@ -28,7 +28,7 @@ const STATIONS_CONFIG = {
 		iframeUrl: 'https://timeview.vvt.at/#75AB8984-F0F6-469B-9C619AF32864216B'
 	},
 	'Schwaz Terminal': {
-		iframeUrl: 'https://timeview.vvt.at/#542EDD76-647C-432D-AEAEF44D2900B096'
+		iframeUrl: 'https://timeview.vvt.at/#32F32425-BB82-4D90-A6029A11C5AEA1F1'
 	},
 	'Brixlegg BHF': {
 		iframeUrl: 'https://timeview.vvt.at/#0CDB1A43-FAD5-422D-94F7184A3B32DBE7'
@@ -41,6 +41,9 @@ const STATIONS_CONFIG = {
 	},
 	'Zirl BHF': {
 		iframeUrl: 'https://timeview.vvt.at/#D8AF7C04-B80D-4F7F-AA90817FDE9C192D'
+	},
+	'Telfs Sagl/M-Preis': {
+		iframeUrl: 'https://timeview.vvt.at/#CB03384A-4008-4E10-BD2C8E123280EB3F'
 	},
 	'Telfs BHF': {
 		iframeUrl: 'https://timeview.vvt.at/#F1E103A3-7259-4721-B36726EF8523F024'
@@ -63,8 +66,8 @@ const STATIONS_CONFIG = {
 	'Jenbach BHF': {
 		iframeUrl: 'https://timeview.vvt.at/#B396AD85-AE18-4CE7-8657CAF7FFB7B8C7'
 	},
-	'Jenbach Schalserstraße/M-Preis': {
-		iframeUrl: ''
+	'Jenbach Schalserstraße': {
+		iframeUrl: 'https://timeview.vvt.at/#591B7C3F-9327-482D-A7D2E97D14C67FE4'
 	},
 	'Kematen BHF': {
 		iframeUrl: 'https://timeview.vvt.at/#2B49C93A-AACD-4F27-9A5181FA8C8115827'
@@ -202,11 +205,12 @@ const ROUTE_CONFIG = {
 	},
 	'L': {
 		segments: [
-			{from: 'Mötz', to: 'Telfs BHF'},
+			{from: 'Mötz', to: 'Telfs Sagl/M-Preis'},
 			{from: 'Buchener Höhe', to: 'Telfs BHF'}
 		],
 		stations: [
 			'Innsbruck BHF',
+			'Telfs Sagl/M-Preis',
 			'Telfs BHF'
 		]
 	},
@@ -217,7 +221,7 @@ const ROUTE_CONFIG = {
 		],
 		stations: [
 			'Innsbruck BHF',
-			'Jenbach Schalserstraße/M-Preis',
+			'Jenbach Schalserstraße',
 			'Jenbach BHF'
 		]
 	}
