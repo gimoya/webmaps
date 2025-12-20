@@ -19,7 +19,7 @@ const STATIONS_CONFIG = {
 		iframeUrl: 'https://timeview.vvt.at/#AEA613A7-DCEC-495E-8A06E4762239436C'
 	},
 	'Innsbruck SOS-Kinderorf': {
-		iframeUrl: 'https://timeview.vvt.at/#9E7E563D-5BB9-49EE-A9D52C5A747B1EF7'
+		iframeUrl: 'https://timeview.vvt.at/#BC2C57D3-A1A4-4EBD-91252119256D1FCF'
 	},
 	'Hall BHF': {
 		iframeUrl: 'https://timeview.vvt.at/#F81F57B8-E49E-4A37-86037AE366123492'
