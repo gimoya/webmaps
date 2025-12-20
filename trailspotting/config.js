@@ -5,9 +5,72 @@
 
 /*
  * ==================
- * ROUTE START/END CONFIGURATION
+ * STATIONS CONFIGURATION
  * ==================
  */
+const STATIONS_CONFIG = {
+	'Innsbruck Sillpark': {
+		iframeUrl: 'https://timeview.vvt.at/#4F9D9CE5-A2E0-4ED2-BC40A88C63075217'
+	},
+	'Innsbruck BHF': {
+		iframeUrl: 'https://timeview.vvt.at/#FD637831-93EA-4DD7-BB75DD34A82DF0D2'
+	},
+	'Innsbruck Marktplatz': {
+		iframeUrl: 'https://timeview.vvt.at/#AEA613A7-DCEC-495E-8A06E4762239436C'
+	},
+	'Innsbruck SOS-Kinderorf': {
+		iframeUrl: 'https://timeview.vvt.at/#9E7E563D-5BB9-49EE-A9D52C5A747B1EF7'
+	},
+	'Hall BHF': {
+		iframeUrl: 'https://timeview.vvt.at/#F81F57B8-E49E-4A37-86037AE366123492'
+	},
+	'Schwaz BHF': {
+		iframeUrl: 'https://timeview.vvt.at/#75AB8984-F0F6-469B-9C619AF32864216B'
+	},
+	'Schwaz Terminal': {
+		iframeUrl: 'https://timeview.vvt.at/#542EDD76-647C-432D-AEAEF44D2900B096'
+	},
+	'Brixlegg BHF': {
+		iframeUrl: 'https://timeview.vvt.at/#0CDB1A43-FAD5-422D-94F7184A3B32DBE7'
+	},
+	'Terfens/Weer BHF': {
+		iframeUrl: 'https://timeview.vvt.at/#FAEA6F93-159F-4D19-9D1ECBB979509660'
+	},
+	'Völs BHF': {
+		iframeUrl: 'https://timeview.vvt.at/#87531436-9B3A-4C1F-8B792A7848D01826'
+	},
+	'Zirl BHF': {
+		iframeUrl: 'https://timeview.vvt.at/#D8AF7C04-B80D-4F7F-AA90817FDE9C192D'
+	},
+	'Telfs BHF': {
+		iframeUrl: 'https://timeview.vvt.at/#F1E103A3-7259-4721-B36726EF8523F024'
+	},
+	'Mötz BHF': {
+		iframeUrl: 'https://timeview.vvt.at/#411012F1-BBBF-437D-A4A0484EBB6BFD82'
+	},
+	'Ötztal BHF': {
+		iframeUrl: 'https://timeview.vvt.at/#9E7E563D-5BB9-49EE-A9D52C5A747B1EF7'
+	},
+	'Haiming BHF': {
+		iframeUrl: 'https://timeview.vvt.at/#FDD5C5EC-A1A4-42D7-8F2F0A43C169D4FD'
+	},
+	'Fritzens/Wattens': {
+		iframeUrl: 'https://timeview.vvt.at/#6ECB3026-EB71-4CF7-A9A7E75347C30C40'
+	},
+	'Rum BHF': {
+		iframeUrl: 'https://timeview.vvt.at/#1DB9D318-6C51-4337-83043F57DD976718'
+	},
+	'Jenbach BHF': {
+		iframeUrl: 'https://timeview.vvt.at/#B396AD85-AE18-4CE7-8657CAF7FFB7B8C7'
+	},
+	'Jenbach Schalserstraße/M-Preis': {
+		iframeUrl: ''
+	},
+	'Kematen BHF': {
+		iframeUrl: 'https://timeview.vvt.at/#2B49C93A-AACD-4F27-9A5181FA8C8115827'
+	}
+};
+
 /*
  * ==================
  * ROUTE CONFIGURATION
@@ -18,13 +81,13 @@ const APP_CONFIG = {
 	/*
 	 * Active routes (add new routes here)
 	 */
-	activeRoutes: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'],
+	activeRoutes: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'],
 	
 	/*
 	 * Route-specific overrides
 	 */
 	routeOverrides: {
-		'B': { minZoom: 9 }  /* Example: Route B has different minZoom */
+		'B': { minZoom: 9 } /* Example: Route B has different minZoom */
 	}
 };
 
@@ -36,8 +99,8 @@ const ROUTE_CONFIG = {
 		],
 		stations: [
 			'Innsbruck Sillpark',
-			'Hall',
-			'Terfens/Weer'
+			'Hall BHF',
+			'Terfens/Weer BHF'
 		]
 	},
 	'B': {
@@ -48,9 +111,9 @@ const ROUTE_CONFIG = {
 		],
 		stations: [
 			'Innsbruck Sillpark',
-			'Hall',
-			'Brixlegg',
-			'Terfens/Weer'
+			'Hall BHF',
+			'Brixlegg BHF',
+			'Terfens/Weer BHF'
 		]
 	},
 	'C': {
@@ -60,7 +123,7 @@ const ROUTE_CONFIG = {
 		],
 		stations: [
 			'Innsbruck Sillpark',
-			'Hall'
+			'Hall BHF'
 		]
 	},
 	'D': {
@@ -69,7 +132,7 @@ const ROUTE_CONFIG = {
 		],
 		stations: [
 			'Innsbruck BHF',
-			'Völs'
+			'Völs BHF'
 		]
 	},
 	'E': {
@@ -86,16 +149,16 @@ const ROUTE_CONFIG = {
 		],
 		stations: [
 			'Innsbruck BHF',
-			'Zirl'
+			'Zirl BHF'
 		]
 	},
 	'G': {
 		segments: [
-			{from: 'Mötz', to: 'Telfs'}
+			{from: 'Mötz', to: 'Telfs BHF'}
 		],
 		stations: [
 			'Innsbruck BHF',
-			'Telfs'
+			'Telfs BHF'
 		]
 	},
 	'H': {
@@ -114,7 +177,7 @@ const ROUTE_CONFIG = {
 		],
 		stations: [
 			'Innsbruck Sillpark',
-			'Hall',
+			'Hall BHF',
 			'Fritzens/Wattens'
 		]
 	},
@@ -124,7 +187,7 @@ const ROUTE_CONFIG = {
 		],
 		stations: [
 			'Innsbruck Marktplatz',
-			'Rum'
+			'Rum BHF'
 		]
 	},
 	'K': {
@@ -139,13 +202,23 @@ const ROUTE_CONFIG = {
 	},
 	'L': {
 		segments: [
-			{from: 'Mötz', to: 'Telfs'},
+			{from: 'Mötz', to: 'Telfs BHF'},
 			{from: 'Buchener Höhe', to: 'Telfs BHF'}
 		],
 		stations: [
 			'Innsbruck BHF',
-			'Telfs Sagl M-Preis',
 			'Telfs BHF'
+		]
+	},
+	'M': {
+		segments: [
+			{from: 'Schwaz', to: 'Jenbach'},
+			{from: 'Maurach', to: 'Jenbach'}
+		],
+		stations: [
+			'Innsbruck BHF',
+			'Jenbach Schalserstraße/M-Preis',
+			'Jenbach BHF'
 		]
 	}
 };
@@ -160,8 +233,9 @@ const MAP_CONFIG = {
 	/*
 	 * Tile source and attribution
 	 */
-	mapSource: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-	mapAttribution: 'Map data &copy; <a href="https://www.opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
+	maptilerKey: 'luZxg9l38dVBSQGjrelS',
+	mapSource: `https://api.maptiler.com/maps/outdoor-v4/{z}/{x}/{y}.png?key=luZxg9l38dVBSQGjrelS`,
+	mapAttribution: '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>',
 	
 	/*
 	 * Default map settings
@@ -169,7 +243,7 @@ const MAP_CONFIG = {
 	defaultMinZoom: 9,
 	defaultMaxZoom: 17,
 	defaultMaxNativeZoom: 17,
-	defaultBoundsPadding: 0.1,
+	defaultBoundsPadding: 0.3,
 	
 	/*
 	 * Track styling

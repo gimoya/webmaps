@@ -175,12 +175,18 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 	// Create the map
 	const map = L.map(mapId);
 	
+	// Store bounds on map object for control access
+	map._trailBounds = null;
+	
 	// Add tile layer
 	L.tileLayer(MAP_CONFIG.mapSource, {
+		tileSize: 512,
+		zoomOffset: -1,
 		attribution: MAP_CONFIG.mapAttribution,
 		minZoom: config.minZoom,
 		maxZoom: config.maxZoom,
-		maxNativeZoom: config.maxNativeZoom
+		maxNativeZoom: config.maxNativeZoom,
+		crossOrigin: true
 	}).addTo(map);
 	
 	// Add locate control
@@ -201,6 +207,31 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 			fillOpacity: 0.3
 		}
 	}).addTo(map);
+	
+	// Add focus on trails control
+	const FocusTrailsControl = L.Control.extend({
+		onAdd: function(map) {
+			const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+			const button = L.DomUtil.create('a', 'leaflet-control-button', container);
+			button.innerHTML = '🎯';
+			button.href = '#';
+			button.title = 'Focus on trails';
+			button.style.cssText = 'width: 30px; height: 30px; line-height: 30px; text-align: center; font-size: 18px; display: block;';
+			
+			L.DomEvent.disableClickPropagation(button);
+			L.DomEvent.on(button, 'click', function(e) {
+				L.DomEvent.stopPropagation(e);
+				L.DomEvent.preventDefault(e);
+				if (map._trailBounds) {
+					map.fitBounds(map._trailBounds, {maxZoom: config.maxZoom});
+				}
+			});
+			
+			return container;
+		}
+	});
+	
+	new FocusTrailsControl({ position: 'topleft' }).addTo(map);
 
 	// Ensure gpxFiles is an array
 	const files = Array.isArray(gpxFiles) ? gpxFiles : [gpxFiles];
@@ -461,6 +492,7 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 						}, allBounds[0]);
 						
 						const paddedBounds = combinedBounds.pad(config.boundsPadding);
+						map._trailBounds = paddedBounds; // Store for refocus control
 						map.fitBounds(paddedBounds);
 						map.setMaxBounds(paddedBounds);
 					} else {
@@ -472,6 +504,45 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 	});
 	
 	return map;
+}
+
+// Function to populate timetable boxes dynamically from STATIONS_CONFIG
+function populateTimetableBoxes() {
+	const timetableContainer = document.getElementById('timetable-container');
+	if (!timetableContainer) {
+		console.warn('Timetable container not found');
+		return;
+	}
+	
+	// Clear existing content
+	timetableContainer.innerHTML = '';
+	
+	// Create timetable boxes for each station in STATIONS_CONFIG
+	Object.keys(STATIONS_CONFIG).forEach(stationName => {
+		const station = STATIONS_CONFIG[stationName];
+		const box = document.createElement('div');
+		box.className = 'floating-box half-floating-box timetable-box';
+		
+		const title = document.createElement('div');
+		title.className = 'timetable-title';
+		title.textContent = `${stationName} 🕐`;
+		
+		box.appendChild(title);
+		
+		// Check if URL is provided
+		if (!station.iframeUrl || station.iframeUrl.trim() === '') {
+			// Show config error immediately if URL is missing
+			const errorDiv = createConfigError(stationName);
+			box.appendChild(errorDiv);
+		} else {
+			const iframe = document.createElement('iframe');
+			iframe.className = 'timetable-iframe';
+			iframe.dataset.src = station.iframeUrl;
+			box.appendChild(iframe);
+		}
+		
+		timetableContainer.appendChild(box);
+	});
 }
 
 // Function to populate GPX download list dynamically
@@ -533,16 +604,27 @@ function updateTimetableBoxes(route) {
 	const routeStations = ROUTE_CONFIG[route] ? ROUTE_CONFIG[route].stations : [];
 	const allBoxes = document.querySelectorAll('.timetable-box');
 	const allTitles = document.querySelectorAll('.timetable-box .timetable-title');
+	const timetableContainer = document.getElementById('timetable-container');
 	
 	// Hide all timetable boxes first
 	allBoxes.forEach(box => {
 		box.style.display = 'none';
 	});
 	
+	// Track which stations from route config were matched
+	const matchedStations = [];
+	
 	// Show only boxes for stations in the current route and lazy load their iframes
 	allTitles.forEach(title => {
 		const titleText = title.textContent;
-		const isMatchingStation = routeStations.some(stationName => titleText.includes(stationName));
+		const isMatchingStation = routeStations.some(stationName => {
+			const stationNameWithEmoji = `${stationName} 🕐`;
+			if (titleText.includes(stationName) || titleText === stationNameWithEmoji) {
+				matchedStations.push(stationName);
+				return true;
+			}
+			return false;
+		});
 		
 		if (isMatchingStation) {
 			const timetableBox = title.closest('.timetable-box');
@@ -554,6 +636,28 @@ function updateTimetableBoxes(route) {
 			}
 		}
 	});
+	
+	// Check for unmatched stations and create error boxes for them
+	if (timetableContainer) {
+		routeStations.forEach(stationName => {
+			if (!matchedStations.includes(stationName)) {
+				// Station not found in STATIONS_CONFIG - create error box
+				const box = document.createElement('div');
+				box.className = 'floating-box half-floating-box timetable-box';
+				box.style.display = 'block';
+				
+				const title = document.createElement('div');
+				title.className = 'timetable-title';
+				title.textContent = `${stationName} 🕐`;
+				
+				const errorDiv = createConfigError(stationName);
+				
+				box.appendChild(title);
+				box.appendChild(errorDiv);
+				timetableContainer.appendChild(box);
+			}
+		});
+	}
 }
 
 // Helper function to create error message for failed iframe
@@ -584,10 +688,48 @@ function createTimetableError(stationName) {
 	return errorDiv;
 }
 
+// Helper function to create config error message
+function createConfigError(stationName) {
+	const errorDiv = document.createElement('div');
+	errorDiv.className = 'timetable-error';
+	errorDiv.style.cssText = `
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		height: 200px;
+		background-color: #f5f5f5;
+		border: 1px solid #ddd;
+		border-radius: 5px;
+		color: #666;
+		font-size: 14px;
+		text-align: center;
+		padding: 20px;
+		box-sizing: border-box;
+	`;
+	errorDiv.innerHTML = `
+		<div>
+			<div style="font-size: 18px; margin-bottom: 10px;">⚠️</div>
+			<div><strong>Config file set up error</strong></div>
+			<div style="font-size: 12px; margin-top: 5px;">${stationName} timetable</div>
+		</div>
+	`;
+	return errorDiv;
+}
+
 // Function to lazy load a timetable iframe
 function loadTimetableIframe(iframe) {
 	const originalSrc = iframe.dataset.src || iframe.src;
-	if (!originalSrc) return;
+	if (!originalSrc || originalSrc.trim() === '') {
+		// Show config error if URL is missing
+		const parentBox = iframe.closest('.timetable-box');
+		if (parentBox) {
+			const title = parentBox.querySelector('.timetable-title');
+			const stationName = title ? title.textContent.replace(' 🕐', '') : 'Station';
+			const errorDiv = createConfigError(stationName);
+			iframe.parentNode.replaceChild(errorDiv, iframe);
+		}
+		return;
+	}
 	
 	iframe.dataset.loaded = 'loading';
 	
@@ -670,6 +812,9 @@ document.addEventListener('DOMContentLoaded', function() {
 	document.documentElement.style.setProperty('--marker-size', `${MAP_CONFIG.markerSize}px`);
 	document.documentElement.style.setProperty('--marker-color-start', MAP_CONFIG.markerColors.start);
 	document.documentElement.style.setProperty('--marker-color-end', MAP_CONFIG.markerColors.end);
+	
+	// Populate timetable boxes dynamically
+	populateTimetableBoxes();
 	
 	// Populate GPX download list dynamically
 	populateGPXDownloadList();
