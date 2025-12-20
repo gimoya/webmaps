@@ -681,7 +681,7 @@ function createTimetableError(stationName) {
 	errorDiv.innerHTML = `
 		<div>
 			<div style="font-size: 18px; margin-bottom: 10px;">🚫</div>
-			<div><strong>Service not avail. at the moment</strong></div>
+			<div><strong>Timetable dzt. nicht verfügbar!</strong></div>
 			<div style="font-size: 12px; margin-top: 5px;">${stationName} timetable</div>
 		</div>
 	`;
@@ -708,8 +708,8 @@ function createConfigError(stationName) {
 	`;
 	errorDiv.innerHTML = `
 		<div>
-			<div style="font-size: 18px; margin-bottom: 10px;">⚠️</div>
-			<div><strong>Config file set up error</strong></div>
+			<div style="font-size: 18px; margin-bottom: 10px;">😬</div>
+			<div><strong>Timetable noch nicht konfiguriert!</strong></div>
 			<div style="font-size: 12px; margin-top: 5px;">${stationName} timetable</div>
 		</div>
 	`;
