@@ -41,7 +41,7 @@ const ROUTE_CONFIG = {
         segments: [
             {from: 'StartLocation', to: 'EndLocation'},
             {from: 'AnotherStart', to: 'AnotherEnd'}
-        ],
+    ],
         stations: [
             'Station Name 1',
             'Station Name 2',

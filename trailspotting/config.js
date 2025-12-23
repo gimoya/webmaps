@@ -9,17 +9,17 @@
  * ==================
  */
 const STATIONS_CONFIG = {
-	'Innsbruck Sillpark': {
-		iframeUrl: 'https://timeview.vvt.at/#4F9D9CE5-A2E0-4ED2-BC40A88C63075217'
+	'Innsbruck Tivoli': {
+		iframeUrl: 'https://timeview.vvt.at/#42D539BA-4F21-4CBE-8F69DD5C30BC3AB2'
 	},
 	'Innsbruck BHF': {
 		iframeUrl: 'https://timeview.vvt.at/#FD637831-93EA-4DD7-BB75DD34A82DF0D2'
 	},
 	'Innsbruck Marktplatz': {
-		iframeUrl: 'https://timeview.vvt.at/#B97652F9-451A-44BA-A1D0B4875F7CBB47'
+		iframeUrl: 'https://timeview.vvt.at/#32A3FD1B-6456-41E5-950874B80FBC59EE'
 	},
 	'Innsbruck SOS-Kinderorf': {
-		iframeUrl: 'https://timeview.vvt.at/#591B7C3F-9327-482D-A7D2E97D14C67FE4'
+		iframeUrl: 'https://timeview.vvt.at/#C4F5763C-8BE2-41F6-AC350DDED00520CD'
 	},
 	'Hall BHF': {
 		iframeUrl: 'https://timeview.vvt.at/#F81F57B8-E49E-4A37-86037AE366123492'
@@ -40,19 +40,19 @@ const STATIONS_CONFIG = {
 		iframeUrl: 'https://timeview.vvt.at/#87531436-9B3A-4C1F-8B792A7848D01826'
 	},
 	'Zirl BHF': {
-		iframeUrl: 'https://timeview.vvt.at/#D8AF7C04-B80D-4F7F-AA90817FDE9C192D'
+		iframeUrl: 'https://timeview.vvt.at/#2A43DEAC-CD7A-47AF-80FC5D20AA370F2D'
 	},
 	'Telfs Sagl/M-Preis': {
 		iframeUrl: 'https://timeview.vvt.at/#CB03384A-4008-4E10-BD2C8E123280EB3F'
 	},
 	'Telfs BHF': {
-		iframeUrl: 'https://timeview.vvt.at/#F1E103A3-7259-4721-B36726EF8523F024'
+		iframeUrl: 'https://timeview.vvt.at/#088DF7AE-2E94-4A92-8C2A87FE1CB0B606'
 	},
 	'Mötz BHF': {
 		iframeUrl: 'https://timeview.vvt.at/#411012F1-BBBF-437D-A4A0484EBB6BFD82'
 	},
 	'Ötztal BHF': {
-		iframeUrl: 'https://timeview.vvt.at/#9E7E563D-5BB9-49EE-A9D52C5A747B1EF7'
+		iframeUrl: 'https://timeview.vvt.at/#FBD2EDA0-8232-4C8D-8F7038E55EA1C5C5'
 	},
 	'Haiming BHF': {
 		iframeUrl: 'https://timeview.vvt.at/#FDD5C5EC-A1A4-42D7-8F2F0A43C169D4FD'
@@ -64,7 +64,7 @@ const STATIONS_CONFIG = {
 		iframeUrl: 'https://timeview.vvt.at/#1DB9D318-6C51-4337-83043F57DD976718'
 	},
 	'Jenbach BHF': {
-		iframeUrl: 'https://timeview.vvt.at/#B396AD85-AE18-4CE7-8657CAF7FFB7B8C7'
+		iframeUrl: 'https://timeview.vvt.at/#54346321-DF15-4DDF-B4B9F5A6DED9EF33'
 	},
 	'Jenbach Schalserstraße': {
 		iframeUrl: 'https://timeview.vvt.at/#591B7C3F-9327-482D-A7D2E97D14C67FE4'
@@ -101,7 +101,7 @@ const ROUTE_CONFIG = {
 			{from: 'Schwaz', to: 'Terfens/Weer'}
 		],
 		stations: [
-			'Innsbruck Sillpark',
+			'Innsbruck Tivoli',
 			'Hall BHF',
 			'Terfens/Weer BHF'
 		]
@@ -113,7 +113,7 @@ const ROUTE_CONFIG = {
 			{from: 'Schwaz', to: 'Terfens/Weer'}
 		],
 		stations: [
-			'Innsbruck Sillpark',
+			'Innsbruck Tivoli',
 			'Hall BHF',
 			'Brixlegg BHF',
 			'Terfens/Weer BHF'
@@ -125,7 +125,7 @@ const ROUTE_CONFIG = {
 			{from: 'Walderbrücke', to: 'Hall'}
 		],
 		stations: [
-			'Innsbruck Sillpark',
+			'Innsbruck Tivoli',
 			'Hall BHF'
 		]
 	},
@@ -179,7 +179,7 @@ const ROUTE_CONFIG = {
 			{from: 'Gnadenwald', to: 'Fritzens/Wattens'}
 		],
 		stations: [
-			'Innsbruck Sillpark',
+			'Innsbruck Tivoli',
 			'Hall BHF',
 			'Fritzens/Wattens'
 		]
@@ -199,7 +199,7 @@ const ROUTE_CONFIG = {
 			{from: 'Sistrans', to: 'Innsbruck-Mitte'}
 		],
 		stations: [
-			'Innsbruck Sillpark',
+			'Innsbruck Tivoli',
 			'Innsbruck SOS-Kinderorf'
 		]
 	},

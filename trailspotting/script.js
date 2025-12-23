@@ -522,12 +522,13 @@ function populateTimetableBoxes() {
 		const station = STATIONS_CONFIG[stationName];
 		const box = document.createElement('div');
 		box.className = 'floating-box half-floating-box timetable-box';
+		box.dataset.stationName = stationName; // Store station name for matching
 		
-		const title = document.createElement('div');
-		title.className = 'timetable-title';
-		title.textContent = `${stationName} 🕐`;
-		
-		box.appendChild(title);
+		// Add tooltip for hover/touch
+		const tooltip = document.createElement('div');
+		tooltip.className = 'timetable-tooltip';
+		tooltip.textContent = 'Falls Fahrplan nicht angezeigt wird, kurz warten bzw. Seite neu laden!';
+		box.appendChild(tooltip);
 		
 		// Check if URL is provided
 		if (!station.iframeUrl || station.iframeUrl.trim() === '') {
@@ -540,6 +541,18 @@ function populateTimetableBoxes() {
 			iframe.dataset.src = station.iframeUrl;
 			box.appendChild(iframe);
 		}
+		
+		// Add touch event handlers for mobile
+		let touchTimeout;
+		box.addEventListener('touchstart', (e) => {
+			clearTimeout(touchTimeout);
+			tooltip.classList.add('show');
+		});
+		box.addEventListener('touchend', (e) => {
+			touchTimeout = setTimeout(() => {
+				tooltip.classList.remove('show');
+			}, 2000); // Hide after 2 seconds
+		});
 		
 		timetableContainer.appendChild(box);
 	});
@@ -588,6 +601,31 @@ function populateRouteWheel() {
 		option.className = 'route-option';
 		option.dataset.route = route;
 		option.textContent = route;
+		
+		// Create tooltip with segment information
+		const tooltip = document.createElement('div');
+		tooltip.className = 'route-tooltip';
+		const routeConfig = ROUTE_CONFIG[route];
+		if (routeConfig && routeConfig.segments && routeConfig.segments.length > 0) {
+			const segmentText = routeConfig.segments.map(seg => `${seg.from} → ${seg.to}`).join(', ');
+			tooltip.textContent = segmentText;
+		} else {
+			tooltip.textContent = 'No segments configured';
+		}
+		option.appendChild(tooltip);
+		
+		// Add touch event handlers for mobile
+		let touchTimeout;
+		option.addEventListener('touchstart', (e) => {
+			clearTimeout(touchTimeout);
+			tooltip.classList.add('show');
+		});
+		option.addEventListener('touchend', (e) => {
+			touchTimeout = setTimeout(() => {
+				tooltip.classList.remove('show');
+			}, 2000); // Hide after 2 seconds
+		});
+		
 		option.addEventListener('click', () => {
 			switchRoute(route);
 		});
@@ -603,7 +641,6 @@ function populateRouteWheel() {
 function updateTimetableBoxes(route) {
 	const routeStations = ROUTE_CONFIG[route] ? ROUTE_CONFIG[route].stations : [];
 	const allBoxes = document.querySelectorAll('.timetable-box');
-	const allTitles = document.querySelectorAll('.timetable-box .timetable-title');
 	const timetableContainer = document.getElementById('timetable-container');
 	
 	// Hide all timetable boxes first
@@ -615,22 +652,13 @@ function updateTimetableBoxes(route) {
 	const matchedStations = [];
 	
 	// Show only boxes for stations in the current route and lazy load their iframes
-	allTitles.forEach(title => {
-		const titleText = title.textContent;
-		const isMatchingStation = routeStations.some(stationName => {
-			const stationNameWithEmoji = `${stationName} 🕐`;
-			if (titleText.includes(stationName) || titleText === stationNameWithEmoji) {
-				matchedStations.push(stationName);
-				return true;
-			}
-			return false;
-		});
-		
-		if (isMatchingStation) {
-			const timetableBox = title.closest('.timetable-box');
-			timetableBox.style.display = 'block';
+	allBoxes.forEach(box => {
+		const stationName = box.dataset.stationName;
+		if (routeStations.includes(stationName)) {
+			matchedStations.push(stationName);
+			box.style.display = 'block';
 			
-			const iframe = timetableBox.querySelector('.timetable-iframe');
+			const iframe = box.querySelector('.timetable-iframe');
 			if (iframe && !iframe.dataset.loaded) {
 				loadTimetableIframe(iframe);
 			}
@@ -644,16 +672,30 @@ function updateTimetableBoxes(route) {
 				// Station not found in STATIONS_CONFIG - create error box
 				const box = document.createElement('div');
 				box.className = 'floating-box half-floating-box timetable-box';
+				box.dataset.stationName = stationName; // Store station name for consistency
 				box.style.display = 'block';
 				
-				const title = document.createElement('div');
-				title.className = 'timetable-title';
-				title.textContent = `${stationName} 🕐`;
+				// Add tooltip for hover/touch
+				const tooltip = document.createElement('div');
+				tooltip.className = 'timetable-tooltip';
+				tooltip.textContent = 'Falls Fahrplan nicht angezeigt wird, kurz warten bzw. Seite neu laden!';
+				box.appendChild(tooltip);
 				
 				const errorDiv = createConfigError(stationName);
-				
-				box.appendChild(title);
 				box.appendChild(errorDiv);
+				
+				// Add touch event handlers for mobile
+				let touchTimeout;
+				box.addEventListener('touchstart', (e) => {
+					clearTimeout(touchTimeout);
+					tooltip.classList.add('show');
+				});
+				box.addEventListener('touchend', (e) => {
+					touchTimeout = setTimeout(() => {
+						tooltip.classList.remove('show');
+					}, 2000); // Hide after 2 seconds
+				});
+				
 				timetableContainer.appendChild(box);
 			}
 		});
@@ -723,8 +765,7 @@ function loadTimetableIframe(iframe) {
 		// Show config error if URL is missing
 		const parentBox = iframe.closest('.timetable-box');
 		if (parentBox) {
-			const title = parentBox.querySelector('.timetable-title');
-			const stationName = title ? title.textContent.replace(' 🕐', '') : 'Station';
+			const stationName = parentBox.dataset.stationName || 'Station';
 			const errorDiv = createConfigError(stationName);
 			iframe.parentNode.replaceChild(errorDiv, iframe);
 		}
@@ -741,8 +782,7 @@ function loadTimetableIframe(iframe) {
 	const showError = () => {
 		const parentBox = iframe.closest('.timetable-box');
 		if (parentBox) {
-			const title = parentBox.querySelector('.timetable-title');
-			const stationName = title ? title.textContent.replace(' 🕐', '') : 'Station';
+			const stationName = parentBox.dataset.stationName || 'Station';
 			const errorDiv = createTimetableError(stationName);
 			iframe.parentNode.replaceChild(errorDiv, iframe);
 		}
