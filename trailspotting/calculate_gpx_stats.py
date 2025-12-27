@@ -238,46 +238,66 @@ def update_gpx_metadata(gpx_file: str, avg_km_per_hour: float = 10.0, time_penal
     print("  Removing namespaces from GPX elements...")
     remove_namespaces(root)
     
-    # Find all track segments
-    trksegs = root.findall('.//trkseg')
-    print(f"  Found {len(trksegs)} track segments")
+    # Find all tracks
+    tracks = root.findall('.//trk')
+    print(f"  Found {len(tracks)} tracks")
     
-    # Update each segment
-    for i, trkseg in enumerate(trksegs):
-        # Calculate statistics
-        stats = calculate_segment_stats(trkseg, avg_km_per_hour, time_penalty_per_10m_elev, pause_time_per_60min)
+    # Update each track and its segments
+    for track_idx, track in enumerate(tracks):
+        segment_name = f"Segment {track_idx + 1}"
         
-        # Remove existing metadata if present
-        name = trkseg.find('name')
-        if name is not None:
-            trkseg.remove(name)
-        desc = trkseg.find('desc')
-        if desc is not None:
-            trkseg.remove(desc)
+        # Set track name
+        # Remove existing track name if present
+        track_name = track.find('name')
+        if track_name is not None:
+            track.remove(track_name)
         
-        # Create new metadata elements
-        name = ET.Element('name')
-        name.text = f"Segment {i+1}"
+        # Create new track name
+        track_name = ET.Element('name')
+        track_name.text = segment_name
+        track.insert(0, track_name)
+        track_name.tail = '\n    '
         
-        desc = ET.Element('desc')
-        desc.text = (f"distance: {stats['distance']}km, "
-                    f"elevation_gain: {stats['elevation_gain']}m, "
-                    f"elevation_loss: {stats['elevation_loss']}m, "
-                    f"estimated_duration: {stats['duration']}")
+        # Find all track segments within this track
+        trksegs = track.findall('trkseg')
+        print(f"    Track {track_idx + 1} has {len(trksegs)} segment(s)")
         
-        # Insert at the beginning of trkseg
-        trkseg.insert(0, name)
-        trkseg.insert(1, desc)
-        
-        # Add proper formatting
-        name.tail = '\n      '
-        desc.tail = '\n      '
-        
-        print(f"    Segment {i+1}: {stats['distance']}km, +{stats['elevation_gain']}m/-{stats['elevation_loss']}m, ~{stats['duration']}")
+        # Update each segment within the track
+        for trkseg in trksegs:
+            # Calculate statistics
+            stats = calculate_segment_stats(trkseg, avg_km_per_hour, time_penalty_per_10m_elev, pause_time_per_60min)
+            
+            # Remove existing metadata if present
+            name = trkseg.find('name')
+            if name is not None:
+                trkseg.remove(name)
+            desc = trkseg.find('desc')
+            if desc is not None:
+                trkseg.remove(desc)
+            
+            # Create new metadata elements with same name as track
+            name = ET.Element('name')
+            name.text = segment_name
+            
+            desc = ET.Element('desc')
+            desc.text = (f"distance: {stats['distance']}km, "
+                        f"elevation_gain: {stats['elevation_gain']}m, "
+                        f"elevation_loss: {stats['elevation_loss']}m, "
+                        f"estimated_duration: {stats['duration']}")
+            
+            # Insert at the beginning of trkseg
+            trkseg.insert(0, name)
+            trkseg.insert(1, desc)
+            
+            # Add proper formatting
+            name.tail = '\n      '
+            desc.tail = '\n      '
+            
+            print(f"      {segment_name}: {stats['distance']}km, +{stats['elevation_gain']}m/-{stats['elevation_loss']}m, ~{stats['duration']}")
     
     # Write back to file
     tree.write(gpx_file, encoding='utf-8', xml_declaration=True)
-    print(f"  Updated {len(trksegs)} segments with calculated statistics")
+    print(f"  Updated {len(tracks)} tracks with calculated statistics")
 
 def main(avg_km_per_hour: float = 15.0, time_penalty_per_10m_elev: float = 1.0, pause_time_per_60min: float = 5.0):
     """

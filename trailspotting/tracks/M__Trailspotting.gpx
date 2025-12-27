@@ -9,7 +9,7 @@
     </author>
     </metadata>
   <trk>
-    <name>Trailspotting Route M</name>
+    <name>Segment 1</name>
     <trkseg>
       <name>Segment 1</name>
       <desc>distance: 16.0km, elevation_gain: 944.0m, elevation_loss: 921.0m, estimated_duration: 02:34</desc>
@@ -2077,7 +2077,7 @@
     </trkseg>
   </trk>
   <trk>
-    <name>Trailspotting Route M</name>
+    <name>Segment 2</name>
     <trkseg>
       <name>Segment 2</name>
       <desc>distance: 14.0km, elevation_gain: 897.0m, elevation_loss: 1333.0m, estimated_duration: 02:24</desc>

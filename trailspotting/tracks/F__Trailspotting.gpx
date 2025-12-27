@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <gpx creator="https://tiroltrailhead.com" version="1.1" schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd http://www.garmin.com/xmlschemas/GpxExtensions/v3 http://www.garmin.com/xmlschemas/GpxExtensionsv3.xsd http://www.garmin.com/xmlschemas/TrackPointExtension/v1 http://www.garmin.com/xmlschemas/TrackPointExtensionv1.xsd http://www.garmin.com/xmlschemas/PowerExtension/v1 http://www.garmin.com/xmlschemas/PowerExtensionv1.xsd http://www.topografix.com/GPX/gpx_style/0/2 http://www.topografix.com/GPX/gpx_style/0/2/gpx_style.xsd">
   <trk>
-    <name>G__Trainspotting</name>
+    <name>Segment 1</name>
     <trkseg>
       <name>Segment 1</name>
       <desc>distance: 19.0km, elevation_gain: 786.0m, elevation_loss: 1310.0m, estimated_duration: 02:27</desc>

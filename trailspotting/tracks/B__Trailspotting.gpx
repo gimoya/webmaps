@@ -9,7 +9,7 @@
     </author>
   </metadata>
   <trk>
-    <name>B_conservative_clean</name>
+    <name>Segment 1</name>
     <trkseg>
       <name>Segment 1</name>
       <desc>distance: 9.0km, elevation_gain: 338.0m, elevation_loss: 604.0m, estimated_duration: 01:06</desc>
@@ -996,7 +996,7 @@
       </trkpt>
     </trkseg>
     <trkseg>
-      <name>Segment 2</name>
+      <name>Segment 1</name>
       <desc>distance: 17.0km, elevation_gain: 628.0m, elevation_loss: 637.0m, estimated_duration: 02:02</desc>
       <trkpt lat="47.403242" lon="11.81698">
         <ele>531.46</ele>
@@ -2797,7 +2797,7 @@
       </trkpt>
     </trkseg>
     <trkseg>
-      <name>Segment 3</name>
+      <name>Segment 1</name>
       <desc>distance: 16.0km, elevation_gain: 893.0m, elevation_loss: 887.0m, estimated_duration: 02:29</desc>
       <trkpt lat="47.349392" lon="11.702119">
         <ele>537.25</ele>

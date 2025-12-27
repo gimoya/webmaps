@@ -9,7 +9,7 @@
     </author>
   </metadata>
   <trk>
-    <name>A_clean</name>
+    <name>Segment 1</name>
     <trkseg>
       <name>Segment 1</name>
       <desc>distance: 10.0km, elevation_gain: 384.0m, elevation_loss: 650.0m, estimated_duration: 01:12</desc>
@@ -1287,7 +1287,7 @@
       </trkpt>
     </trkseg>
     <trkseg>
-      <name>Segment 2</name>
+      <name>Segment 1</name>
       <desc>distance: 16.0km, elevation_gain: 883.0m, elevation_loss: 867.0m, estimated_duration: 02:27</desc>
       <trkpt lat="47.349389" lon="11.702129">
         <ele>537.25</ele>
