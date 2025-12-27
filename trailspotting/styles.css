@@ -503,6 +503,8 @@ a, button, input, textarea, [contenteditable="true"] {
 	
 	#map-title {
 		font-size: 32px;
+		line-height: 1.5;
+		height: 38px;
 	}
 	
 	.cycling-info {
