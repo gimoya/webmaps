@@ -478,3 +478,46 @@ a, button, input, textarea, [contenteditable="true"] {
 .timetable-box .timetable-tooltip.show {
 	opacity: 1;
 }
+
+/* Small smartphone screens - increase font sizes */
+@media (max-width: 480px) {
+	.route-header {
+		font-size: 28px;
+	}
+	
+	.route-option {
+		font-size: 26px;
+	}
+	
+	.route-option .route-tooltip {
+		font-size: 10px;
+	}
+	
+	.floating-box, .gps-footer, #map-title {
+		font-size: 15px;
+	}
+	
+	.floating-box p {
+		font-size: 14px;
+	}
+	
+	#map-title {
+		font-size: 32px;
+	}
+	
+	.cycling-info {
+		font-size: 13px;
+	}
+	
+	.segment-title {
+		font-size: 15px;
+	}
+	
+	.gpx-download-list a {
+		font-size: 13px;
+	}
+	
+	.timetable-box .timetable-tooltip {
+		font-size: 12px;
+	}
+}

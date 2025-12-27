@@ -216,6 +216,16 @@ def update_gpx_metadata(gpx_file: str, avg_km_per_hour: float = 10.0, time_penal
     """
     print(f"Processing {gpx_file}...")
     
+    # Replace gpx.studio with tiroltrailhead.com in file content
+    with open(gpx_file, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    if 'gpx.studio' in content:
+        content = content.replace('gpx.studio', 'tiroltrailhead.com')
+        with open(gpx_file, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print("  Replaced gpx.studio with tiroltrailhead.com")
+    
     # Parse GPX file
     tree = ET.parse(gpx_file)
     root = tree.getroot()
