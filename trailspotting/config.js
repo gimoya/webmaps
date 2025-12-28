@@ -295,15 +295,15 @@ const STATS_CONFIG = {
 	/*
 	 * Average cycling speed in km/h
 	 */
-	avgSpeed: 22.0,
+	avgSpeed: 17,
 	
 	/*
 	 * Time penalty in minutes per 10m elevation gain
 	 */
-	elevationPenalty: 1.1,
+	elevationPenalty: 0.85,
 	
 	/*
 	 * Pause time in minutes per 60 minutes of riding
 	 */
-	pauseTimePer60min: 10.0
+	pauseTimePer60min: 10
 };

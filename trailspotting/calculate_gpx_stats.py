@@ -90,7 +90,7 @@ def calculate_segment_stats(trkseg, avg_km_per_hour: float = 10.0, time_penalty_
     trkpts = trkseg.findall('trkpt')
     
     if len(trkpts) < 2:
-        return {'distance': 0, 'elevation_gain': 0, 'elevation_loss': 0, 'duration': 0}
+        return {'distance': 0, 'elevation_gain': 0, 'elevation_loss': 0, 'duration': '00:00', 'avg_km_per_hour': 0}
     
     total_distance = 0
     elevations = []
@@ -137,11 +137,19 @@ def calculate_segment_stats(trkseg, avg_km_per_hour: float = 10.0, time_penalty_
     minutes = int(total_duration % 60)
     duration_str = f"{hours:02d}:{minutes:02d}"
     
+    # Calculate average km/h based on estimated duration
+    # avg_km_per_hour = distance / time_in_hours
+    if total_duration > 0:
+        avg_km_per_hour_calculated = distance_km / (total_duration / 60)
+    else:
+        avg_km_per_hour_calculated = 0
+    
     return {
         'distance': round(distance_km, 0),
         'elevation_gain': round(elevation_gain, 0),
         'elevation_loss': round(elevation_loss, 0),
-        'duration': duration_str
+        'duration': duration_str,
+        'avg_km_per_hour': round(avg_km_per_hour_calculated, 1)
     }
 
 def clean_gpx_element(element):
@@ -267,12 +275,10 @@ def update_gpx_metadata(gpx_file: str, avg_km_per_hour: float = 10.0, time_penal
             # Calculate statistics
             stats = calculate_segment_stats(trkseg, avg_km_per_hour, time_penalty_per_10m_elev, pause_time_per_60min)
             
-            # Remove existing metadata if present
-            name = trkseg.find('name')
-            if name is not None:
+            # Remove existing metadata if present (remove all occurrences)
+            for name in trkseg.findall('name'):
                 trkseg.remove(name)
-            desc = trkseg.find('desc')
-            if desc is not None:
+            for desc in trkseg.findall('desc'):
                 trkseg.remove(desc)
             
             # Create new metadata elements with same name as track
@@ -283,7 +289,8 @@ def update_gpx_metadata(gpx_file: str, avg_km_per_hour: float = 10.0, time_penal
             desc.text = (f"distance: {stats['distance']}km, "
                         f"elevation_gain: {stats['elevation_gain']}m, "
                         f"elevation_loss: {stats['elevation_loss']}m, "
-                        f"estimated_duration: {stats['duration']}")
+                        f"estimated_duration: {stats['duration']}, "
+                        f"avg_km_per_hour: {stats['avg_km_per_hour']}")
             
             # Insert at the beginning of trkseg
             trkseg.insert(0, name)
