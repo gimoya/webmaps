@@ -155,6 +155,65 @@ function renderCyclingSegments(route, containerId) {
 	container.innerHTML = html;
 }
 
+// Function to add directional arrows to GPX tracks using leaflet.textpath (same method as legacy_trails)
+// Only shows arrows when zoom level > 15
+function addDirectionalArrows(gpxData, map) {
+	const ARROW_STYLE = {
+		repeat: true,
+		offset: 4,
+		attributes: {
+			fill: MAP_CONFIG.trackColors.foreground,
+			'font-weight': 'bold',
+			'font-size': '12px',
+			'paint-order': 'stroke',
+			stroke: MAP_CONFIG.trackColors.background,
+			'stroke-width': '3',
+			'stroke-linejoin': 'round',
+			'letter-spacing': '0px',
+			'alignment-baseline': 'middle'
+		}
+	};
+	const ARROW_TEXT = '>>               '; // choose your preferred single arrow look
+
+	function setArrowOnPolyline(polyline, showArrows) {
+		if (polyline instanceof L.Polyline && polyline.setText) {
+			if (showArrows) {
+				polyline.setText(ARROW_TEXT, ARROW_STYLE);
+			} else {
+				polyline.setText(null);
+			}
+		}
+	}
+
+	function processLayer(layer, showArrows) {
+		// Handle nested layers
+		if (layer._layers) {
+			Object.values(layer._layers).forEach(nestedLayer => {
+				setArrowOnPolyline(nestedLayer, showArrows);
+			});
+		} else {
+			// Handle direct polylines
+			setArrowOnPolyline(layer, showArrows);
+		}
+	}
+
+	function updateArrows() {
+		const zoom = map.getZoom();
+		const showArrows = zoom > 13;
+		if (gpxData._layers) {
+			Object.values(gpxData._layers).forEach(layer => {
+				processLayer(layer, showArrows);
+			});
+		}
+	}
+
+	// Update arrows on initial load
+	updateArrows();
+
+	// Update arrows when zoom changes
+	map.on('zoomend', updateArrows);
+}
+
 // Reusable function to create a map with GPX files
 function createMapWithGPX(mapId, gpxFiles, options = {}) {
 	// Default options from configuration
@@ -262,7 +321,7 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 			console.error(`GPX loading error for ${gpxFile}:`, e);
 		}).on('loaded', function(e) {
 			// Add thinner foreground line on top
-			new L.GPX(gpxFile, {
+			const foregroundLayer = new L.GPX(gpxFile, {
 				async: true,
 				polyline_options: {
 					color: MAP_CONFIG.trackColors.foreground,
@@ -275,6 +334,10 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 					endIconUrl: null,
 					shadowUrl: null
 				}
+			}).on('loaded', function(loadedEvent) {
+				// Add directional arrows to the track using same method as numbered markers
+				const gpxLayer = loadedEvent.target;
+				addDirectionalArrows(gpxLayer, map);
 			}).addTo(map);
 		}).addTo(map);
 		
