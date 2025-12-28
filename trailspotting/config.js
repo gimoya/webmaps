@@ -97,26 +97,21 @@ const APP_CONFIG = {
 const ROUTE_CONFIG = {
 	'A': {
 		segments: [
-			{from: 'Aldrans', to: 'Hall'},
-			{from: 'Schwaz', to: 'Terfens/Weer'}
+			{from: 'Hungerburg', to: 'Neu-Rum'}
 		],
 		stations: [
-			'Innsbruck Tivoli',
-			'Hall BHF',
-			'Terfens/Weer BHF'
+			'Innsbruck Marktplatz',
+			'Rum BHF'
 		]
 	},
 	'B': {
 		segments: [
-			{from: 'Aldrans', to: 'Hall'},
-			{from: 'Münster/Wiesing', to: 'Brixlegg'},
-			{from: 'Schwaz', to: 'Terfens/Weer'}
+			{from: 'Aldrans', to: 'Innsbruck-DEZ'},
+			{from: 'Sistrans', to: 'Innsbruck-Mitte'}
 		],
 		stations: [
 			'Innsbruck Tivoli',
-			'Hall BHF',
-			'Brixlegg BHF',
-			'Terfens/Weer BHF'
+			'Innsbruck SOS-Kinderorf'
 		]
 	},
 	'C': {
@@ -166,11 +161,13 @@ const ROUTE_CONFIG = {
 	},
 	'H': {
 		segments: [
-			{from: 'Ötztal Bhf.', to: 'Ötztal Bhf.'}
+			{from: 'Mötz', to: 'Telfs Sagl/M-Preis'},
+			{from: 'Buchener Höhe', to: 'Telfs BHF'}
 		],
 		stations: [
 			'Innsbruck BHF',
-			'Ötztal BHF'
+			'Telfs Sagl/M-Preis',
+			'Telfs BHF'
 		]
 	},
 	'I': {
@@ -186,35 +183,29 @@ const ROUTE_CONFIG = {
 	},
 	'J': {
 		segments: [
-			{from: 'Hungerburg', to: 'Neu-Rum'}
+			{from: 'Aldrans', to: 'Hall'},
+			{from: 'Schwaz', to: 'Terfens/Weer'}
 		],
 		stations: [
-			'Innsbruck Marktplatz',
-			'Rum BHF'
+			'Innsbruck Tivoli',
+			'Hall BHF',
+			'Terfens/Weer BHF'
 		]
 	},
 	'K': {
 		segments: [
-			{from: 'Aldrans', to: 'Innsbruck-DEZ'},
-			{from: 'Sistrans', to: 'Innsbruck-Mitte'}
+			{from: 'Aldrans', to: 'Hall'},
+			{from: 'Münster/Wiesing', to: 'Brixlegg'},
+			{from: 'Schwaz', to: 'Terfens/Weer'}
 		],
 		stations: [
 			'Innsbruck Tivoli',
-			'Innsbruck SOS-Kinderorf'
+			'Hall BHF',
+			'Brixlegg BHF',
+			'Terfens/Weer BHF'
 		]
 	},
 	'L': {
-		segments: [
-			{from: 'Mötz', to: 'Telfs Sagl/M-Preis'},
-			{from: 'Buchener Höhe', to: 'Telfs BHF'}
-		],
-		stations: [
-			'Innsbruck BHF',
-			'Telfs Sagl/M-Preis',
-			'Telfs BHF'
-		]
-	},
-	'M': {
 		segments: [
 			{from: 'Schwaz', to: 'Jenbach'},
 			{from: 'Maurach', to: 'Jenbach'}
@@ -223,6 +214,15 @@ const ROUTE_CONFIG = {
 			'Innsbruck BHF',
 			'Jenbach Schalserstraße',
 			'Jenbach BHF'
+		]
+	},
+	'M': {
+		segments: [
+			{from: 'Ötztal Bhf.', to: 'Ötztal Bhf.'}
+		],
+		stations: [
+			'Innsbruck BHF',
+			'Ötztal BHF'
 		]
 	}
 };

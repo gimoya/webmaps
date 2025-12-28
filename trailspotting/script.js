@@ -658,8 +658,9 @@ function populateRouteWheel() {
 	const innerContainer = document.createElement('div');
 	innerContainer.className = 'route-wheel-inner';
 	
-	// Create route options from active routes
-	APP_CONFIG.activeRoutes.forEach(route => {
+	// Create route options from active routes (sorted alphabetically)
+	const sortedRoutes = [...APP_CONFIG.activeRoutes].sort();
+	sortedRoutes.forEach(route => {
 		const option = document.createElement('div');
 		option.className = 'route-option';
 		option.dataset.route = route;
