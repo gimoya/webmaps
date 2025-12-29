@@ -1,6 +1,6 @@
 body {
 	margin: 0 auto;
-	padding: 30px;
+	padding: 15px;
 	max-width: 900px;
 }
 
@@ -73,19 +73,20 @@ a, button, input, textarea {
 
 .video-title-main,
 .video-title-sub {
-	font-family: 'gongnormal', 'Saira Stencil One', cursive;
 	color: white;
 	text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 }
 
 .video-title-main {
-	font-size: 48px;
+	font-family: 'Frozbite', 'Saira Stencil One', cursive;
+	font-size: 68px;
 	line-height: 1.2;
-	letter-spacing: -2px;
+	letter-spacing: -1px;
 	margin-bottom: 20px;
 }
 
 .video-title-sub {
+	font-family: 'gongnormal', 'Saira Stencil One', cursive;
 	font-size: 36px;
 	line-height: 1.3;
 	letter-spacing: -1.5px;
@@ -124,7 +125,7 @@ a, button, input, textarea {
 
 .button {
 	display: inline-block;
-	padding: 10px 15px 8px 15px;
+	padding: 10px 15px 5px 15px;
 	background: linear-gradient(135deg, #aa4d02 0%, #ffbf65 100%);
 	color: white;
 	text-decoration: none;
