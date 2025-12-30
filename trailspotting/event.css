@@ -2,6 +2,7 @@ body {
 	margin: 0 auto;
 	padding: 15px;
 	max-width: 900px;
+	background: rgb(8, 56, 78);
 }
 
 a, button, input, textarea {
@@ -20,12 +21,12 @@ a, button, input, textarea {
 
 .video-container {
 	width: 100% !important;
-	padding-bottom: 50px !important;
+	padding-bottom: 10px !important;
 	min-height: 400px;
 	position: relative;
 	overflow: hidden;
 	border-radius: 5px;
-	background-color: #aa4d02;
+	background: rgb(34, 114, 161);
 	display: flex;
 	flex-direction: column;
 }
@@ -63,7 +64,7 @@ a, button, input, textarea {
 .video-title-container {
 	flex: 1;
 	padding: 10px;
-	margin-top: 20px;
+	margin-top: 10px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -73,16 +74,16 @@ a, button, input, textarea {
 
 .video-title-main,
 .video-title-sub {
-	color: white;
+	color: rgb(0, 32, 40);
 	text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 }
 
 .video-title-main {
 	font-family: 'Frozbite', 'Saira Stencil One', cursive;
-	font-size: 68px;
+	font-size: 98px;
 	line-height: 1.2;
 	letter-spacing: -1px;
-	margin-bottom: 20px;
+	margin-bottom: 10px;
 }
 
 .video-title-sub {
@@ -98,8 +99,8 @@ a, button, input, textarea {
 	line-height: 1.3;
 	letter-spacing: -1.5px;
 	margin: 0 0 20px 0;
-	color: black;
-	text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+	color: #86a5c7;
+	text-shadow: 2px 2px 3px rgba(1, 1, 1, 0.5);
 	text-align: center;
 }
 
@@ -107,11 +108,11 @@ a, button, input, textarea {
 	font-family: 'Special Elite', cursive;
 	font-size: clamp(12px, 1.2vw, 18px);
 	line-height: 1.4;
-	color: #333;
+	color: #d1e3ec;
 }
 
 .subheader {
-	color: #aa4d02;
+	color: #757c82;
 	font-weight: bold;
 	font-size: 24px;
 	margin-top: 40px;
@@ -119,14 +120,14 @@ a, button, input, textarea {
 }
 
 .link {
-	color: #aa4d02;
+	color: #2d5a87;
 	font-weight: bold;
 }
 
 .button {
 	display: inline-block;
 	padding: 10px 15px 5px 15px;
-	background: linear-gradient(135deg, #aa4d02 0%, #ffbf65 100%);
+	background: linear-gradient(135deg, #2d5a87 0%, #4a7ba7 50%, #6b9bc7 100%);
 	color: white;
 	text-decoration: none;
 	border-radius: 5px;
