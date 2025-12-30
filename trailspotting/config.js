@@ -24,6 +24,9 @@ const STATIONS_CONFIG = {
 	'Hall BHF': {
 		iframeUrl: 'https://timeview.vvt.at/#F81F57B8-E49E-4A37-86037AE366123492'
 	},
+	'Volders-Baumkirchen': {
+		iframeUrl: 'https://timeview.vvt.at/#CE6D5151-F745-428F-A8EB978E41688989'
+	},
 	'Schwaz BHF': {
 		iframeUrl: 'https://timeview.vvt.at/#75AB8984-F0F6-469B-9C619AF32864216B'
 	},
@@ -173,12 +176,12 @@ const ROUTE_CONFIG = {
 	'I': {
 		segments: [
 			{from: 'Aldrans/Fagslung', to: 'Hall'},
-			{from: 'Gnadenwald', to: 'Fritzens/Wattens'}
+			{from: 'Walderbrücke', to: 'Fritzens'}
 		],
 		stations: [
 			'Innsbruck Tivoli',
 			'Hall BHF',
-			'Fritzens/Wattens'
+			'Volders-Baumkirchen'
 		]
 	},
 	'J': {

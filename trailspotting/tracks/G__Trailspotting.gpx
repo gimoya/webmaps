@@ -4,7 +4,7 @@
     <name>Segment 1</name>
     <trkseg>
       <name>Segment 1</name>
-      <desc>distance: 25.0km, elevation_gain: 1404.0m, elevation_loss: 1421.0m, estimated_duration: 03:42, avg_km_per_hour: 6.8</desc>
+      <desc>distance: 25.0km, elevation_gain: 1404.0m, elevation_loss: 1421.0m, est_duration_moving: 03:27, est_duration_incl_pauses: 04:02, avg_km_per_hour: 6.2, avg_km_hr_moving: 7.2</desc>
       <trkpt lat="47.275722" lon="10.96064">
         <ele>640.75</ele>
         </trkpt>

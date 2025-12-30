@@ -44,14 +44,20 @@ function loadCyclingSegments(route, containerId, gpxFile) {
 						const distanceMatch = descText.match(/distance: ([\d.]+)km/);
 						const gainMatch = descText.match(/elevation_gain: ([\d.]+)m/);
 						const lossMatch = descText.match(/elevation_loss: ([\d.]+)m/);
-						const durationMatch = descText.match(/estimated_duration: ([\d:]+)/);
+						const durationMovingMatch = descText.match(/est_duration_moving: ([\d:]+)/);
+						const durationInclPausesMatch = descText.match(/est_duration_incl_pauses: ([\d:]+)/);
+						const avgKmPerHourMatch = descText.match(/avg_km_per_hour: ([\d.]+)/);
+						const avgKmHrMovingMatch = descText.match(/avg_km_hr_moving: ([\d.]+)/);
 						
 						segments.push({
 							segment: index + 1,
 							distance: distanceMatch ? distanceMatch[1] + 'km' : 'N/A',
 							elevation_gain: gainMatch ? gainMatch[1] + 'm' : 'N/A',
 							elevation_loss: lossMatch ? lossMatch[1] + 'm' : 'N/A',
-							duration: durationMatch ? durationMatch[1] : 'N/A'
+							duration_moving: durationMovingMatch ? durationMovingMatch[1] : 'N/A',
+							duration_incl_pauses: durationInclPausesMatch ? durationInclPausesMatch[1] : 'N/A',
+							avg_km_per_hour: avgKmPerHourMatch ? avgKmPerHourMatch[1] : 'N/A',
+							avg_km_hr_moving: avgKmHrMovingMatch ? avgKmHrMovingMatch[1] : 'N/A'
 						});
 					}
 				});
@@ -147,7 +153,7 @@ function renderCyclingSegments(route, containerId) {
 		
 		html += `<div class="segment-details">`;
 		html += `<strong>Segment ${seg.segment}${stationText}</strong><br>`;
-		html += `📈 +${seg.elevation_gain} / -${seg.elevation_loss} | 📏 ${seg.distance} | ⏱️ ${seg.duration}`;
+		html += `📈 +${seg.elevation_gain} / -${seg.elevation_loss} | 📏 ${seg.distance} | ⏱️ ${seg.duration_incl_pauses}`;
 		html += `</div>`;
 	});
 	
@@ -371,6 +377,9 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 					button.innerHTML = '⛶';
 					button.title = 'Exit fullscreen';
 					
+					// Update URL parameter
+					setURLParameter('fullscreen', '1');
+					
 					// Invalidate map size to adjust and refit bounds
 					setTimeout(function() {
 						map.invalidateSize();
@@ -418,6 +427,11 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 					isFullscreen = false;
 					button.innerHTML = '⛶';
 					button.title = 'Toggle fullscreen';
+					
+					// Remove fullscreen URL parameter
+					const url = new URL(window.location);
+					url.searchParams.delete('fullscreen');
+					window.history.pushState({}, '', url);
 					
 					// Invalidate map size to adjust
 					setTimeout(function() {
@@ -1060,6 +1074,18 @@ function switchRoute(route) {
 			currentMap.remove();
 		}
 		currentMap = createMapWithGPX('map_main', filename, routeOptions);
+		
+		// Check for fullscreen URL parameter and trigger fullscreen if present
+		const fullscreenParam = getURLParameter('fullscreen');
+		if (fullscreenParam === '1' || fullscreenParam === 'true') {
+			// Wait for map to be fully initialized, then trigger fullscreen
+			setTimeout(function() {
+				const fullscreenButton = document.querySelector('.leaflet-control-button[title="Toggle fullscreen"]');
+				if (fullscreenButton) {
+					fullscreenButton.click();
+				}
+			}, 500);
+		}
 	}).catch(error => {
 		console.error(`Error loading route ${route}:`, error);
 	});
@@ -1128,6 +1154,18 @@ document.addEventListener('DOMContentLoaded', function() {
 	loadCyclingSegments(initialRoute, 'cycling-info-main', filename).then(() => {
 		// Create initial map
 		currentMap = createMapWithGPX('map_main', filename, routeOptions);
+		
+		// Check for fullscreen URL parameter and trigger fullscreen if present
+		const fullscreenParam = getURLParameter('fullscreen');
+		if (fullscreenParam === '1' || fullscreenParam === 'true') {
+			// Wait for map to be fully initialized, then trigger fullscreen
+			setTimeout(function() {
+				const fullscreenButton = document.querySelector('.leaflet-control-button[title="Toggle fullscreen"]');
+				if (fullscreenButton) {
+					fullscreenButton.click();
+				}
+			}, 500);
+		}
 	}).catch(error => {
 		console.error(`Error loading initial route ${initialRoute}:`, error);
 	});

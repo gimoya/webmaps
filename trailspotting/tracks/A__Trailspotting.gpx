@@ -11,7 +11,7 @@
     <name>Segment 1</name>
     <trkseg>
       <name>Segment 1</name>
-      <desc>distance: 24.0km, elevation_gain: 1364.0m, elevation_loss: 1657.0m, estimated_duration: 03:35, avg_km_per_hour: 6.7</desc>
+      <desc>distance: 24.0km, elevation_gain: 1364.0m, elevation_loss: 1657.0m, est_duration_moving: 03:21, est_duration_incl_pauses: 03:54, avg_km_per_hour: 6.2, avg_km_hr_moving: 7.2</desc>
       <trkpt lat="47.285846" lon="11.398966">
         <ele>857.25</ele>
         </trkpt>

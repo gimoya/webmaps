@@ -90,7 +90,7 @@ def calculate_segment_stats(trkseg, avg_km_per_hour: float = 10.0, time_penalty_
     trkpts = trkseg.findall('trkpt')
     
     if len(trkpts) < 2:
-        return {'distance': 0, 'elevation_gain': 0, 'elevation_loss': 0, 'duration': '00:00', 'avg_km_per_hour': 0}
+        return {'distance': 0, 'elevation_gain': 0, 'elevation_loss': 0, 'est_duration_moving': '00:00', 'est_duration_incl_pauses': '00:00', 'avg_km_per_hour': 0, 'avg_km_hr_moving': 0}
     
     total_distance = 0
     elevations = []
@@ -129,27 +129,48 @@ def calculate_segment_stats(trkseg, avg_km_per_hour: float = 10.0, time_penalty_
     distance_km = total_distance / 1000
     base_duration = (distance_km / avg_km_per_hour) * 60  # minutes
     elevation_penalty = (elevation_gain / 10) * time_penalty_per_10m_elev  # penalty per 10m gain
-    pause_time = (base_duration / 60) * pause_time_per_60min  # pause time per 60min of riding
-    total_duration = base_duration + elevation_penalty + pause_time
     
-    # Format duration as HH:MM
-    hours = int(total_duration // 60)
-    minutes = int(total_duration % 60)
-    duration_str = f"{hours:02d}:{minutes:02d}"
+    # Moving duration (without pause time)
+    moving_duration = base_duration + elevation_penalty
     
-    # Calculate average km/h based on estimated duration
+    # Pause time is calculated based on moving duration (not just base duration)
+    pause_time = (moving_duration / 60) * pause_time_per_60min  # pause time per 60min of moving time
+    
+    # Total duration (including pause time)
+    total_duration = moving_duration + pause_time
+    
+    # Format moving duration as HH:MM
+    moving_hours = int(moving_duration // 60)
+    moving_minutes = int(moving_duration % 60)
+    duration_moving_str = f"{moving_hours:02d}:{moving_minutes:02d}"
+    
+    # Format total duration as HH:MM
+    total_hours = int(total_duration // 60)
+    total_minutes = int(total_duration % 60)
+    duration_incl_pauses_str = f"{total_hours:02d}:{total_minutes:02d}"
+    
+    # Calculate average km/h based on estimated duration (includes pause time)
     # avg_km_per_hour = distance / time_in_hours
     if total_duration > 0:
         avg_km_per_hour_calculated = distance_km / (total_duration / 60)
     else:
         avg_km_per_hour_calculated = 0
     
+    # Calculate moving average km/h (excluding pause time)
+    # Only uses base_duration + elevation_penalty
+    if moving_duration > 0:
+        avg_km_hr_moving = distance_km / (moving_duration / 60)
+    else:
+        avg_km_hr_moving = 0
+    
     return {
         'distance': round(distance_km, 0),
         'elevation_gain': round(elevation_gain, 0),
         'elevation_loss': round(elevation_loss, 0),
-        'duration': duration_str,
-        'avg_km_per_hour': round(avg_km_per_hour_calculated, 1)
+        'est_duration_moving': duration_moving_str,
+        'est_duration_incl_pauses': duration_incl_pauses_str,
+        'avg_km_per_hour': round(avg_km_per_hour_calculated, 1),
+        'avg_km_hr_moving': round(avg_km_hr_moving, 1)
     }
 
 def clean_gpx_element(element):
@@ -289,8 +310,10 @@ def update_gpx_metadata(gpx_file: str, avg_km_per_hour: float = 10.0, time_penal
             desc.text = (f"distance: {stats['distance']}km, "
                         f"elevation_gain: {stats['elevation_gain']}m, "
                         f"elevation_loss: {stats['elevation_loss']}m, "
-                        f"estimated_duration: {stats['duration']}, "
-                        f"avg_km_per_hour: {stats['avg_km_per_hour']}")
+                        f"est_duration_moving: {stats['est_duration_moving']}, "
+                        f"est_duration_incl_pauses: {stats['est_duration_incl_pauses']}, "
+                        f"avg_km_per_hour: {stats['avg_km_per_hour']}, "
+                        f"avg_km_hr_moving: {stats['avg_km_hr_moving']}")
             
             # Insert at the beginning of trkseg
             trkseg.insert(0, name)
@@ -300,7 +323,7 @@ def update_gpx_metadata(gpx_file: str, avg_km_per_hour: float = 10.0, time_penal
             name.tail = '\n      '
             desc.tail = '\n      '
             
-            print(f"      {segment_name}: {stats['distance']}km, +{stats['elevation_gain']}m/-{stats['elevation_loss']}m, ~{stats['duration']}")
+            print(f"      {segment_name}: {stats['distance']}km, +{stats['elevation_gain']}m/-{stats['elevation_loss']}m, ~{stats['est_duration_moving']} (moving) / ~{stats['est_duration_incl_pauses']} (total)")
     
     # Write back to file
     tree.write(gpx_file, encoding='utf-8', xml_declaration=True)

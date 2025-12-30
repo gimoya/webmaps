@@ -216,6 +216,11 @@ a, button, input, textarea, [contenteditable="true"] {
   min-height: 245px;
 }
 
+.half-floating-box a {
+    display: inline;
+    white-space: nowrap;
+}
+
 /* Maps */
 .themap { 
   flex: 1;
