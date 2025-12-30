@@ -21,7 +21,7 @@ a, button, input, textarea {
 
 .video-container {
 	width: 100% !important;
-	padding-bottom: 10px !important;
+	padding-bottom: 35px !important;
 	min-height: 400px;
 	position: relative;
 	overflow: hidden;
@@ -106,9 +106,9 @@ a, button, input, textarea {
 
 .text {
 	font-family: 'Special Elite', cursive;
-	font-size: clamp(12px, 1.2vw, 18px);
+	font-size: clamp(12px, 1.2vw, 16px);
 	line-height: 1.4;
-	color: #d1e3ec;
+	color: #9fd9f7;
 }
 
 .subheader {

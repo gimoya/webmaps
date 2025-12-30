@@ -273,6 +273,16 @@ a, button, input, textarea, [contenteditable="true"] {
 	border-radius: 3px;
 }
 
+/* Fullscreen mode styles */
+.cycling-info.fullscreen-overlay {
+	position: fixed !important;
+	top: 130px !important;
+	left: 10px !important;
+	z-index: 10001 !important;
+	max-width: 400px !important;
+	box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+}
+
 /* Timetables */
 .timetable-iframe {
 	width: 100%;

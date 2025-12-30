@@ -267,22 +267,162 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 		}
 	}).addTo(map);
 	
-	// Add focus on trails control
-	const FocusTrailsControl = L.Control.extend({
+	// Add fullscreen control
+	const FullscreenControl = L.Control.extend({
 		onAdd: function(map) {
 			const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
 			const button = L.DomUtil.create('a', 'leaflet-control-button', container);
-			button.innerHTML = '🎯';
+			button.innerHTML = '⛶';
 			button.href = '#';
-			button.title = 'Focus on trails';
+			button.title = 'Toggle fullscreen';
 			button.style.cssText = 'width: 30px; height: 30px; line-height: 30px; text-align: center; font-size: 18px; display: block;';
+			
+			let isFullscreen = false;
+			let originalStyles = {};
+			let cyclingInfoCard = null;
 			
 			L.DomEvent.disableClickPropagation(button);
 			L.DomEvent.on(button, 'click', function(e) {
 				L.DomEvent.stopPropagation(e);
 				L.DomEvent.preventDefault(e);
-				if (map._trailBounds) {
-					map.fitBounds(map._trailBounds, {maxZoom: config.maxZoom});
+				
+				const mapContainer = map.getContainer();
+				const mapBox = mapContainer.closest('.floating-box');
+				const body = document.body;
+				const cyclingInfoMain = document.getElementById('cycling-info-main');
+				if (!cyclingInfoCard) {
+					cyclingInfoCard = cyclingInfoMain ? cyclingInfoMain.querySelector('.cycling-info') : null;
+				}
+				
+				if (!isFullscreen) {
+					// Store original styles
+					const mapBoxComputed = window.getComputedStyle(mapBox);
+					const mapContainerComputed = window.getComputedStyle(mapContainer);
+					
+					originalStyles.mapBox = {
+						position: mapBox.style.position || mapBoxComputed.position,
+						top: mapBox.style.top || mapBoxComputed.top,
+						left: mapBox.style.left || mapBoxComputed.left,
+						width: mapBox.style.width || mapBoxComputed.width,
+						height: mapBox.style.height || mapBoxComputed.height,
+						zIndex: mapBox.style.zIndex || mapBoxComputed.zIndex,
+						border: mapBox.style.border || mapBoxComputed.border,
+						borderRadius: mapBox.style.borderRadius || mapBoxComputed.borderRadius,
+						margin: mapBox.style.margin || mapBoxComputed.margin,
+						padding: mapBox.style.padding || mapBoxComputed.padding
+					};
+					originalStyles.mapContainer = {
+						width: mapContainer.style.width || mapContainerComputed.width,
+						height: mapContainer.style.height || mapContainerComputed.height,
+						padding: mapContainer.style.padding || mapContainerComputed.padding,
+						borderRadius: mapContainer.style.borderRadius || mapContainerComputed.borderRadius
+					};
+					originalStyles.body = {
+						overflow: body.style.overflow,
+						position: body.style.position,
+						padding: body.style.padding
+					};
+					
+					// Hide all other floating boxes
+					const allFloatingBoxes = document.querySelectorAll('.floating-box');
+					allFloatingBoxes.forEach(function(box) {
+						if (box !== mapBox) {
+							box.style.display = 'none';
+						}
+					});
+					
+					// Make fullscreen - remove all borders, padding, margins
+					body.style.overflow = 'hidden';
+					body.style.position = 'fixed';
+					body.style.width = '100%';
+					body.style.padding = '0';
+					mapBox.style.position = 'fixed';
+					mapBox.style.top = '0';
+					mapBox.style.left = '0';
+					mapBox.style.width = '100vw';
+					mapBox.style.height = '100vh';
+					mapBox.style.zIndex = '10000';
+					mapBox.style.border = 'none';
+					mapBox.style.borderRadius = '0';
+					mapBox.style.margin = '0';
+					mapBox.style.padding = '0';
+					mapContainer.style.width = '100%';
+					mapContainer.style.height = '100%';
+					mapContainer.style.padding = '0';
+					mapContainer.style.borderRadius = '0';
+					
+					// Move cycling info card to top of map in fullscreen (below controls)
+					if (cyclingInfoCard) {
+						const cardComputed = window.getComputedStyle(cyclingInfoCard);
+						originalStyles.cyclingInfoCard = {
+							position: cyclingInfoCard.style.position || cardComputed.position,
+							top: cyclingInfoCard.style.top || cardComputed.top,
+							left: cyclingInfoCard.style.left || cardComputed.left,
+							zIndex: cyclingInfoCard.style.zIndex || cardComputed.zIndex,
+							parent: cyclingInfoCard.parentNode,
+							className: cyclingInfoCard.className
+						};
+						
+						cyclingInfoCard.classList.add('fullscreen-overlay');
+						document.body.appendChild(cyclingInfoCard);
+					}
+					
+					isFullscreen = true;
+					button.innerHTML = '⛶';
+					button.title = 'Exit fullscreen';
+					
+					// Invalidate map size to adjust and refit bounds
+					setTimeout(function() {
+						map.invalidateSize();
+						if (map._trailBounds) {
+							map.fitBounds(map._trailBounds, {maxZoom: config.maxZoom});
+						}
+					}, 100);
+				} else {
+					// Restore original styles
+					body.style.overflow = originalStyles.body.overflow || '';
+					body.style.position = originalStyles.body.position || '';
+					body.style.width = '';
+					body.style.padding = originalStyles.body.padding || '';
+					mapBox.style.position = originalStyles.mapBox.position || '';
+					mapBox.style.top = originalStyles.mapBox.top || '';
+					mapBox.style.left = originalStyles.mapBox.left || '';
+					mapBox.style.width = originalStyles.mapBox.width || '';
+					mapBox.style.height = originalStyles.mapBox.height || '';
+					mapBox.style.zIndex = originalStyles.mapBox.zIndex || '';
+					mapBox.style.border = originalStyles.mapBox.border || '';
+					mapBox.style.borderRadius = originalStyles.mapBox.borderRadius || '';
+					mapBox.style.margin = originalStyles.mapBox.margin || '';
+					mapBox.style.padding = originalStyles.mapBox.padding || '';
+					mapContainer.style.width = originalStyles.mapContainer.width || '';
+					mapContainer.style.height = originalStyles.mapContainer.height || '';
+					mapContainer.style.padding = originalStyles.mapContainer.padding || '';
+					mapContainer.style.borderRadius = originalStyles.mapContainer.borderRadius || '';
+					
+					// Show all other floating boxes
+					const allFloatingBoxes = document.querySelectorAll('.floating-box');
+					allFloatingBoxes.forEach(function(box) {
+						if (box !== mapBox) {
+							box.style.display = '';
+						}
+					});
+					
+					// Restore cycling info card to original position
+					if (cyclingInfoCard && originalStyles.cyclingInfoCard) {
+						cyclingInfoCard.classList.remove('fullscreen-overlay');
+						if (originalStyles.cyclingInfoCard.parent) {
+							originalStyles.cyclingInfoCard.parent.appendChild(cyclingInfoCard);
+						}
+					}
+					
+					isFullscreen = false;
+					button.innerHTML = '⛶';
+					button.title = 'Toggle fullscreen';
+					
+					// Invalidate map size to adjust
+					setTimeout(function() {
+						map.invalidateSize();
+					}, 100);
 				}
 			});
 			
@@ -290,7 +430,7 @@ function createMapWithGPX(mapId, gpxFiles, options = {}) {
 		}
 	});
 	
-	new FocusTrailsControl({ position: 'topleft' }).addTo(map);
+	new FullscreenControl({ position: 'topleft' }).addTo(map);
 
 	// Ensure gpxFiles is an array
 	const files = Array.isArray(gpxFiles) ? gpxFiles : [gpxFiles];
@@ -873,11 +1013,27 @@ function loadTimetableIframe(iframe) {
 	};
 }
 
+// Function to get URL parameter
+function getURLParameter(name) {
+	const urlParams = new URLSearchParams(window.location.search);
+	return urlParams.get(name);
+}
+
+// Function to set URL parameter
+function setURLParameter(name, value) {
+	const url = new URL(window.location);
+	url.searchParams.set(name, value);
+	window.history.pushState({}, '', url);
+}
+
 // Function to switch between routes
 function switchRoute(route) {
 	if (route === currentRoute) return;
 	
 	currentRoute = route;
+	
+	// Update URL parameter
+	setURLParameter('route', route);
 	
 	// Update route selector UI
 	document.querySelectorAll('.route-option').forEach(option => {
@@ -926,11 +1082,22 @@ document.addEventListener('DOMContentLoaded', function() {
 	// Populate route wheel dynamically
 	populateRouteWheel();
 	
-	// Set initial active state for first route
-	const firstRoute = APP_CONFIG.activeRoutes[0];
-	if (firstRoute) {
-		document.querySelector(`[data-route="${firstRoute}"]`).classList.add('active');
-		currentRoute = firstRoute;
+	// Check for route parameter in URL
+	const urlRoute = getURLParameter('route');
+	let initialRoute = null;
+	
+	if (urlRoute && APP_CONFIG.activeRoutes.includes(urlRoute)) {
+		// Use route from URL if valid
+		initialRoute = urlRoute;
+	} else {
+		// Otherwise use first route from config
+		initialRoute = APP_CONFIG.activeRoutes[0] || 'A';
+	}
+	
+	// Set initial active state
+	if (initialRoute) {
+		document.querySelector(`[data-route="${initialRoute}"]`).classList.add('active');
+		currentRoute = initialRoute;
 	}
 	
 	// Initialize lazy loading for iframes - store src and remove to prevent immediate loading
@@ -943,8 +1110,6 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	});
 	
-	// Initialize with first route from config
-	const initialRoute = APP_CONFIG.activeRoutes[0] || 'A';
 	const filename = `${GPX_CONFIG.tracksDirectory}${initialRoute}${GPX_CONFIG.filePattern}`;
 	const routeOptions = APP_CONFIG.routeOverrides[initialRoute] || {};
 	
@@ -953,6 +1118,11 @@ document.addEventListener('DOMContentLoaded', function() {
 	
 	// Update map title
 	document.getElementById('map-title').textContent = initialRoute;
+	
+	// Update URL parameter if not already set
+	if (!urlRoute) {
+		setURLParameter('route', initialRoute);
+	}
 	
 	// Load cycling segments for initial route
 	loadCyclingSegments(initialRoute, 'cycling-info-main', filename).then(() => {
