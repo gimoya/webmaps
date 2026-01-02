@@ -1,11 +1,8 @@
 @font-face {
     font-family: 'Special Elite';
-    src: url('SpecialElite-Regular.eot');
-    src: url('SpecialElite-Regular.eot?#iefix') format('embedded-opentype'),
-         url('SpecialElite-Regular.woff2') format('woff2'),
+    src: url('SpecialElite-Regular.woff2') format('woff2'),
          url('SpecialElite-Regular.woff') format('woff'),
-         url('SpecialElite-Regular.ttf') format('truetype'),
-         url('SpecialElite-Regular.svg#SpecialElite-Regular') format('svg');
+         url('SpecialElite-Regular.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
 }
