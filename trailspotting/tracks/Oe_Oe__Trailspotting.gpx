@@ -1,17 +1,23 @@
 <?xml version='1.0' encoding='utf-8'?>
-<gpx creator="https://tiroltrailhead.com" version="1.1" schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd http://www.garmin.com/xmlschemas/GpxExtensions/v3 http://www.garmin.com/xmlschemas/GpxExtensionsv3.xsd http://www.garmin.com/xmlschemas/TrackPointExtension/v1 http://www.garmin.com/xmlschemas/TrackPointExtensionv1.xsd http://www.garmin.com/xmlschemas/PowerExtension/v1 http://www.garmin.com/xmlschemas/PowerExtensionv1.xsd http://www.topografix.com/GPX/gpx_style/0/2 http://www.topografix.com/GPX/gpx_style/0/2/gpx_style.xsd">
+<gpx creator="https://tiroltrailhead.com" version="1.1" schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
   <metadata>
-    <name>New file 1</name>
+    <name>Oe_Oe__Trailspotting</name>
+    <desc>This file contains a Trailspotting-Route with bike ride segments. For the transfers between bike ride segments, public transport is available (train or local bus services). See this site for details: https://tiroltrailhead.com/webmaps/trailspotting
+
+If your application is having issues with opening this gpx file (some apps might have issues with opening files that contain more than one track) - use one of the following apps instead:
+Apple: https://apps.apple.com/de/app/gaia-gps-wander-app/id1201979492
+Android: https://play.google.com/store/apps/details?id=menion.android.locus.pro
+Web: https://gpx.studio/de/app#0/0/0</desc>
     <author>
       <name>tiroltrailhead.com</name>
       <link href="https://tiroltrailhead.com" />
     </author>
-    </metadata>
+  </metadata>
   <trk>
     <name>Segment 1</name>
     <trkseg>
       <name>Segment 1</name>
-      <desc>distance: 26.0km, elevation_gain: 826.0m, elevation_loss: 825.0m, est_duration_moving: 02:40, est_duration_incl_pauses: 03:07, avg_km_per_hour: 8.2, avg_km_hr_moving: 9.6</desc>
+      <desc>distance: 25.7km, elevation_gain: 826m, elevation_loss: 825m, est_duration_moving: 02:40, est_duration_incl_pauses: 03:07, avg_km_per_hour: 8.2, avg_km_hr_moving: 9.6</desc>
       <trkpt lat="47.238057" lon="10.859288">
         <ele>692.25</ele>
       </trkpt>

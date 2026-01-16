@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-GPX Statistics Calculator
-Calculates distance, elevation gain/loss, and estimated duration for GPX files.
-Updates the metadata in each GPX file with calculated statistics.
+GPX File Cleaner and Statistics Calculator
+Cleans GPX files by removing unnecessary tags and extensions, then calculates
+distance, elevation gain/loss, and estimated duration for GPX files.
+Updates the metadata in each GPX file with calculated statistics and file information.
 """
 
 import xml.etree.ElementTree as ET
@@ -164,9 +165,9 @@ def calculate_segment_stats(trkseg, avg_km_per_hour: float = 10.0, time_penalty_
         avg_km_hr_moving = 0
     
     return {
-        'distance': round(distance_km, 0),
-        'elevation_gain': round(elevation_gain, 0),
-        'elevation_loss': round(elevation_loss, 0),
+        'distance': round(distance_km, 1),
+        'elevation_gain': round(elevation_gain, 0),  # Round to 0 decimals (keeps as float for precision)
+        'elevation_loss': round(elevation_loss, 0),   # Round to 0 decimals (keeps as float for precision)
         'est_duration_moving': duration_moving_str,
         'est_duration_incl_pauses': duration_incl_pauses_str,
         'avg_km_per_hour': round(avg_km_per_hour_calculated, 1),
@@ -267,6 +268,69 @@ def update_gpx_metadata(gpx_file: str, avg_km_per_hour: float = 10.0, time_penal
     print("  Removing namespaces from GPX elements...")
     remove_namespaces(root)
     
+    # Standardize root element attributes
+    print("  Standardizing GPX root attributes...")
+    root.set('version', '1.1')
+    root.set('creator', 'https://tiroltrailhead.com')
+    # Use standard GPX 1.1 schemaLocation (no extensions needed since we clean them)
+    # Remove any existing schemaLocation first
+    for attr_name in list(root.attrib.keys()):
+        if 'schemaLocation' in attr_name.lower():
+            del root.attrib[attr_name]
+    # Set standard GPX 1.1 schemaLocation
+    root.set('schemaLocation', 'http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd')
+    
+    # Update metadata: inject filename and description
+    print("  Updating GPX metadata...")
+    metadata = root.find('metadata')
+    if metadata is None:
+        # Create metadata element if it doesn't exist
+        metadata = ET.Element('metadata')
+        root.insert(0, metadata)
+        metadata.tail = '\n  '
+    
+    # Get filename without path and extension
+    filename = os.path.basename(gpx_file)
+    filename_without_ext = os.path.splitext(filename)[0]
+    
+    # Update or create name element in metadata
+    name_elem = metadata.find('name')
+    if name_elem is not None:
+        name_elem.text = filename_without_ext
+    else:
+        name_elem = ET.Element('name')
+        name_elem.text = filename_without_ext
+        metadata.insert(0, name_elem)
+        name_elem.tail = '\n    '
+    
+    # Add or update description in metadata
+    desc_elem = metadata.find('desc')
+    desc_text = ("This file contains a Trailspotting-Route with bike ride segments. "
+                 "For the transfers between bike ride segments, public transport is available "
+                 "(train or local bus services). See this site for details: https://tiroltrailhead.com/webmaps/trailspotting\n\n"
+                 "If your application is having issues with opening this gpx file (some apps might have issues with opening files that " 
+                 "contain more than one track) - use one of the following apps instead:\n"
+                 "Apple: https://apps.apple.com/de/app/gaia-gps-wander-app/id1201979492\n"
+                 "Android: https://play.google.com/store/apps/details?id=menion.android.locus.pro\n"
+                 "Web: https://gpx.studio/de/app#0/0/0")
+    
+    if desc_elem is not None:
+        desc_elem.text = desc_text
+    else:
+        desc_elem = ET.Element('desc')
+        desc_elem.text = desc_text
+        # Insert after name, before author if exists
+        author_elem = metadata.find('author')
+        if author_elem is not None:
+            # Find index of author
+            author_idx = list(metadata).index(author_elem)
+            metadata.insert(author_idx, desc_elem)
+        else:
+            metadata.append(desc_elem)
+        desc_elem.tail = '\n    '
+    
+    print(f"    Metadata updated: name='{filename_without_ext}'")
+    
     # Find all tracks
     tracks = root.findall('.//trk')
     print(f"  Found {len(tracks)} tracks")
@@ -307,13 +371,13 @@ def update_gpx_metadata(gpx_file: str, avg_km_per_hour: float = 10.0, time_penal
             name.text = segment_name
             
             desc = ET.Element('desc')
-            desc.text = (f"distance: {stats['distance']}km, "
-                        f"elevation_gain: {stats['elevation_gain']}m, "
-                        f"elevation_loss: {stats['elevation_loss']}m, "
+            desc.text = (f"distance: {stats['distance']:.1f}km, "
+                        f"elevation_gain: {int(stats['elevation_gain'])}m, "
+                        f"elevation_loss: {int(stats['elevation_loss'])}m, "
                         f"est_duration_moving: {stats['est_duration_moving']}, "
                         f"est_duration_incl_pauses: {stats['est_duration_incl_pauses']}, "
-                        f"avg_km_per_hour: {stats['avg_km_per_hour']}, "
-                        f"avg_km_hr_moving: {stats['avg_km_hr_moving']}")
+                        f"avg_km_per_hour: {stats['avg_km_per_hour']:.1f}, "
+                        f"avg_km_hr_moving: {stats['avg_km_hr_moving']:.1f}")
             
             # Insert at the beginning of trkseg
             trkseg.insert(0, name)

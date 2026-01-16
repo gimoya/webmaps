@@ -1,3 +1,14 @@
 {
-    "livePreview.defaultPreviewPath": "/index.html"
+    "livePreview.defaultPreviewPath": "/index.html",
+    "files.associations": {
+        "config.js": "javascript"
+    },
+    "emeraldwalk.runonsave": {
+        "commands": [
+            {
+                "match": "config\\.js$",
+                "cmd": "python sort_config.py"
+            }
+        ]
+    }
 }

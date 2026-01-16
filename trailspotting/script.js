@@ -10,6 +10,15 @@ const gpxMetadata = {};
 
 // Configuration constants are loaded from config.js
 
+// Function to get GPX filename for a route using ROUTE_CONFIG
+function getGPXFilename(route) {
+	if (!ROUTE_CONFIG || !ROUTE_CONFIG[route] || !ROUTE_CONFIG[route].filename) {
+		console.error(`No route config or filename found for route: ${route}`);
+		return null;
+	}
+	return `${GPX_CONFIG.tracksDirectory}${ROUTE_CONFIG[route].filename}`;
+}
+
 // Function to load cycling segments and return a Promise
 function loadCyclingSegments(route, containerId, gpxFile) {
 	return new Promise((resolve, reject) => {
@@ -51,9 +60,9 @@ function loadCyclingSegments(route, containerId, gpxFile) {
 						
 						segments.push({
 							segment: index + 1,
-							distance: distanceMatch ? distanceMatch[1] + 'km' : 'N/A',
-							elevation_gain: gainMatch ? gainMatch[1] + 'm' : 'N/A',
-							elevation_loss: lossMatch ? lossMatch[1] + 'm' : 'N/A',
+							distance: distanceMatch ? distanceMatch[1] + ' km' : 'N/A',
+							elevation_gain: gainMatch ? gainMatch[1] + ' m' : 'N/A',
+							elevation_loss: lossMatch ? lossMatch[1] + ' m' : 'N/A',
 							duration_moving: durationMovingMatch ? durationMovingMatch[1] : 'N/A',
 							duration_incl_pauses: durationInclPausesMatch ? durationInclPausesMatch[1] : 'N/A',
 							avg_km_per_hour: avgKmPerHourMatch ? avgKmPerHourMatch[1] : 'N/A',
@@ -111,9 +120,9 @@ function displayCyclingSegmentsFromGPX(route, containerId, gpxFile) {
 					
 					segments.push({
 						segment: index + 1,
-						distance: distanceMatch ? distanceMatch[1] + 'km' : 'N/A',
-						elevation_gain: gainMatch ? gainMatch[1] + 'm' : 'N/A',
-						elevation_loss: lossMatch ? lossMatch[1] + 'm' : 'N/A',
+						distance: distanceMatch ? distanceMatch[1] + ' km' : 'N/A',
+						elevation_gain: gainMatch ? gainMatch[1] + ' m' : 'N/A',
+						elevation_loss: lossMatch ? lossMatch[1] + ' m' : 'N/A',
 						duration: durationMatch ? durationMatch[1] : 'N/A'
 					});
 				}
@@ -148,7 +157,8 @@ function renderCyclingSegments(route, containerId) {
 	html += `<div class="segment-title">Route ${route} - Cycling Segments</div>`;
 	
 	segments.forEach(seg => {
-		const stationInfo = ROUTE_CONFIG[route] && ROUTE_CONFIG[route].segments[seg.segment - 1];
+		const routeConfig = ROUTE_CONFIG[route];
+		const stationInfo = routeConfig && routeConfig.segments[seg.segment - 1];
 		const stationText = stationInfo ? `: ${stationInfo.from} → ${stationInfo.to}` : '';
 		
 		html += `<div class="segment-details">`;
@@ -786,14 +796,48 @@ function populateGPXDownloadList() {
 	// Clear existing content
 	downloadList.innerHTML = '';
 	
+	// German tooltip text for multi-track GPX files
+	const tooltipText = "Wenn Deine App Probleme beim Lesen dieser GPX hat: die folgenden Apps funktionieren viel besser;) -> Appl: GAIA-GPS, Android: Locus Maps Classic, Web: gpx-studio";
+	
 	// Add download links for all active routes
 	APP_CONFIG.activeRoutes.forEach(route => {
-		const filename = `${route}${GPX_CONFIG.filePattern}`;
-		const filepath = `${GPX_CONFIG.tracksDirectory}${filename}`;
+		const filepath = getGPXFilename(route);
+		if (!filepath) {
+			console.warn(`Skipping route ${route} - no track mapping found`);
+			return;
+		}
+		
+		// Display old A-Z naming pattern (e.g., "A__Trailspotting.gpx")
+		const displayName = `${route}__Trailspotting.gpx`;
 		
 		const link = document.createElement('a');
 		link.href = filepath;
-		link.textContent = filename;
+		link.textContent = displayName;
+		link.title = tooltipText;
+		link.setAttribute('data-tooltip', tooltipText);
+		
+		// Add tooltip positioning on hover
+		link.addEventListener('mouseenter', function(e) {
+			const tooltip = document.createElement('div');
+			tooltip.className = 'gpx-tooltip';
+			tooltip.textContent = tooltipText;
+			document.body.appendChild(tooltip);
+			
+			const rect = e.target.getBoundingClientRect();
+			tooltip.style.left = rect.left + 'px';
+			tooltip.style.top = (rect.top - tooltip.offsetHeight - 5) + 'px';
+			
+			// Store tooltip reference for cleanup
+			link._tooltip = tooltip;
+		});
+		
+		link.addEventListener('mouseleave', function(e) {
+			if (e.target._tooltip) {
+				e.target._tooltip.remove();
+				e.target._tooltip = null;
+			}
+		});
+		
 		downloadList.appendChild(link);
 	});
 	
@@ -803,14 +847,14 @@ function populateGPXDownloadList() {
 let currentMap = null;
 let currentRoute = 'A';
 
-// Function to populate route wheel dynamically
-function populateRouteWheel() {
-	const routeWheel = document.getElementById('route-wheel');
-	if (!routeWheel) return;
+// Function to populate route selector dynamically
+function populateRouteSelector() {
+	const routeSelector = document.getElementById('route-selector');
+	if (!routeSelector) return;
 	
 	// Create inner container
 	const innerContainer = document.createElement('div');
-	innerContainer.className = 'route-wheel-inner';
+	innerContainer.className = 'route-selector-inner';
 	
 	// Create route options from active routes (sorted alphabetically)
 	const sortedRoutes = [...APP_CONFIG.activeRoutes].sort();
@@ -851,13 +895,14 @@ function populateRouteWheel() {
 	});
 	
 	// Clear existing content and add new inner container
-	routeWheel.innerHTML = '';
-	routeWheel.appendChild(innerContainer);
+	routeSelector.innerHTML = '';
+	routeSelector.appendChild(innerContainer);
 }
 
 // Function to show/hide timetable boxes based on route
 function updateTimetableBoxes(route) {
-	const routeStations = ROUTE_CONFIG[route] ? ROUTE_CONFIG[route].stations : [];
+	const routeConfig = ROUTE_CONFIG[route];
+	const routeStations = routeConfig ? routeConfig.stations : [];
 	const allBoxes = document.querySelectorAll('.timetable-box');
 	const timetableContainer = document.getElementById('timetable-container');
 	
@@ -1063,8 +1108,8 @@ function switchRoute(route) {
 	// Update map title
 	document.getElementById('map-title').textContent = route;
 	
-	// Load new route data
-	const filename = `${GPX_CONFIG.tracksDirectory}${route}${GPX_CONFIG.filePattern}`;
+	// Load new route data - USE MAPPING
+	const filename = getGPXFilename(route);
 	const routeOptions = APP_CONFIG.routeOverrides[route] || {};
 	
 	// Load cycling segments for new route
@@ -1105,8 +1150,8 @@ document.addEventListener('DOMContentLoaded', function() {
 	// Populate GPX download list dynamically
 	populateGPXDownloadList();
 	
-	// Populate route wheel dynamically
-	populateRouteWheel();
+	// Populate route selector dynamically
+	populateRouteSelector();
 	
 	// Check for route parameter in URL
 	const urlRoute = getURLParameter('route');
@@ -1136,7 +1181,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	});
 	
-	const filename = `${GPX_CONFIG.tracksDirectory}${initialRoute}${GPX_CONFIG.filePattern}`;
+	const filename = getGPXFilename(initialRoute);
 	const routeOptions = APP_CONFIG.routeOverrides[initialRoute] || {};
 	
 	// Update timetable boxes visibility for initial route (this will trigger lazy loading)

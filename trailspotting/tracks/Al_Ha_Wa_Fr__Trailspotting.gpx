@@ -1,7 +1,13 @@
 <?xml version='1.0' encoding='utf-8'?>
-<gpx creator="https://tiroltrailhead.com" version="1.1" schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd http://www.garmin.com/xmlschemas/GpxExtensions/v3 http://www.garmin.com/xmlschemas/GpxExtensionsv3.xsd http://www.garmin.com/xmlschemas/TrackPointExtension/v1 http://www.garmin.com/xmlschemas/TrackPointExtensionv1.xsd http://www.garmin.com/xmlschemas/PowerExtension/v1 http://www.garmin.com/xmlschemas/PowerExtensionv1.xsd http://www.topografix.com/GPX/gpx_style/0/2 http://www.topografix.com/GPX/gpx_style/0/2/gpx_style.xsd">
+<gpx creator="https://tiroltrailhead.com" version="1.1" schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
   <metadata>
-    <name>Trailspotting Route I</name>
+    <name>Al_Ha_Wa_Fr__Trailspotting</name>
+    <desc>This file contains a Trailspotting-Route with bike ride segments. For the transfers between bike ride segments, public transport is available (train or local bus services). See this site for details: https://tiroltrailhead.com/webmaps/trailspotting
+
+If your application is having issues with opening this gpx file (some apps might have issues with opening files that contain more than one track) - use one of the following apps instead:
+Apple: https://apps.apple.com/de/app/gaia-gps-wander-app/id1201979492
+Android: https://play.google.com/store/apps/details?id=menion.android.locus.pro
+Web: https://gpx.studio/de/app#0/0/0</desc>
     <author>
       <name>tiroltrailhead.com</name>
       <link href="https://tiroltrailhead.com" />
@@ -11,7 +17,7 @@
     <name>Segment 1</name>
     <trkseg>
       <name>Segment 1</name>
-      <desc>distance: 12.0km, elevation_gain: 376.0m, elevation_loss: 724.0m, est_duration_moving: 01:12, est_duration_incl_pauses: 01:24, avg_km_per_hour: 8.2, avg_km_hr_moving: 9.5</desc>
+      <desc>distance: 11.5km, elevation_gain: 376m, elevation_loss: 724m, est_duration_moving: 01:12, est_duration_incl_pauses: 01:24, avg_km_per_hour: 8.2, avg_km_hr_moving: 9.5</desc>
       <trkpt lat="47.241721" lon="11.456669">
         <ele>911</ele>
       </trkpt>
@@ -1368,7 +1374,7 @@
     <name>Segment 2</name>
     <trkseg>
       <name>Segment 2</name>
-      <desc>distance: 13.0km, elevation_gain: 591.0m, elevation_loss: 819.0m, est_duration_moving: 01:37, est_duration_incl_pauses: 01:53, avg_km_per_hour: 7.0, avg_km_hr_moving: 8.2</desc>
+      <desc>distance: 13.3km, elevation_gain: 591m, elevation_loss: 819m, est_duration_moving: 01:37, est_duration_incl_pauses: 01:53, avg_km_per_hour: 7.0, avg_km_hr_moving: 8.2</desc>
       <trkpt lat="47.308435" lon="11.523624">
         <ele>781</ele>
       </trkpt>

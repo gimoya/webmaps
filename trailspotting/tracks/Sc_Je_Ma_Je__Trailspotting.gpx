@@ -1,18 +1,23 @@
 <?xml version='1.0' encoding='utf-8'?>
-<gpx version="1.1" creator="Locus Map, Android" schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd http://www.garmin.com/xmlschemas/GpxExtensions/v3 http://www.garmin.com/xmlschemas/GpxExtensionsv3.xsd http://www.garmin.com/xmlschemas/TrackPointExtension/v1 http://www.garmin.com/xmlschemas/TrackPointExtensionv1.xsd http://www.garmin.com/xmlschemas/PowerExtension/v1 http://www.garmin.com/xmlschemas/PowerExtensionv1.xsd http://www.topografix.com/GPX/gpx_style/0/2 http://www.topografix.com/GPX/gpx_style/0/2/gpx_style.xsd">
+<gpx version="1.1" creator="https://tiroltrailhead.com" schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
   <metadata>
-    <name>Trailspotting Route M</name>
-    <desc>File with points/tracks from Locus Map Classic/3.70.15</desc>
+    <name>Sc_Je_Ma_Je__Trailspotting</name>
+    <desc>This file contains a Trailspotting-Route with bike ride segments. For the transfers between bike ride segments, public transport is available (train or local bus services). See this site for details: https://tiroltrailhead.com/webmaps/trailspotting
+
+If your application is having issues with opening this gpx file (some apps might have issues with opening files that contain more than one track) - use one of the following apps instead:
+Apple: https://apps.apple.com/de/app/gaia-gps-wander-app/id1201979492
+Android: https://play.google.com/store/apps/details?id=menion.android.locus.pro
+Web: https://gpx.studio/de/app#0/0/0</desc>
     <author>
       <name>tiroltrailhead.com</name>
       <link href="https://tiroltrailhead.com" />
     </author>
-    </metadata>
+  </metadata>
   <trk>
     <name>Segment 1</name>
     <trkseg>
       <name>Segment 1</name>
-      <desc>distance: 16.0km, elevation_gain: 944.0m, elevation_loss: 921.0m, est_duration_moving: 02:16, est_duration_incl_pauses: 02:38, avg_km_per_hour: 6.0, avg_km_hr_moving: 7.0</desc>
+      <desc>distance: 15.8km, elevation_gain: 944m, elevation_loss: 921m, est_duration_moving: 02:16, est_duration_incl_pauses: 02:38, avg_km_per_hour: 6.0, avg_km_hr_moving: 7.0</desc>
       <trkpt lat="47.352119" lon="11.703068">
         <ele>536.74</ele>
       </trkpt>
@@ -2080,7 +2085,7 @@
     <name>Segment 2</name>
     <trkseg>
       <name>Segment 2</name>
-      <desc>distance: 14.0km, elevation_gain: 897.0m, elevation_loss: 1333.0m, est_duration_moving: 02:06, est_duration_incl_pauses: 02:27, avg_km_per_hour: 5.8, avg_km_hr_moving: 6.8</desc>
+      <desc>distance: 14.3km, elevation_gain: 897m, elevation_loss: 1333m, est_duration_moving: 02:06, est_duration_incl_pauses: 02:27, avg_km_per_hour: 5.8, avg_km_hr_moving: 6.8</desc>
       <trkpt lat="47.413801" lon="11.764061">
         <ele>967.42</ele>
       </trkpt>

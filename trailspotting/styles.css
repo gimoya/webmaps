@@ -54,7 +54,7 @@ a, button, input, textarea, [contenteditable="true"] {
 	justify-content: center;
 }
 
-.route-wheel {
+.route-selector-box {
 	min-height: 150px;
 	height: auto;
 	width: 90%;
@@ -70,7 +70,7 @@ a, button, input, textarea, [contenteditable="true"] {
 	z-index: 1;
 }
 
-.route-wheel-inner {
+.route-selector-inner {
 	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
@@ -299,20 +299,22 @@ a, button, input, textarea, [contenteditable="true"] {
 /* GPX Download List with Vertical Scrolling Animation */
 .gpx-download-container {
 	height: 60%;
-	overflow: hidden;
+	overflow-y: auto;
+	overflow-x: hidden;
 	position: relative;
 	margin: 10px 0;
 	border: 1px solid #ccc;
 	border-radius: 5px;
 	background-color: rgba(240, 240, 240, 0.9);
-	opacity: 0;
-	animation: fadeInGpx 3s ease-in 8s forwards;
+	opacity: 1;
+	/* Firefox scrollbar */
+	scrollbar-width: thin;
+	scrollbar-color: rgba(100, 100, 100, 0.6) rgba(200, 200, 200, 0.3);
 }
 
 .gpx-download-list {
 	display: flex;
 	flex-direction: column;
-	animation: scrollVertical 8s linear infinite;
 	padding: 10px;
 }
 
@@ -327,6 +329,8 @@ a, button, input, textarea, [contenteditable="true"] {
 	transition: background-color 0.3s ease;
 	font-size: 12px;
 	white-space: nowrap;
+	position: relative;
+	cursor: help;
 }
 
 .gpx-download-list a:hover {
@@ -334,36 +338,40 @@ a, button, input, textarea, [contenteditable="true"] {
 	color: #000;
 }
 
-@keyframes scrollVertical {
-	0% {
-		transform: translateY(0);
-	}
-	100% {
-		transform: translateY(-100%);
-	}
+.gpx-tooltip {
+	position: fixed;
+	padding: 8px 12px;
+	background-color: rgba(0, 0, 0, 0.95);
+	color: #fff;
+	border-radius: 4px;
+	font-size: 12px;
+	font-family: 'Special Elite';
+	white-space: pre-line;
+	z-index: 99999;
+	min-width: 250px;
+	max-width: 400px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+	pointer-events: none;
+	line-height: 1.4;
 }
 
-@keyframes scrollHorizontal {
-	0% {
-		transform: translateX(0);
-	}
-	100% {
-		transform: translateX(-100%);
-	}
+/* Custom scrollbar for GPX download container */
+.gpx-download-container::-webkit-scrollbar {
+	width: 10px;
 }
 
-@keyframes fadeInGpx {
-	0% {
-		opacity: 0;
-	}
-	100% {
-		opacity: 1;
-	}
+.gpx-download-container::-webkit-scrollbar-track {
+	background: rgba(200, 200, 200, 0.3);
+	border-radius: 5px;
 }
 
-/* Pause animation on hover */
-.gpx-download-container:hover .gpx-download-list {
-	animation-play-state: paused;
+.gpx-download-container::-webkit-scrollbar-thumb {
+	background: rgba(100, 100, 100, 0.6);
+	border-radius: 5px;
+}
+
+.gpx-download-container::-webkit-scrollbar-thumb:hover {
+	background: rgba(80, 80, 80, 0.8);
 }
 
 /* Footer */

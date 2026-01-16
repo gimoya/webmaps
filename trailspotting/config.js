@@ -5,12 +5,202 @@
 
 /*
  * ==================
+ * ROUTE SELECTION CONFIGURATION
+ * ==================
+ */
+
+/*
+ * Active routes - controls which routes are displayed in the application
+ * Remove routes from this array to hide them, or add new ones to show them
+ */
+const APP_CONFIG = {
+	/*
+	 * Active routes (add new routes here)
+	 */
+	activeRoutes: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'],
+	
+	/*
+	 * Route-specific overrides
+	 */
+	routeOverrides: {
+		'B': { minZoom: 9 } /* Example: Route B has different minZoom */
+	}
+};
+
+/*
+ * ==================
+ * ROUTE CONFIGURATION
+ * ==================
+ * Defines segments and stations for each route
+ * Keyed by route letters (A-Z), with filename included in each route config
+ */
+const ROUTE_CONFIG = {
+	'A': {
+		filename: 'Hu_NR__Trailspotting.gpx',
+		segments: [
+			{from: 'Hungerburg', to: 'Neu-Rum'}
+		],
+		stations: [
+			'Innsbruck Marktplatz',
+			'Rum BHF'
+		]
+	}
+	,
+	'B': {
+		filename: 'Al_Id_Si_Im__Trailspotting.gpx',
+		segments: [
+			{from: 'Aldrans', to: 'Innsbruck-DEZ'},
+			{from: 'Sistrans', to: 'Innsbruck-Mitte'}
+		],
+		stations: [
+			'Innsbruck Tivoli',
+			'Innsbruck SOS-Kinderorf'
+		]
+	}
+	,
+	'C': {
+		filename: 'Al_Ha_Wa_Ha__Trailspotting.gpx',
+		segments: [
+			{from: 'Aldrans', to: 'Hall'},
+			{from: 'Walderbrücke', to: 'Hall'}
+		],
+		stations: [
+			'Innsbruck Tivoli',
+			'Hall BHF'
+		]
+	}
+	,
+	'D': {
+		filename: 'Al_Ha_Wa_Fr__Trailspotting.gpx',
+		segments: [
+			{from: 'Aldrans/Fagslung', to: 'Hall'},
+			{from: 'Walderbrücke', to: 'Fritzens'}
+		],
+		stations: [
+			'Innsbruck Tivoli',
+			'Hall BHF',
+			'Volders-Baumkirchen'
+		]
+	}
+	,
+	'E': {
+		filename: 'Re_Voe__Trailspotting.gpx',
+		segments: [
+			{from: 'Reith', to: 'Völs'}
+		],
+		stations: [
+			'Innsbruck BHF',
+			'Völs BHF'
+		]
+	}
+	,
+	'F': {
+		filename: 'Re_In__Trailspotting.gpx',
+		segments: [
+			{from: 'Reith', to: 'Innsbruck'}
+		],
+		stations: [
+			'Innsbruck BHF'
+		]
+	}
+	,
+	'G': {
+		filename: 'Re_Ob_Kr_Voe__Trailspotting.gpx',
+		segments: [
+			{from: 'Reith', to: 'Unterperfuss'},
+			{from: 'Oberperfuss', to: 'Völs'}
+		],
+		stations: [
+			'Innsbruck BHF',
+			'Unterperfuss Mühlbrückl'
+		]
+	}
+	,
+	'H': {
+		filename: 'Moe_Te__Trailspotting.gpx',
+		segments: [
+			{from: 'Mötz', to: 'Telfs BHF'}
+		],
+		stations: [
+			'Innsbruck BHF',
+			'Telfs BHF'
+		]
+	}
+	,
+	'I': {
+		filename: 'Moe_Te_BH_Te__Trailspotting.gpx',
+		segments: [
+			{from: 'Mötz', to: 'Telfs Sagl/M-Preis'},
+			{from: 'Buchener Höhe', to: 'Telfs BHF'}
+		],
+		stations: [
+			'Innsbruck BHF',
+			'Telfs Sagl/M-Preis',
+			'Telfs BHF'
+		]
+	}
+	,
+	'J': {
+		filename: 'Oe_Oe__Trailspotting.gpx',
+		segments: [
+			{from: 'Ötztal Bhf.', to: 'Ötztal Bhf.'}
+		],
+		stations: [
+			'Innsbruck BHF',
+			'Ötztal BHF'
+		]
+	}
+	,
+	'K': {
+		filename: 'Al_Ha_Sc_Te__Trailspotting.gpx',
+		segments: [
+			{from: 'Aldrans', to: 'Hall'},
+			{from: 'Schwaz', to: 'Terfens/Weer'}
+		],
+		stations: [
+			'Innsbruck Tivoli',
+			'Hall BHF',
+			'Terfens/Weer BHF'
+		]
+	}
+	,
+	'L': {
+		filename: 'Sc_Je_Ma_Je__Trailspotting.gpx',
+		segments: [
+			{from: 'Schwaz', to: 'Jenbach'},
+			{from: 'Maurach', to: 'Jenbach'}
+		],
+		stations: [
+			'Innsbruck BHF',
+			'Jenbach Schalserstraße',
+			'Jenbach BHF'
+		]
+	}
+	,
+	'M': {
+		filename: 'Al_Ha_Mue_Br_Sc_Te__Trailspotting.gpx',
+		segments: [
+			{from: 'Aldrans', to: 'Hall'},
+			{from: 'Münster/Wiesing', to: 'Brixlegg'},
+			{from: 'Schwaz', to: 'Terfens/Weer'}
+		],
+		stations: [
+			'Innsbruck Tivoli',
+			'Hall BHF',
+			'Brixlegg BHF',
+			'Terfens/Weer BHF'
+		]
+	}
+};
+
+/*
+ * ==================
  * STATIONS CONFIGURATION
  * ==================
  */
 const STATIONS_CONFIG = {
 	'Innsbruck Tivoli': {
-		iframeUrl: 'https://timeview.vvt.at/#42D539BA-4F21-4CBE-8F69DD5C30BC3AB2'
+		iframeUrl: 'https://timeview.vvt.at/#6B0A24A2-795B-4424-A18132119E04ABE7'
 	},
 	'Innsbruck BHF': {
 		iframeUrl: 'https://timeview.vvt.at/#FD637831-93EA-4DD7-BB75DD34A82DF0D2'
@@ -74,159 +264,9 @@ const STATIONS_CONFIG = {
 	},
 	'Kematen BHF': {
 		iframeUrl: 'https://timeview.vvt.at/#2B49C93A-AACD-4F27-9A5181FA8C8115827'
-	}
-};
-
-/*
- * ==================
- * ROUTE CONFIGURATION
- * ==================
- */
-
-const APP_CONFIG = {
-	/*
-	 * Active routes (add new routes here)
-	 */
-	activeRoutes: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'],
-	
-	/*
-	 * Route-specific overrides
-	 */
-	routeOverrides: {
-		'B': { minZoom: 9 } /* Example: Route B has different minZoom */
-	}
-};
-
-const ROUTE_CONFIG = {
-	'A': {
-		segments: [
-			{from: 'Hungerburg', to: 'Neu-Rum'}
-		],
-		stations: [
-			'Innsbruck Marktplatz',
-			'Rum BHF'
-		]
 	},
-	'B': {
-		segments: [
-			{from: 'Aldrans', to: 'Innsbruck-DEZ'},
-			{from: 'Sistrans', to: 'Innsbruck-Mitte'}
-		],
-		stations: [
-			'Innsbruck Tivoli',
-			'Innsbruck SOS-Kinderorf'
-		]
-	},
-	'C': {
-		segments: [
-			{from: 'Aldrans', to: 'Hall'},
-			{from: 'Walderbrücke', to: 'Hall'}
-		],
-		stations: [
-			'Innsbruck Tivoli',
-			'Hall BHF'
-		]
-	},
-	'D': {
-		segments: [
-			{from: 'Reith', to: 'Völs'}
-		],
-		stations: [
-			'Innsbruck BHF',
-			'Völs BHF'
-		]
-	},
-	'E': {
-		segments: [
-			{from: 'Reith', to: 'Innsbruck'}
-		],
-		stations: [
-			'Innsbruck BHF'
-		]
-	},
-	'F': {
-		segments: [
-			{from: 'Reith', to: 'Zirl'}
-		],
-		stations: [
-			'Innsbruck BHF',
-			'Zirl BHF'
-		]
-	},
-	'G': {
-		segments: [
-			{from: 'Mötz', to: 'Telfs BHF'}
-		],
-		stations: [
-			'Innsbruck BHF',
-			'Telfs BHF'
-		]
-	},
-	'H': {
-		segments: [
-			{from: 'Mötz', to: 'Telfs Sagl/M-Preis'},
-			{from: 'Buchener Höhe', to: 'Telfs BHF'}
-		],
-		stations: [
-			'Innsbruck BHF',
-			'Telfs Sagl/M-Preis',
-			'Telfs BHF'
-		]
-	},
-	'I': {
-		segments: [
-			{from: 'Aldrans/Fagslung', to: 'Hall'},
-			{from: 'Walderbrücke', to: 'Fritzens'}
-		],
-		stations: [
-			'Innsbruck Tivoli',
-			'Hall BHF',
-			'Volders-Baumkirchen'
-		]
-	},
-	'J': {
-		segments: [
-			{from: 'Aldrans', to: 'Hall'},
-			{from: 'Schwaz', to: 'Terfens/Weer'}
-		],
-		stations: [
-			'Innsbruck Tivoli',
-			'Hall BHF',
-			'Terfens/Weer BHF'
-		]
-	},
-	'K': {
-		segments: [
-			{from: 'Aldrans', to: 'Hall'},
-			{from: 'Münster/Wiesing', to: 'Brixlegg'},
-			{from: 'Schwaz', to: 'Terfens/Weer'}
-		],
-		stations: [
-			'Innsbruck Tivoli',
-			'Hall BHF',
-			'Brixlegg BHF',
-			'Terfens/Weer BHF'
-		]
-	},
-	'L': {
-		segments: [
-			{from: 'Schwaz', to: 'Jenbach'},
-			{from: 'Maurach', to: 'Jenbach'}
-		],
-		stations: [
-			'Innsbruck BHF',
-			'Jenbach Schalserstraße',
-			'Jenbach BHF'
-		]
-	},
-	'M': {
-		segments: [
-			{from: 'Ötztal Bhf.', to: 'Ötztal Bhf.'}
-		],
-		stations: [
-			'Innsbruck BHF',
-			'Ötztal BHF'
-		]
+	'Unterperfuss Mühlbrückl': {
+		iframeUrl: 'https://timeview.vvt.at/#0A78D0FC-01B6-4E31-8115E176C6AA812F'
 	}
 };
 
@@ -282,7 +322,7 @@ const MAP_CONFIG = {
 
 const GPX_CONFIG = {
 	/*
-	 * File naming pattern
+	 * File naming pattern (legacy - kept for backward compatibility)
 	 */
 	filePattern: '__Trailspotting.gpx',
 	tracksDirectory: 'tracks/'
