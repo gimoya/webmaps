@@ -206,6 +206,11 @@ def clean_gpx_element(element):
         for attr in attrs_to_remove:
             del element.attrib[attr]
 
+# GPX 1.1 namespace for writing valid GPX that parsers (e.g. TRAILISM GPX Checkpoint Times) can use
+GPX_NS = 'http://www.topografix.com/GPX/1/1'
+XSI_NS = 'http://www.w3.org/2001/XMLSchema-instance'
+
+
 def remove_namespaces(element):
     """
     Recursively remove namespace prefixes from element tags and attributes.
@@ -233,6 +238,34 @@ def remove_namespaces(element):
     # Recursively process children
     for child in element:
         remove_namespaces(child)
+
+
+def apply_gpx11_namespaces_for_write(root):
+    """
+    Apply GPX 1.1 default namespace to root and all descendants so that
+    tree.write() produces valid GPX 1.1 with xmlns="http://www.topografix.com/GPX/1/1".
+    Call this right before tree.write(); does not change findall() behavior before that.
+    """
+    def local_name(tag):
+        return tag.split('}', 1)[1] if tag.startswith('{') else tag
+
+    def set_ns(element):
+        if not element.tag.startswith('{'):
+            element.tag = f'{{{GPX_NS}}}{element.tag}'
+        for child in element:
+            set_ns(child)
+
+    set_ns(root)
+    # xsi:schemaLocation so validators and parsers recognize GPX 1.1
+    root.set(f'{{{XSI_NS}}}schemaLocation',
+             'http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd')
+    # Remove unqualified schemaLocation if present
+    for key in list(root.attrib):
+        if key == 'schemaLocation' or (not key.startswith('{') and 'schemaLocation' in key.lower()):
+            del root.attrib[key]
+    # So write() emits xmlns="..." and xmlns:xsi="..."
+    ET.register_namespace('', GPX_NS)
+    ET.register_namespace('xsi', XSI_NS)
 
 def update_gpx_metadata(gpx_file: str, avg_km_per_hour: float = 10.0, time_penalty_per_10m_elev: float = 1.0, pause_time_per_60min: float = 5.0) -> None:
     """
@@ -268,17 +301,13 @@ def update_gpx_metadata(gpx_file: str, avg_km_per_hour: float = 10.0, time_penal
     print("  Removing namespaces from GPX elements...")
     remove_namespaces(root)
     
-    # Standardize root element attributes
+    # Standardize root element attributes (xmlns and xsi:schemaLocation applied later before write)
     print("  Standardizing GPX root attributes...")
     root.set('version', '1.1')
     root.set('creator', 'https://tiroltrailhead.com')
-    # Use standard GPX 1.1 schemaLocation (no extensions needed since we clean them)
-    # Remove any existing schemaLocation first
     for attr_name in list(root.attrib.keys()):
         if 'schemaLocation' in attr_name.lower():
             del root.attrib[attr_name]
-    # Set standard GPX 1.1 schemaLocation
-    root.set('schemaLocation', 'http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd')
     
     # Update metadata: inject filename and description
     print("  Updating GPX metadata...")
@@ -388,6 +417,10 @@ def update_gpx_metadata(gpx_file: str, avg_km_per_hour: float = 10.0, time_penal
             desc.tail = '\n      '
             
             print(f"      {segment_name}: {stats['distance']}km, +{stats['elevation_gain']}m/-{stats['elevation_loss']}m, ~{stats['est_duration_moving']} (moving) / ~{stats['est_duration_incl_pauses']} (total)")
+    
+    # Apply GPX 1.1 default namespace so output is valid GPX 1.1 (xmlns="...") for parsers
+    print("  Applying GPX 1.1 namespaces for output...")
+    apply_gpx11_namespaces_for_write(root)
     
     # Write back to file
     tree.write(gpx_file, encoding='utf-8', xml_declaration=True)
