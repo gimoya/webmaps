@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /leaderboard/{docId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasAll(['name', 'segmentName', 'duration', 'distance', 'segmentInfo', 'timestamp'])
+        && request.resource.data.segmentName is string
+        && request.resource.data.segmentName.size() > 0
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && (!('gpx' in request.resource.data) || (request.resource.data.gpx is string && request.resource.data.gpx.size() <= 1048487));
+      allow update: if false;
+      allow delete: if true;
+    }
+  }
+}

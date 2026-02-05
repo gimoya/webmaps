@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GPX Blinduro – Checkpoint Times</title>
+  <link rel="icon" href="images/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+  <link href="https://fonts.cdnfonts.com/css/raster-forge" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol@0.76.0/dist/L.Control.Locate.min.css" crossorigin="">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-layout">
+    <div id="map"></div>
+    <aside class="unified-panel" id="unified-panel">
+      <div class="unified-panel-scroll">
+        <header class="panel-header">
+          <div class="panel-header-title-row">
+            <h1>GPX Blinduro</h1>
+            <div class="track-nav" aria-label="Navigate tracks">
+              <button type="button" class="track-nav-btn track-nav-prev" aria-label="Previous track">‹</button>
+              <button type="button" class="track-nav-btn track-nav-next" aria-label="Next track">›</button>
+            </div>
+          </div>
+          <h2>🦸‍♀️ Upload your GPX for segment times between checkpoints</h2>
+        </header>
+        <div class="panel-section" id="section-controls">
+          <div class="toolbar-row">
+            <label for="gpx-file" class="upload-label">
+              <span class="upload-icon">📁</span>
+              <span>Upload GPX</span>
+            </label>
+            <input type="file" id="gpx-file" accept=".gpx" hidden>
+            <label class="options-inline" id="max-dist-row" style="display:none">
+              Max snap (m):
+              <input type="number" id="max-dist" value="20" min="1" max="500" step="1">
+            </label>
+            <div class="status" id="status" aria-live="polite"></div>
+          </div>
+          <section class="error" id="error" hidden></section>
+        </div>
+        <details class="panel-collapse" id="collapse-tracks" data-section="tracks">
+          <summary class="panel-collapse-header">Track summary</summary>
+          <div class="panel-collapse-body" id="tracks-summary"></div>
+        </details>
+        <details class="panel-collapse" id="collapse-segments" data-section="segments">
+          <summary class="panel-collapse-header">Segments</summary>
+          <div class="panel-collapse-body">
+            <div class="submission-form-wrapper">
+              <form id="submission-form" class="submission-form">
+                <label for="submitter-name"></label>
+                <input type="text" id="submitter-name" name="name" placeholder="Enter your name" autocomplete="name">
+              </form>
+            </div>
+            <div id="segments-list"></div>
+          </div>
+        </details>
+        <details class="panel-collapse" id="collapse-leaderboards" data-section="leaderboards">
+          <summary class="panel-collapse-header">Leaderboards</summary>
+          <div class="panel-collapse-body">
+            <button type="button" id="reset-leaderboard" class="reset-btn" style="display:none">Reset all</button>
+            <div id="leaderboards-container"></div>
+          </div>
+        </details>
+      </div>
+    </aside>
+  </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.locatecontrol@0.76.0/dist/L.Control.Locate.min.js" crossorigin=""></script>
+  <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRTbTdvK8O7tkLCoRfTaGPV-JZpoay7Zw",
+      authDomain: "gpx-blinduro.firebaseapp.com",
+      projectId: "gpx-blinduro",
+      storageBucket: "gpx-blinduro.firebasestorage.app",
+      messagingSenderId: "58925827381",
+      appId: "1:58925827381:web:9c54e7dc69aa53df29b87c",
+      measurementId: "G-GXWNEBDGG3"
+    };
+    firebase.initializeApp(firebaseConfig);
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>
