@@ -17,7 +17,7 @@ const CIRCLE_END_COLOR = '#991b1b';
 const CIRCLE_START_COLOR = '#166534';
 const CIRCLE_WEIGHT = 1;
 
-const GPX_LOADED_COLOR = '#c7a600'; // dark yellow
+const GPX_LOADED_COLOR = 'orange'; 
 const GPX_LOADED_WEIGHT = 2;
 
 const PRELOAD_TRACKS_COLOR = '#960018'; // carmin red
@@ -33,7 +33,7 @@ const PRELOAD_TRACKS_GLOW_STYLE = {
   opacity: 0.35,
   fillOpacity: 0
 };
-const SEGMENT_MATCH_COLOR = '#16a34a';
+const SEGMENT_MATCH_COLOR = 'green';
 const SEGMENT_MATCH_WEIGHT = 10;
 const SEGMENT_MATCH_OPACITY = 0.5;
 
@@ -833,7 +833,7 @@ function showSubmissionPopup(rank) {
   popup.innerHTML = `
     <div class="submission-popup-inner">
       <img src="images/pacman-namco.gif" alt="" class="submission-popup-gif">
-      <div class="submission-popup-text">You made it #${rank}!</div>
+      <div class="submission-popup-text">You are #${rank}!</div>
     </div>
   `;
   document.body.appendChild(popup);
@@ -1085,7 +1085,21 @@ function renderMap() {
     mapLayers.matchedSegments.push(polyline);
     allLatLngs.push(...latlngs);
   }
-  if (allLatLngs.length) {
+  if (uploadedTracks.length > 0 || lastMatchedSegments.length > 0) {
+    const gpxLatLngs = [];
+    for (const track of uploadedTracks) {
+      if (Array.isArray(track) && track.length >= 2) {
+        for (const p of track) {
+          const ll = Array.isArray(p) ? [p[0], p[1]] : [p.lat ?? p[0], p.lng ?? p[1]];
+          gpxLatLngs.push(ll);
+        }
+      }
+    }
+    for (const seg of lastMatchedSegments) {
+      if (seg.pts && seg.pts.length >= 2) gpxLatLngs.push(...seg.pts.map(p => [p[0], p[1]]));
+    }
+    if (gpxLatLngs.length) fitBoundsWithOffset(L.latLngBounds(gpxLatLngs));
+  } else if (allLatLngs.length) {
     fitBoundsWithOffset(L.latLngBounds(allLatLngs));
   }
 }

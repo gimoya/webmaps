@@ -6,6 +6,8 @@
   --font-family: 'Press Start 2P', 'VT323', 'IBM Plex Mono', 'Fira Mono', monospace;
   --font-family-heading: 'Raster Forge', sans-serif;
   --font-family-hero: 'Bebas Neue', Arial, sans-serif;
+  --line-height-hero: 1.2;
+  --font-size-hero: 3.5rem;
   --font-family-button: 'Raster Forge', sans-serif;
 
   /* Font sizes – scale from base */
@@ -17,7 +19,6 @@
   --font-size-lg: 1.1rem;
   --font-size-xl: 1.25rem;
   --font-size-2xl: 1.5rem;
-  --font-size-hero: 4rem;
   --font-size-emoji: 1.75rem;
   --line-height: 1.5;
 
@@ -59,7 +60,6 @@
   --marker-size: 28px;
   --marker-scale-low: 0.7;
   --marker-margin-top-low: -30px;
-  --marker-margin-left-low: -9px;
 }
 
 * {
@@ -174,6 +174,7 @@ body.panel-hidden .unified-panel {
 
 .unified-panel .panel-header h1 {
   font-family: var(--font-family-hero);
+  line-height: var(--line-height-hero);
   font-size: var(--font-size-hero);
   letter-spacing: 0.04em;
 }
@@ -364,7 +365,6 @@ body.map-zoom-low .leaflet-tooltip.blinduro-marker-label {
 
 body.map-zoom-very-low .blinduro-marker {
   margin-top: var(--marker-margin-top-low) !important;
-  margin-left: var(--margin-left-low) !important;
 }
 
 body.map-zoom-very-low .blinduro-marker span {
@@ -644,7 +644,6 @@ body.map-zoom-very-low .blinduro-marker span {
   gap: 0.5rem;
   padding: 1.5rem 2rem;
   background: var(--color-bg-panel-elevated);
-  border: 12px solid var(--color-success);
   border-radius: var(--radius-lg);
   box-shadow: 0 0 40px rgba(34, 197, 94, 0.4);
   transform: scale(0.5);

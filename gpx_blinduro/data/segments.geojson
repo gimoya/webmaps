@@ -3,10 +3,6 @@
 "name": "segments",
 "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
 "features": [
-{ "type": "Feature", "properties": { "segmentName": "Die Mure", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 10.839359274797458, 47.240893647203734 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Die Mure", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 10.842316253973234, 47.238004705158012 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Ötztal Bhf", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 10.852601696912295, 47.233122474376209 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Ötztal Bhf", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 10.849835654102302, 47.235504756765671 ] } },
 { "type": "Feature", "properties": { "segmentName": "Falzloaregg", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.56102440951056, 47.312402866616239 ] } },
 { "type": "Feature", "properties": { "segmentName": "Falzloaregg", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.575622573347301, 47.307048874694452 ] } },
 { "type": "Feature", "properties": { "segmentName": "Urschen", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.547775539363542, 47.322745396709649 ] } },
@@ -22,16 +18,22 @@
 { "type": "Feature", "properties": { "segmentName": "Lanser Gully", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.421092898526084, 47.245134837915849 ] } },
 { "type": "Feature", "properties": { "segmentName": "Lanser Gully", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.427018033412601, 47.248637485956891 ] } },
 { "type": "Feature", "properties": { "segmentName": "Mötzer Flow", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 10.937295247329333, 47.287511600115501 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Mötzer Flow", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 10.952276671260455, 47.286024126706572 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Sassberg Epic", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 10.964916374212612, 47.283138103902488 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Sassberg Epic", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 10.985043480551699, 47.28636792331654 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Mötzer Flow", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 10.947027289732475, 47.287967648356378 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Sassberg Epic", "pointType": "start" }, "geometry": null },
+{ "type": "Feature", "properties": { "segmentName": "Sassberg Epic", "pointType": "end" }, "geometry": null },
 { "type": "Feature", "properties": { "segmentName": "Jenbach DH", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.765169542905483, 47.410935625197027 ] } },
 { "type": "Feature", "properties": { "segmentName": "Jenbach DH", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.769191050037437, 47.403899917476465 ] } },
 { "type": "Feature", "properties": { "segmentName": "Fiechter Köpfl", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.024482787002976, 47.300143671684644 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Fiechter Köpfl", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.035215306163307, 47.300832622219367 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Fiechter Köpfl", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.044828711067128, 47.298846322605897 ] } },
 { "type": "Feature", "properties": { "segmentName": "Stallental Offcamber", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.686114092089282, 47.374642960656118 ] } },
 { "type": "Feature", "properties": { "segmentName": "Stallental Offcamber", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.695860803107097, 47.373255383154579 ] } },
 { "type": "Feature", "properties": { "segmentName": "Astenau Epic", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.777887930246619, 47.417655744702998 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Astenau Epic", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.771819409294082, 47.416367366287751 ] } }
+{ "type": "Feature", "properties": { "segmentName": "Astenau Epic", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.771819409294082, 47.416367366287751 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Kristen", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.30833676958656, 47.247189892418078 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Kriste", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.320261436703664, 47.252346802839995 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Kammerland", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.247904932004504, 47.236455074656149 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Kammerland", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.255069579044182, 47.243045844553542 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Waalweg", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 10.951882020375715, 47.28404129053218 ] } },
+{ "type": "Feature", "properties": { "segmentName": null, "pointType": "Waalweg" }, "geometry": { "type": "Point", "coordinates": [ 10.95437676156217, 47.285523122757631 ] } }
 ]
 }
