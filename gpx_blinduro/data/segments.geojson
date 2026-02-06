@@ -30,7 +30,7 @@
 { "type": "Feature", "properties": { "segmentName": "Astenau Epic", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.777887930246619, 47.417655744702998 ] } },
 { "type": "Feature", "properties": { "segmentName": "Astenau Epic", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.771819409294082, 47.416367366287751 ] } },
 { "type": "Feature", "properties": { "segmentName": "Kristen", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.30833676958656, 47.247189892418078 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Kriste", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.320261436703664, 47.252346802839995 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Kristen", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.320261436703664, 47.252346802839995 ] } },
 { "type": "Feature", "properties": { "segmentName": "Kammerland", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.247904932004504, 47.236455074656149 ] } },
 { "type": "Feature", "properties": { "segmentName": "Kammerland", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.255069579044182, 47.243045844553542 ] } },
 { "type": "Feature", "properties": { "segmentName": "Waalweg", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 10.951816904331865, 47.283913111006015 ] } },

@@ -627,6 +627,10 @@ body.map-zoom-very-low .blinduro-marker span {
   margin-bottom: 0.2rem;
 }
 
+#levels-list .leaderboard-segment-name {
+  font-family: var(--font-family-heading);
+}
+
 .leaderboard-segment-collapse[open] .leaderboard-segment-title::before {
   transform: rotate(90deg);
 }
