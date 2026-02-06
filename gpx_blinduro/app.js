@@ -362,6 +362,50 @@ function slugify(s) {
   return String(s).replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_]/g, '');
 }
 
+function buildLevelsList() {
+  const container = document.getElementById('levels-list');
+  if (!container) return;
+  container.innerHTML = '';
+  if (!standardTracks?.length) return;
+  const gpxBase = DATA_BASE + 'data/';
+  for (const track of standardTracks) {
+    const details = document.createElement('details');
+    details.className = 'leaderboard-segment-collapse';
+    details.dataset.trackName = track.name;
+    const len = track.length != null ? track.length.toFixed(2) + ' km' : '—';
+    const gain = track['elevation gain'] != null ? Math.round(track['elevation gain']) + ' m' : '—';
+    const loss = track['elevaiton loss'] != null ? Math.round(track['elevaiton loss']) + ' m' : '—';
+    const stats = `length ${len} · elevation gain ${gain} · elevaiton loss ${loss}`;
+    const gpxUrl = gpxBase + encodeURIComponent(track.name + '.gpx');
+    details.innerHTML = `
+      <summary class="leaderboard-segment-title">
+        <span class="leaderboard-segment-name">Level - ${escapeHtml(track.name)}</span>
+        <span class="leaderboard-segment-meta"></span>
+      </summary>
+      <ul>
+        <li class="leaderboard-entry">
+          <div class="leaderboard-entry-row">
+            <span class="leaderboard-entry-main">${escapeHtml(stats)}</span>
+            <a href="${escapeHtml(gpxUrl)}" class="leaderboard-entry-gpx-dl" target="_blank" rel="noopener">GPX</a>
+          </div>
+        </li>
+      </ul>
+    `;
+    const summary = details.querySelector('.leaderboard-segment-title');
+    if (summary) {
+      summary.addEventListener('click', () => {
+        const idx = standardTracks.findIndex(t => t.name === track.name);
+        if (idx >= 0) {
+          trackNavIndex = idx;
+          fitMapToTrack(idx);
+          updateTrackNavButtons();
+        }
+      });
+    }
+    container.appendChild(details);
+  }
+}
+
 function buildLeaderboardPanel() {
   const container = document.getElementById('leaderboards-container');
   if (!container) return;
@@ -546,6 +590,14 @@ function trackNameNoExt(f, index) {
   return raw.replace(/\.[^/.]+$/, '');
 }
 
+function parseGeoJsonTrackProps(p) {
+  return {
+    length: p?.length != null ? Number(p.length) : null,
+    'elevation gain': p?.['elevation gain'] != null ? Number(p['elevation gain']) : null,
+    'elevaiton loss': p?.['elevaiton loss'] != null ? Number(p['elevaiton loss']) : null
+  };
+}
+
 function parseGeoJsonTracks(data) {
   const fc = typeof data === 'string' ? JSON.parse(data) : data;
   if (fc?.type !== 'FeatureCollection' || !Array.isArray(fc.features)) return [];
@@ -553,13 +605,24 @@ function parseGeoJsonTracks(data) {
   let trackIndex = 0;
   for (const f of fc.features) {
     const g = f?.geometry;
+    const props = parseGeoJsonTrackProps(f?.properties);
     if (!g || !Array.isArray(g.coordinates)) continue;
     if (g.type === 'LineString' && g.coordinates.length >= 2) {
-      tracks.push({ coords: g.coordinates.map(c => [c[1], c[0]]), name: trackNameNoExt(f, trackIndex++) });
+      const raw = g.coordinates;
+      tracks.push({
+        coords: raw.map(c => [c[1], c[0]]),
+        name: trackNameNoExt(f, trackIndex++),
+        ...props
+      });
     } else if (g.type === 'MultiLineString') {
       for (const line of g.coordinates) {
         if (Array.isArray(line) && line.length >= 2) {
-          tracks.push({ coords: line.map(c => [c[1], c[0]]), name: trackNameNoExt(f, trackIndex++) });
+          const raw = line;
+          tracks.push({
+            coords: raw.map(c => [c[1], c[0]]),
+            name: trackNameNoExt(f, trackIndex++),
+            ...props
+          });
         }
       }
     }
@@ -1350,6 +1413,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   showSection('tracks', false);
   await loadCheckpoints();
   await loadTracks();
+  buildLevelsList();
   buildLeaderboardPanel();
   initMap();
   document.getElementById('gpx-file').addEventListener('change', handleFile);
@@ -1369,6 +1433,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   toggleAdminUI();
   window.addEventListener('hashchange', toggleAdminUI);
+  const hasLevels = standardTracks?.length > 0;
+  showSection('levels', hasLevels, false);
   const leaderboardsCollapse = document.getElementById('collapse-leaderboards');
   const hasLeaderboards = checkpoints.segmentNames?.length > 0;
   showSection('leaderboards', hasLeaderboards, false);
