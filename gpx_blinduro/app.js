@@ -367,7 +367,6 @@ function buildLevelsList() {
   if (!container) return;
   container.innerHTML = '';
   if (!standardTracks?.length) return;
-  const gpxBase = DATA_BASE + 'data/';
   for (const track of standardTracks) {
     const details = document.createElement('details');
     details.className = 'leaderboard-segment-collapse';
@@ -376,7 +375,6 @@ function buildLevelsList() {
     const gain = track['elevation gain'] != null ? Math.round(track['elevation gain']) + ' m' : '—';
     const loss = track['elevaiton loss'] != null ? Math.round(track['elevaiton loss']) + ' m' : '—';
     const stats = `length ${len} · elevation gain ${gain} · elevaiton loss ${loss}`;
-    const gpxUrl = gpxBase + encodeURIComponent(track.name + '.gpx');
     details.innerHTML = `
       <summary class="leaderboard-segment-title">
         <span class="leaderboard-segment-name">Level - ${escapeHtml(track.name)}</span>
@@ -386,11 +384,18 @@ function buildLevelsList() {
         <li class="leaderboard-entry">
           <div class="leaderboard-entry-row">
             <span class="leaderboard-entry-main">${escapeHtml(stats)}</span>
-            <a href="${escapeHtml(gpxUrl)}" class="leaderboard-entry-gpx-dl" target="_blank" rel="noopener">GPX</a>
+            <button type="button" class="leaderboard-entry-gpx-dl" title="Download GPX">GPX</button>
           </div>
         </li>
       </ul>
     `;
+    const gpxBtn = details.querySelector('.leaderboard-entry-gpx-dl');
+    if (gpxBtn) {
+      gpxBtn.addEventListener('click', () => {
+        const gpxText = trackToGpx(track);
+        if (gpxText) downloadGpx(gpxText, track.name, 'Level');
+      });
+    }
     const summary = details.querySelector('.leaderboard-segment-title');
     if (summary) {
       summary.addEventListener('click', () => {
@@ -426,6 +431,33 @@ function escapeHtml(s) {
   const div = document.createElement('div');
   div.textContent = s;
   return div.innerHTML;
+}
+
+function trackToGpx(track) {
+  const raw = track.rawCoords ?? track.coords?.map(c => [c[1], c[0], c[2]]);
+  if (!raw?.length) return null;
+  const pts = raw.map(c => {
+    const lon = c[0], lat = c[1], ele = c[2];
+    const eleTag = ele != null && !Number.isNaN(Number(ele)) ? `\n        <ele>${Number(ele)}</ele>` : '';
+    return `      <trkpt lat="${lat}" lon="${lon}">${eleTag}\n      </trkpt>`;
+  }).join('\n');
+  const name = escapeXml(String(track.name ?? 'track'));
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="GPX Blinduro" xmlns="${GPX_NS_11}" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="${GPX_NS_11} http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata>
+    <name>${name}</name>
+  </metadata>
+  <trk>
+    <name>${name}</name>
+    <trkseg>
+${pts}
+    </trkseg>
+  </trk>
+</gpx>`;
+}
+
+function escapeXml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 
 function downloadGpx(gpxText, name, segmentName) {
@@ -611,6 +643,7 @@ function parseGeoJsonTracks(data) {
       const raw = g.coordinates;
       tracks.push({
         coords: raw.map(c => [c[1], c[0]]),
+        rawCoords: raw,
         name: trackNameNoExt(f, trackIndex++),
         ...props
       });
@@ -620,6 +653,7 @@ function parseGeoJsonTracks(data) {
           const raw = line;
           tracks.push({
             coords: raw.map(c => [c[1], c[0]]),
+            rawCoords: raw,
             name: trackNameNoExt(f, trackIndex++),
             ...props
           });
