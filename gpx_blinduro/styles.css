@@ -177,6 +177,32 @@ body.panel-hidden .unified-panel {
   }
 }
 
+/* Safari/WebKit: fixed heights to avoid flex collapse */
+.safari .unified-panel {
+  height: 50vh;
+  height: 50dvh;
+  max-height: 50vh;
+  max-height: 50dvh;
+  top: 20px;
+  right: 20px;
+  left: 50%;
+  width: calc(50% - 20px);
+}
+
+@media (orientation: portrait) {
+  .safari .unified-panel {
+    top: auto;
+    right: 20px;
+    bottom: 20px;
+    left: 20px;
+    width: calc(100% - 40px);
+    height: 40vh;
+    height: 40dvh;
+    max-height: 40vh;
+    max-height: 40dvh;
+  }
+}
+
 .unified-panel .panel-header {
   margin-bottom: 0.75rem;
 }
