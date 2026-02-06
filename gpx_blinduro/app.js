@@ -1128,39 +1128,63 @@ function initMap() {
   const scheduleOffset = () => map.once('moveend', applyMapOffsetForPanel);
   map.on('locateactivate', scheduleOffset);
   map.on('locatelocationfound', scheduleOffset);
+  const setPanelHidden = (hidden) => {
+    document.body.classList.toggle('panel-hidden', hidden);
+  };
+  const isPanelHidden = () => document.body.classList.contains('panel-hidden');
+  const togglePanel = () => setPanelHidden(!isPanelHidden());
+
+  const PANEL_FADE_MS = 1000;
+  const requestFs = document.documentElement.requestFullscreen ?? document.documentElement.webkitRequestFullscreen;
+  const exitFs = document.exitFullscreen ?? document.webkitExitFullscreen;
+  const hasFullscreen = !!(requestFs && exitFs);
+  const isFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+
   const PanelToggleControl = L.Control.extend({
     onAdd() {
       const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
       const button = L.DomUtil.create('a', 'leaflet-control-button', container);
-      button.innerHTML = '⛶';
       button.href = '#';
-      button.title = 'Fullscreen';
       button.style.cssText = 'width: 30px; height: 30px; line-height: 30px; text-align: center; font-size: 18px; display: block;';
       L.DomEvent.disableClickPropagation(button);
-      const isFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+
       const updateButton = () => {
-        const fs = isFullscreen();
-        button.title = fs ? 'Exit fullscreen' : 'Fullscreen';
-        button.innerHTML = fs ? '⊞' : '⛶';
-        document.body.classList.toggle('panel-hidden', fs);
+        if (hasFullscreen && isFullscreen()) {
+          button.title = 'Exit fullscreen';
+          button.innerHTML = '⊞';
+          setPanelHidden(true);
+        } else if (hasFullscreen) {
+          button.title = 'Fullscreen';
+          button.innerHTML = '⛶';
+          setPanelHidden(false);
+        } else {
+          const hidden = isPanelHidden();
+          button.title = hidden ? 'Show panel' : 'Hide panel';
+          button.innerHTML = hidden ? '⊞' : '⛶';
+        }
       };
-      document.addEventListener('fullscreenchange', updateButton);
-      document.addEventListener('webkitfullscreenchange', updateButton);
+
+      if (hasFullscreen) {
+        document.addEventListener('fullscreenchange', updateButton);
+        document.addEventListener('webkitfullscreenchange', updateButton);
+      }
+
+      updateButton();
+
       L.DomEvent.on(button, 'click', async (e) => {
         L.DomEvent.stopPropagation(e);
         L.DomEvent.preventDefault(e);
-        try {
+        if (hasFullscreen) {
           if (isFullscreen()) {
-            const exit = document.exitFullscreen || document.webkitExitFullscreen;
-            if (exit) await exit.call(document);
+            await exitFs.call(document);
           } else {
-            const req = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
-            if (req) await req.call(document.documentElement);
+            setPanelHidden(true);
+            await new Promise((r) => setTimeout(r, PANEL_FADE_MS));
+            await requestFs.call(document.documentElement);
           }
-        } catch (err) {
-          const hidden = document.body.classList.toggle('panel-hidden');
-          button.title = hidden ? 'Show panel' : 'Fullscreen';
-          button.innerHTML = hidden ? '⊞' : '⛶';
+        } else {
+          togglePanel();
+          updateButton();
         }
         setTimeout(() => map?.invalidateSize(), 50);
       });

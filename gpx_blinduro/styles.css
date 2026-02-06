@@ -94,11 +94,13 @@ html, body {
 }
 
 body.panel-hidden .unified-panel {
-  display: none !important;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .unified-panel {
   position: absolute;
+  transition: opacity 1s ease;
   top: 20px;
   right: 20px;
   left: 50%;
