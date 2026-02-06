@@ -70,6 +70,8 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
   font-family: var(--font-family);
   font-size: var(--font-size-base);
   line-height: var(--line-height);
@@ -80,7 +82,11 @@ html, body {
 .app-layout {
   position: relative;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
+  width: 100dvw;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
 }
 
 #map {
@@ -105,7 +111,7 @@ body.panel-hidden .unified-panel {
 }
 
 .unified-panel {
-  position: absolute;
+  position: fixed;
   visibility: visible;
   transition: opacity 1s ease, visibility 0s;
   -webkit-transition: opacity 1s ease, visibility 0s;
@@ -114,7 +120,9 @@ body.panel-hidden .unified-panel {
   left: 50%;
   width: calc(50% - 20px);
   height: fit-content;
+  min-height: 200px;
   max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
   z-index: 1000;
   background: var(--color-bg-panel);
   box-shadow: var(--shadow-panel);
@@ -127,7 +135,9 @@ body.panel-hidden .unified-panel {
 .unified-panel-scroll {
   flex: 1;
   min-height: 0;
+  min-height: 1px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 1rem 1.25rem;
   scrollbar-width: auto;
   scrollbar-color: var(--color-border) var(--color-bg-panel);
@@ -160,7 +170,9 @@ body.panel-hidden .unified-panel {
     left: 20px;
     width: calc(100% - 40px);
     height: fit-content;
+    min-height: 120px;
     max-height: 50vh;
+    max-height: 50dvh;
     border-radius: var(--radius-md);
   }
 }
