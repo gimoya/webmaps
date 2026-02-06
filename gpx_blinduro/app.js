@@ -59,6 +59,46 @@ function isAdminMode() {
   return window.location.hash === '#admin';
 }
 
+function initPanelResizeCheck() {
+  if (!isAdminMode()) return;
+  if (panelResizeObserver) {
+    panelResizeObserver.disconnect();
+    panelResizeObserver = null;
+  }
+  const panel = document.getElementById('unified-panel');
+  const header = panel?.querySelector('.panel-header');
+  if (!panel || !header) return;
+  let banner = document.getElementById('panel-resize-warning');
+  const showBanner = (show) => {
+    if (show && !banner) {
+      banner = document.createElement('div');
+      banner.id = 'panel-resize-warning';
+      banner.className = 'panel-resize-warning';
+      banner.textContent = 'Panel resize issue detected: fit-content may not work in this browser.';
+      document.body.appendChild(banner);
+    }
+    if (banner) banner.hidden = !show;
+  };
+  const check = () => {
+    if (document.body.classList.contains('panel-hidden')) return;
+    const ph = panel.getBoundingClientRect().height;
+    const hh = header.getBoundingClientRect().height;
+    showBanner(ph < hh + 20);
+  };
+  panelResizeObserver = new ResizeObserver(() => {
+    requestAnimationFrame(check);
+  });
+  panelResizeObserver.observe(panel);
+  setTimeout(check, 150);
+}
+
+function disconnectPanelResizeCheck() {
+  if (panelResizeObserver) {
+    panelResizeObserver.disconnect();
+    panelResizeObserver = null;
+  }
+}
+
 function getMaxDistM() {
   return isAdminMode()
     ? (parseFloat(document.getElementById('max-dist')?.value) || DEFAULT_MAX_DIST_M)
@@ -408,6 +448,8 @@ let lastMatchedSegments = [];
 let lastGpxText = '';
 let map = null;
 let mapLayers = { tracks: [], trackBounds: [], startMarkers: [], endMarkers: [], uploaded: [], matchedSegments: [], lookCircles: [], anchors: [], trackLabel: null };
+let trackLabelFadeTimeout = null;
+let panelResizeObserver = null;
 
 // --- Math ---
 
@@ -918,10 +960,37 @@ async function loadTracks() {
 }
 
 function clearTrackLabel() {
+  if (trackLabelFadeTimeout) {
+    clearTimeout(trackLabelFadeTimeout);
+    trackLabelFadeTimeout = null;
+  }
   if (mapLayers.trackLabel) {
     map.removeLayer(mapLayers.trackLabel);
     mapLayers.trackLabel = null;
   }
+}
+
+function showTrackLabel(name, latlng) {
+  clearTrackLabel();
+  const content = `<div class="track-label-content track-label-fade-in">
+    <img src="images/pacman-namco.gif" alt="" class="track-label-gif">
+    <span class="track-label-text">Level<br><span class="track-label-name">"${escapeHtml(name)}"</span></span>
+  </div>`;
+  const tooltip = L.tooltip(TRACK_TOOLTIP_OPTS).setContent(content).setLatLng(latlng).addTo(map);
+  mapLayers.trackLabel = tooltip;
+  const contentEl = tooltip._container?.querySelector('.track-label-content');
+  trackLabelFadeTimeout = setTimeout(() => {
+    trackLabelFadeTimeout = null;
+    if (contentEl) {
+      contentEl.classList.remove('track-label-fade-in');
+      contentEl.classList.add('track-label-fade-out');
+      contentEl.addEventListener('animationend', () => {
+        if (mapLayers.trackLabel === tooltip) clearTrackLabel();
+      }, { once: true });
+    } else {
+      clearTrackLabel();
+    }
+  }, 8000);
 }
 
 function clearMapLayers() {
@@ -996,9 +1065,8 @@ function renderMap() {
     const name = track.name ?? 'Track';
     const glowLine = L.polyline(latlngs, PRELOAD_TRACKS_GLOW_STYLE);
     const showTrackTooltip = (e, bounds) => {
-      clearTrackLabel();
-      mapLayers.trackLabel = L.tooltip(TRACK_TOOLTIP_OPTS).setContent(name).setLatLng(e.latlng).addTo(map);
       fitBoundsWithOffset(bounds);
+      showTrackLabel(name, e.latlng);
     };
     glowLine.on('click', (e) => showTrackTooltip(e, glowLine.getBounds()));
     glowLine.addTo(map);
@@ -1216,10 +1284,9 @@ function fitMapToTrack(index) {
   fitBoundsWithOffset(bounds);
   trackNavIndex = index;
   updateTrackNavButtons();
-  clearTrackLabel();
   const name = track.name ?? 'Track';
   const center = bounds.getCenter();
-  mapLayers.trackLabel = L.tooltip(TRACK_TOOLTIP_OPTS).setContent(name).setLatLng(center).addTo(map);
+  showTrackLabel(name, center);
 }
 
 function updateTrackNavButtons() {
@@ -1294,7 +1361,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (maxDistRow) maxDistRow.style.display = admin ? '' : 'none';
     const resetBtn = document.getElementById('reset-leaderboard');
     if (resetBtn) resetBtn.style.display = admin ? 'block' : 'none';
+    const banner = document.getElementById('panel-resize-warning');
+    if (banner && !admin) banner.hidden = true;
+    if (admin) initPanelResizeCheck();
+    else disconnectPanelResizeCheck();
   };
+
   toggleAdminUI();
   window.addEventListener('hashchange', toggleAdminUI);
   const leaderboardsCollapse = document.getElementById('collapse-leaderboards');
