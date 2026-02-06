@@ -33,7 +33,7 @@
 { "type": "Feature", "properties": { "segmentName": "Kriste", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.320261436703664, 47.252346802839995 ] } },
 { "type": "Feature", "properties": { "segmentName": "Kammerland", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.247904932004504, 47.236455074656149 ] } },
 { "type": "Feature", "properties": { "segmentName": "Kammerland", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.255069579044182, 47.243045844553542 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Waalweg", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 10.951882020375715, 47.28404129053218 ] } },
-{ "type": "Feature", "properties": { "segmentName": null, "pointType": "Waalweg" }, "geometry": { "type": "Point", "coordinates": [ 10.95437676156217, 47.285523122757631 ] } }
+{ "type": "Feature", "properties": { "segmentName": "Waalweg", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 10.951816904331865, 47.283913111006015 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Waalweg", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 10.954323874442945, 47.2853239397298 ] } }
 ]
 }

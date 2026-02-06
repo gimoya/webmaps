@@ -1191,6 +1191,10 @@ function fitMapToTrack(index) {
   fitBoundsWithOffset(bounds);
   trackNavIndex = index;
   updateTrackNavButtons();
+  clearTrackLabel();
+  const name = track.name ?? 'Track';
+  const center = bounds.getCenter();
+  mapLayers.trackLabel = L.tooltip(TRACK_TOOLTIP_OPTS).setContent(name).setLatLng(center).addTo(map);
 }
 
 function updateTrackNavButtons() {

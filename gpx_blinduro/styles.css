@@ -354,6 +354,11 @@ body.panel-hidden .unified-panel {
   box-shadow: var(--shadow-panel);
   transition: opacity 0.25s ease;
 }
+
+.leaflet-tooltip.blinduro-track-label {
+  font-size: 1.2rem;
+  padding: 0.25rem 0.75rem;
+}
 .leaflet-tooltip.blinduro-segment-label::before {
   display: none;
 }
