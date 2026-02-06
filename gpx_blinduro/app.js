@@ -1129,7 +1129,8 @@ function initMap() {
   map.on('locateactivate', scheduleOffset);
   map.on('locatelocationfound', scheduleOffset);
   const setPanelHidden = (hidden) => {
-    document.body.classList.toggle('panel-hidden', hidden);
+    if (hidden) document.body.classList.add('panel-hidden');
+    else document.body.classList.remove('panel-hidden');
   };
   const isPanelHidden = () => document.body.classList.contains('panel-hidden');
   const togglePanel = () => setPanelHidden(!isPanelHidden());
@@ -1151,7 +1152,7 @@ function initMap() {
       const updateButton = () => {
         if (hasFullscreen && isFullscreen()) {
           button.title = 'Exit fullscreen';
-          button.innerHTML = '⊞';
+          button.innerHTML = '⟲';
           setPanelHidden(true);
         } else if (hasFullscreen) {
           button.title = 'Fullscreen';
@@ -1160,7 +1161,7 @@ function initMap() {
         } else {
           const hidden = isPanelHidden();
           button.title = hidden ? 'Show panel' : 'Hide panel';
-          button.innerHTML = hidden ? '⊞' : '⛶';
+          button.innerHTML = hidden ? '⟲' : '⛶';
         }
       };
 
