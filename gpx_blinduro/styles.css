@@ -782,6 +782,26 @@ body.map-zoom-very-low .blinduro-marker span {
   border-color: var(--color-accent);
 }
 
+.leaderboard-entry-delete {
+  flex-shrink: 0;
+  margin-left: 0.25rem;
+  padding: 0.2rem 0.4rem;
+  font-size: var(--font-size-xxs);
+  font-family: var(--font-family-button);
+  background: var(--color-bg-panel-elevated);
+  color: #b91c1c;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.leaderboard-entry-delete:hover {
+  background: #b91c1c;
+  color: #fff;
+  border-color: #b91c1c;
+}
+
 .leaderboard-segment-collapse li.empty,
 .leaderboard-segment-collapse li.loading {
   color: var(--color-text-dim);

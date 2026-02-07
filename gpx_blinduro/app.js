@@ -270,7 +270,8 @@ async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmit
     let prevRank = 0;
     let prevSec = null;
     let prevDist = null;
-    top10.forEach(({ data: entry }, index) => {
+    top10.forEach((doc, index) => {
+      const entry = doc.data;
       const useEntry = (newlySubmittedDoc && String(entry.startTime ?? '') === String(highlightEntry?.startTime ?? '') && String(entry.endTime ?? '') === String(highlightEntry?.endTime ?? ''))
         ? { ...entry, gpx: newlySubmittedDoc.gpx }
         : entry;
@@ -278,6 +279,7 @@ async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmit
       const nm = safeStr(useEntry.name);
       const dur = safeStr(useEntry.duration);
       const sec = useEntry.durationSeconds ?? 999999;
+      const kmh = sec > 0 && dist > 0 ? ((dist / 1000) / (sec / 3600)).toFixed(1) + ' km/h' : '—';
       const isTie = prevSec !== null && prevSec === sec && prevDist === dist;
       const rank = isTie ? prevRank : index + 1;
       prevRank = rank;
@@ -287,7 +289,7 @@ async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmit
         && String(useEntry.startTime ?? '') === String(highlightEntry.startTime ?? '')
         && String(useEntry.endTime ?? '') === String(highlightEntry.endTime ?? '');
       const recDate = formatRecordDate(useEntry.startTime);
-      const { date: subDate, time: subTime } = formatSubmissionDateTime(useEntry.timestamp);
+      const { date: subDate, time: subTime } = formatSubmissionDateTime(entry.timestamp);
       const metaParts = [];
       if (recDate !== '—') metaParts.push(`Record: ${escapeHtml(recDate)}`);
       metaParts.push(`Submitted: ${escapeHtml(subDate)}, ${escapeHtml(subTime)}`);
@@ -301,10 +303,14 @@ async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmit
       const gpxBtnHtml = (rank <= 10 && useEntry.gpx)
         ? `<button type="button" class="leaderboard-entry-gpx-dl" title="Download GPX">GPX</button>`
         : '';
+      const deleteBtnHtml = isAdminMode()
+        ? `<button type="button" class="leaderboard-entry-delete" title="Delete entry">Del</button>`
+        : '';
       listItem.innerHTML = `
         <div class="leaderboard-entry-row">
-          <span class="leaderboard-entry-main">${rank}. ${rank <= 3 ? ['🥇','🥈','🥉'][rank - 1] + ' ' : ''}${escapeHtml(nm)} - ${escapeHtml(dur)} - ${dist}m</span>
+          <span class="leaderboard-entry-main">${rank}. ${rank <= 3 ? ['🥇','🥈','🥉'][rank - 1] + ' ' : ''}${escapeHtml(nm)} - ${escapeHtml(dur)} - ${dist}m · ${kmh}</span>
           ${gpxBtnHtml}
+          ${deleteBtnHtml}
         </div>
         <span class="leaderboard-entry-meta">${metaParts.join(' | ')}</span>
       `;
@@ -315,6 +321,21 @@ async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmit
           downloadGpx(useEntry.gpx, nm, segmentName);
         });
       }
+      if (isAdminMode()) {
+        const delBtn = listItem.querySelector('.leaderboard-entry-delete');
+        if (delBtn) delBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (!confirm(`Delete entry: ${nm} - ${dur}?`)) return;
+          try {
+            await doc.ref.delete();
+            setStatus('Entry deleted.');
+            refreshAllLeaderboards();
+          } catch (err) {
+            console.error(err);
+            setStatus('Failed to delete.', true);
+          }
+        });
+      }
       listEl.appendChild(listItem);
     });
     if (newlySubmittedDoc && highlightEntry && highlightRank == null) {
@@ -322,6 +343,8 @@ async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmit
       const nm = safeStr(entry.name);
       const dur = safeStr(entry.duration);
       const dist = safeNumber(entry.distance);
+      const sec = entry.durationSeconds ?? 0;
+      const kmh = sec > 0 && dist > 0 ? ((dist / 1000) / (sec / 3600)).toFixed(1) + ' km/h' : '—';
       const recDate = formatRecordDate(entry.startTime);
       const ts = entry.timestamp?.toDate ? entry.timestamp : (entry.timestamp?.seconds ? { toDate: () => new Date(entry.timestamp.seconds * 1000) } : null);
       const { date: subDate, time: subTime } = formatSubmissionDateTime(ts || new Date());
@@ -333,7 +356,7 @@ async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmit
       const gpxBtnHtml = entry.gpx ? `<button type="button" class="leaderboard-entry-gpx-dl" title="Download GPX">GPX</button>` : '';
       listItem.innerHTML = `
         <div class="leaderboard-entry-row">
-          <span class="leaderboard-entry-main">• ${escapeHtml(nm)} - ${escapeHtml(dur)} - ${dist}m (new)</span>
+          <span class="leaderboard-entry-main">• ${escapeHtml(nm)} - ${escapeHtml(dur)} - ${dist}m · ${kmh} (new)</span>
           ${gpxBtnHtml}
         </div>
         <span class="leaderboard-entry-meta">${metaParts.join(' | ')}</span>
@@ -1450,7 +1473,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   buildLevelsList();
   buildLeaderboardPanel();
   initMap();
-  document.getElementById('gpx-file').addEventListener('change', handleFile);
+  const gpxInput = document.getElementById('gpx-file');
+  const uploadLabel = document.querySelector('.upload-label');
+  gpxInput.addEventListener('change', handleFile);
+  if (uploadLabel) {
+    uploadLabel.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    uploadLabel.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const file = e.dataTransfer.files?.[0];
+      if (file && file.name.toLowerCase().endsWith('.gpx')) {
+        handleFile({ target: { files: [file] } });
+      }
+    });
+  }
   document.getElementById('submission-form')?.addEventListener('submit', (e) => e.preventDefault());
   document.getElementById('max-dist')?.addEventListener('input', () => renderMap());
   const toggleAdminUI = () => {
@@ -1461,8 +1500,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (resetBtn) resetBtn.style.display = admin ? 'block' : 'none';
     const banner = document.getElementById('panel-resize-warning');
     if (banner && !admin) banner.hidden = true;
-    if (admin) initPanelResizeCheck();
-    else disconnectPanelResizeCheck();
+    if (admin) {
+      initPanelResizeCheck();
+      refreshAllLeaderboards();
+    } else {
+      disconnectPanelResizeCheck();
+    }
   };
 
   toggleAdminUI();
