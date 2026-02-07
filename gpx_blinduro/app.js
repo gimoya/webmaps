@@ -265,7 +265,7 @@ async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmit
     });
     const top10 = docs.slice(0, 10);
     const firstPlace = safeStr(top10[0].data.name);
-    if (metaSpan) metaSpan.textContent = `${totalCount} Ride(s) · 🥇 1st: ${firstPlace}`;
+    if (metaSpan) metaSpan.textContent = `${totalCount} Attempt(s) · 🥇 1st: ${firstPlace}`;
     let highlightRank = null;
     let prevRank = 0;
     let prevSec = null;
@@ -767,82 +767,31 @@ function buildEdges(trackPts) {
   return edges;
 }
 
-function findAllSnaps(trackPts, refPts, maxDistM) {
-  if (!trackPts.length || !refPts.length) return [];
-  const result = [];
-  const used = new Set();
-  for (const [refLat, refLon] of refPts) {
-    let bestIdx = null;
-    let bestDist = Infinity;
-    for (let i = 0; i < trackPts.length; i++) {
-      if (used.has(i)) continue;
-      const [lat, lon] = trackPts[i];
-      const d = haversineM(lat, lon, refLat, refLon);
-      if (d <= maxDistM && d < bestDist) {
-        bestDist = d;
-        bestIdx = i;
-      }
-    }
-    if (bestIdx != null) {
-      used.add(bestIdx);
-      const [lat, lon, t] = trackPts[bestIdx];
-      result.push([bestIdx, lat, lon, t]);
-    }
-  }
-  return result.sort((a, b) => a[0] - b[0]);
-}
-
-function findSnapAfter(trackPts, refPt, maxDistM, afterIdx) {
-  const [refLat, refLon] = refPt;
-  let bestIdx = null;
-  let bestDist = Infinity;
-  for (let i = afterIdx + 1; i < trackPts.length; i++) {
-    const [lat, lon] = trackPts[i];
-    const d = haversineM(lat, lon, refLat, refLon);
-    if (d <= maxDistM && d < bestDist) {
-      bestDist = d;
-      bestIdx = i;
-    }
-  }
-  if (bestIdx == null) return null;
-  const [lat, lon, t] = trackPts[bestIdx];
-  return [bestIdx, lat, lon, t];
-}
-
-function getNearestDistances(trackPts, refPts) {
-  const out = [];
-  for (const [refLat, refLon] of refPts) {
-    let bestDist = Infinity;
-    let bestIdx = -1;
-    for (let i = 0; i < trackPts.length; i++) {
-      const [lat, lon] = trackPts[i];
-      const d = haversineM(lat, lon, refLat, refLon);
-      if (d < bestDist) {
-        bestDist = d;
-        bestIdx = i;
-      }
-    }
-    out.push({ dist: bestDist, idx: bestIdx });
-  }
-  return out;
-}
-
-function pairSegments(trackPts, startSnaps, endRefs, maxDistM) {
+function traceSegmentPairs(trackPts, startRefs, endRefs, maxDistM) {
+  if (!trackPts.length || !startRefs.length || !endRefs.length) return [];
   const pairs = [];
-  const usedEndIdxs = new Set();
-  for (let i = 0; i < startSnaps.length && i < endRefs.length; i++) {
-    const sIdx = startSnaps[i][0];
-    const endSnap = findSnapAfter(trackPts, endRefs[i], maxDistM, sIdx);
-    if (endSnap && !usedEndIdxs.has(endSnap[0])) {
-      const eIdx = endSnap[0];
-      pairs.push([sIdx, eIdx]);
-      usedEndIdxs.add(eIdx);
+  let state = 'looking_for_start';
+  let sIdx = -1;
+  const isNearRefs = (i, refs) => refs.some(([refLat, refLon]) => {
+    const [lat, lon] = trackPts[i];
+    return haversineM(lat, lon, refLat, refLon) <= maxDistM;
+  });
+  for (let i = 0; i < trackPts.length; i++) {
+    if (state === 'looking_for_start') {
+      if (isNearRefs(i, startRefs)) {
+        sIdx = i;
+        state = 'looking_for_end';
+      }
+    } else {
+      if (isNearRefs(i, startRefs)) {
+        sIdx = i; // reset: use most recent start before end
+      } else if (isNearRefs(i, endRefs) && i > sIdx) {
+        pairs.push([sIdx, i]);
+        state = 'looking_for_start';
+      }
     }
   }
-  const nStartOrphan = startSnaps.length - pairs.length;
-  const nEndOrphan = endRefs.length - pairs.length;
-  const nInvalid = 0;
-  return { pairs, nStartOrphan, nEndOrphan, nInvalid };
+  return pairs;
 }
 
 function segmentFromEdges(edges, sIdx, eIdx) {
@@ -876,8 +825,7 @@ function processGpx(xmlText, filename, maxDistM) {
     for (const segName of segmentNames) {
       const seg = segDefs[segName];
       if (!seg || !seg.start?.length || !seg.end?.length) continue;
-      const startSnaps = findAllSnaps(trackPts, seg.start, maxDistM);
-      const { pairs, nStartOrphan, nEndOrphan, nInvalid } = pairSegments(trackPts, startSnaps, seg.end, maxDistM);
+      const pairs = traceSegmentPairs(trackPts, seg.start, seg.end, maxDistM);
       if (pairs.length > 0) {
         totalOk += pairs.length;
         parts.push(`✅ ${segName} got matched within look around distance ${maxDistM}`);
