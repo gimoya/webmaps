@@ -15,8 +15,8 @@
 { "type": "Feature", "properties": { "segmentName": "Hochzirl", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.256765404693923, 47.280470228332852 ] } },
 { "type": "Feature", "properties": { "segmentName": "Taxburg", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.419982904667483, 47.218888444023321 ] } },
 { "type": "Feature", "properties": { "segmentName": "Taxburg", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.412922161062705, 47.226451333959275 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Lanser Gully", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.421092898526084, 47.245134837915849 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Lanser Gully", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.427018033412601, 47.248637485956891 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Tantegert", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.426482482382575, 47.249039612988376 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Tantegert", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.416338318270673, 47.252439216018317 ] } },
 { "type": "Feature", "properties": { "segmentName": "Mötzer Flow", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 10.937295247329333, 47.287511600115501 ] } },
 { "type": "Feature", "properties": { "segmentName": "Mötzer Flow", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 10.947027289732475, 47.287967648356378 ] } },
 { "type": "Feature", "properties": { "segmentName": "Sassberg Epic", "pointType": "start" }, "geometry": null },
@@ -34,6 +34,8 @@
 { "type": "Feature", "properties": { "segmentName": "Kammerland", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.247904932004504, 47.236455074656149 ] } },
 { "type": "Feature", "properties": { "segmentName": "Kammerland", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.255069579044182, 47.243045844553542 ] } },
 { "type": "Feature", "properties": { "segmentName": "Waalweg", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 10.951816904331865, 47.283913111006015 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Waalweg", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 10.954323874442945, 47.2853239397298 ] } }
+{ "type": "Feature", "properties": { "segmentName": "Waalweg", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 10.954323874442945, 47.2853239397298 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Lago di Garda", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.255372447610293, 47.2764891708619 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Lago di Garda", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.254190829402267, 47.273962597316554 ] } }
 ]
 }
