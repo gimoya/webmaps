@@ -1,0 +1,9 @@
+@font-face {
+    font-family: 'gongnormal';
+    src: url('GONGN___-webfont.woff2') format('woff2'),
+         url('GONGN___-webfont.woff') format('woff'),
+         url('GONGN___-webfont.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+

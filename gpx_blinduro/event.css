@@ -27,7 +27,7 @@ a, button, input, textarea {
 	left: 4%;
 	width: 100vw;
 	height: 80vh;
-	background-image: url('./video/poster.png');
+	background-image: url('images/poster.png');
 	background-size: cover;
 	background-position: right center;
 	background-repeat: no-repeat;
@@ -191,7 +191,7 @@ a, button, input, textarea {
 		left: 4%;
 		width: 100vw;
 		height: 80vh;
-		background-image: url('./video/poster.png');
+		background-image: url('/images/poster.png');
 		background-size: cover;
 		background-position: right center;
 		background-repeat: no-repeat;
@@ -288,7 +288,7 @@ a, button, input, textarea {
 		display: block;
 		width: 100%;
 		aspect-ratio: 16 / 9;
-		background-image: url('./video/poster.png');
+		background-image: url('images/poster.png');
 		background-size: cover;
 		background-position: center;
 		background-repeat: no-repeat;
