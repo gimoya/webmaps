@@ -8,6 +8,8 @@ const GPX_NS_10 = 'http://www.topografix.com/GPX/1/0';
 const GPX_NAMESPACES = [GPX_NS_11, GPX_NS_10];
 
 const DEFAULT_MAX_DIST_M = 20;
+const LEADERBOARD_COLLECTION = 'leaderboard';
+const STORAGE_GPX_PREFIX = 'leaderboard-gpx';
 
 // Line colors and widths (easy to adjust)
 const ANCHOR_COLOR = '#fff';
@@ -106,6 +108,7 @@ function getMaxDistM() {
 }
 
 const db = typeof firebase !== 'undefined' ? firebase.firestore() : null;
+const storage = typeof firebase !== 'undefined' ? firebase.storage() : null;
 
 function safeNumber(val) {
   const n = typeof val === 'number' ? val : parseFloat(val);
@@ -140,8 +143,6 @@ function formatSubmissionDateTime(ts) {
   return { date: `${day}. ${month} ${year}`, time: `${h}:${String(m).padStart(2, '0')}` };
 }
 
-const GPX_MAX_BYTES = 1048486; // Firestore string field max (UTF-8 bytes)
-
 async function submitLeaderboardEntry(seg, gpxText) {
   if (!db) {
     alert('Firebase not configured. Add your config to index.html.');
@@ -168,6 +169,10 @@ async function submitLeaderboardEntry(seg, gpxText) {
     setStatus('Segment has no timestamps – cannot submit.', true);
     return;
   }
+  if (!gpxText || typeof gpxText !== 'string' || !gpxText.trim()) {
+    setStatus('Upload a GPX and match segments first. GPX is required as proof.', true);
+    return;
+  }
   const doc = {
     name: name.trim(),
     segmentName,
@@ -182,31 +187,32 @@ async function submitLeaderboardEntry(seg, gpxText) {
     timestamp: firebase.firestore.FieldValue.serverTimestamp()
   };
   if (durationSeconds != null) doc.durationSeconds = durationSeconds;
-  let gpxStatus = 'no GPX';
-  if (gpxText && typeof gpxText === 'string') {
-    const bytes = new TextEncoder().encode(gpxText).length;
-    if (bytes <= GPX_MAX_BYTES) {
-      doc.gpx = gpxText;
-      gpxStatus = 'with GPX';
-    } else {
-      gpxStatus = 'GPX skipped (file too large)';
-    }
+  if (seg.pts && Array.isArray(seg.pts) && seg.pts.length >= 2) {
+    doc.segmentPts = seg.pts.map(p => ({ lat: p[0], lng: p[1] }));
+  }
+  if (!storage) {
+    setStatus('Firebase Storage not configured. Cannot submit.', true);
+    return;
   }
   setStatus(`Submitting ${segmentName} to leaderboard…`);
   try {
-    const segSnap = await db.collection('leaderboard')
+    const segSnap = await db.collection(LEADERBOARD_COLLECTION)
       .where('segmentName', '==', segmentName)
       .get();
     const isDup = !isAdminMode() && segSnap.docs.some(d => {
       const e = d.data();
-      return e.startTime === startTime && e.endTime === endTime;
+      return String(e.startTime ?? '') === String(startTime ?? '') && String(e.endTime ?? '') === String(endTime ?? '');
     });
     if (isDup) {
       setStatus('Duplicate entry – same run (first/last track timestamps) already exists.', true);
       return;
     }
-    await db.collection('leaderboard').add(doc);
-    setStatus(`Submitted ${segmentName} (${gpxStatus}).`);
+    const docRef = db.collection(LEADERBOARD_COLLECTION).doc();
+    const ref = storage.ref(`${STORAGE_GPX_PREFIX}/${docRef.id}.gpx`);
+    await ref.put(new Blob([gpxText], { type: 'application/gpx+xml' }));
+    doc.gpxStorageUrl = await ref.getDownloadURL();
+    await docRef.set(doc);
+    setStatus(`Submitted ${segmentName} (with GPX).`);
     const highlightEntry = { startTime: doc.startTime, endTime: doc.endTime };
     focusLeaderboardAfterSubmit(segmentName, null);
     await new Promise(r => setTimeout(r, 400));
@@ -228,7 +234,7 @@ async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmit
   }
   listEl.innerHTML = '<li class="loading">Loading...</li>';
   try {
-    let q = db.collection('leaderboard').where('segmentName', '==', segmentName);
+    let q = db.collection(LEADERBOARD_COLLECTION).where('segmentName', '==', segmentName);
     let snapshot;
     try {
       snapshot = await q.orderBy('durationSeconds', 'asc').limit(100).get();
@@ -245,7 +251,7 @@ async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmit
     }
     let totalCount = snapshot.size;
     try {
-      const countSnap = await db.collection('leaderboard').where('segmentName', '==', segmentName).count().get();
+      const countSnap = await db.collection(LEADERBOARD_COLLECTION).where('segmentName', '==', segmentName).count().get();
       totalCount = countSnap.data().count;
     } catch (_) {}
     const docs = snapshot.docs.map(d => ({ id: d.id, ref: d.ref, data: d.data() }));
@@ -273,7 +279,7 @@ async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmit
     top10.forEach((doc, index) => {
       const entry = doc.data;
       const useEntry = (newlySubmittedDoc && String(entry.startTime ?? '') === String(highlightEntry?.startTime ?? '') && String(entry.endTime ?? '') === String(highlightEntry?.endTime ?? ''))
-        ? { ...entry, gpx: newlySubmittedDoc.gpx }
+        ? { ...entry, gpxStorageUrl: newlySubmittedDoc.gpxStorageUrl, segmentPts: newlySubmittedDoc.segmentPts }
         : entry;
       const dist = safeNumber(useEntry.distance);
       const nm = safeStr(useEntry.name);
@@ -293,82 +299,30 @@ async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmit
       const metaParts = [];
       if (recDate !== '—') metaParts.push(`Record: ${escapeHtml(recDate)}`);
       metaParts.push(`Submitted: ${escapeHtml(subDate)}, ${escapeHtml(subTime)}`);
-      const listItem = document.createElement('li');
-      const topRank = isHighlight && rank <= 10;
-      listItem.className = 'leaderboard-entry' + (isHighlight ? ' leaderboard-entry-new' : '') + (topRank ? ' leaderboard-entry-top' : '');
-      if (isHighlight) {
-        listItem.dataset.rank = rank;
-        highlightRank = rank;
-      }
-      const gpxBtnHtml = (rank <= 10 && useEntry.gpx)
-        ? `<button type="button" class="leaderboard-entry-gpx-dl" title="Download GPX">GPX</button>`
-        : '';
-      const deleteBtnHtml = isAdminMode()
-        ? `<button type="button" class="leaderboard-entry-delete" title="Delete entry">Del</button>`
-        : '';
-      listItem.innerHTML = `
-        <div class="leaderboard-entry-row">
-          <span class="leaderboard-entry-main">${rank}. ${rank <= 3 ? ['🥇','🥈','🥉'][rank - 1] + ' ' : ''}${escapeHtml(nm)} - ${escapeHtml(dur)} - ${dist}m · ${kmh}</span>
-          ${gpxBtnHtml}
-          ${deleteBtnHtml}
-        </div>
-        <span class="leaderboard-entry-meta">${metaParts.join(' | ')}</span>
-      `;
-      if (useEntry.gpx) {
-        const btn = listItem.querySelector('.leaderboard-entry-gpx-dl');
-        if (btn) btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          downloadGpx(useEntry.gpx, nm, segmentName);
-        });
-      }
-      if (isAdminMode()) {
-        const delBtn = listItem.querySelector('.leaderboard-entry-delete');
-        if (delBtn) delBtn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          if (!confirm(`Delete entry: ${nm} - ${dur}?`)) return;
-          try {
-            await doc.ref.delete();
-            setStatus('Entry deleted.');
-            refreshAllLeaderboards();
-          } catch (err) {
-            console.error(err);
-            setStatus('Failed to delete.', true);
-          }
-        });
-      }
-      listEl.appendChild(listItem);
+      if (isHighlight) highlightRank = rank;
+      appendLeaderboardEntry(listEl, useEntry, segmentName, {
+        rank,
+        isNew: false,
+        topRank: isHighlight && rank <= 10,
+        highlightRank: isHighlight ? rank : undefined,
+        metaParts,
+        docRef: doc.ref
+      });
     });
     if (newlySubmittedDoc && highlightEntry && highlightRank == null) {
       const entry = newlySubmittedDoc;
-      const nm = safeStr(entry.name);
-      const dur = safeStr(entry.duration);
-      const dist = safeNumber(entry.distance);
-      const sec = entry.durationSeconds ?? 0;
-      const kmh = sec > 0 && dist > 0 ? ((dist / 1000) / (sec / 3600)).toFixed(1) + ' km/h' : '—';
       const recDate = formatRecordDate(entry.startTime);
       const ts = entry.timestamp?.toDate ? entry.timestamp : (entry.timestamp?.seconds ? { toDate: () => new Date(entry.timestamp.seconds * 1000) } : null);
       const { date: subDate, time: subTime } = formatSubmissionDateTime(ts || new Date());
       const metaParts = [];
       if (recDate !== '—') metaParts.push(`Record: ${escapeHtml(recDate)}`);
       metaParts.push(`Submitted: ${escapeHtml(subDate)}, ${escapeHtml(subTime)}`);
-      const listItem = document.createElement('li');
-      listItem.className = 'leaderboard-entry leaderboard-entry-new';
-      const gpxBtnHtml = entry.gpx ? `<button type="button" class="leaderboard-entry-gpx-dl" title="Download GPX">GPX</button>` : '';
-      listItem.innerHTML = `
-        <div class="leaderboard-entry-row">
-          <span class="leaderboard-entry-main">• ${escapeHtml(nm)} - ${escapeHtml(dur)} - ${dist}m · ${kmh} (new)</span>
-          ${gpxBtnHtml}
-        </div>
-        <span class="leaderboard-entry-meta">${metaParts.join(' | ')}</span>
-      `;
-      if (entry.gpx) {
-        const btn = listItem.querySelector('.leaderboard-entry-gpx-dl');
-        if (btn) btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          downloadGpx(entry.gpx, nm, segmentName);
-        });
-      }
-      listEl.appendChild(listItem);
+      appendLeaderboardEntry(listEl, entry, segmentName, {
+        rank: null,
+        isNew: true,
+        metaParts,
+        docRef: null
+      });
     }
     return highlightRank;
   } catch (err) {
@@ -385,6 +339,64 @@ function slugify(s) {
   return String(s).replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_]/g, '');
 }
 
+function appendLeaderboardEntry(listEl, entry, segmentName, opts) {
+  const { rank, isNew, metaParts, docRef } = opts;
+  const nm = safeStr(entry.name);
+  const dur = safeStr(entry.duration);
+  const dist = safeNumber(entry.distance);
+  const sec = entry.durationSeconds ?? (isNew ? 0 : 999999);
+  const kmh = sec > 0 && dist > 0 ? ((dist / 1000) / (sec / 3600)).toFixed(1) + ' km/h' : '—';
+  const hasGpx = (rank == null ? true : rank <= 10) && entry.gpxStorageUrl;
+  const hasDelete = isAdminMode() && docRef;
+  const mainText = isNew ? `• ${escapeHtml(nm)} - ${escapeHtml(dur)} - ${dist}m · ${kmh} (new)` : `${rank}. ${rank <= 3 ? ['🥇','🥈','🥉'][rank - 1] + ' ' : ''}${escapeHtml(nm)} - ${escapeHtml(dur)} - ${dist}m · ${kmh}`;
+  const listItem = document.createElement('li');
+  listItem.className = 'leaderboard-entry' + (isNew ? ' leaderboard-entry-new' : '') + (opts.topRank ? ' leaderboard-entry-top' : '');
+  if (opts.highlightRank != null) listItem.dataset.rank = opts.highlightRank;
+  const gpxBtnHtml = hasGpx ? `<button type="button" class="leaderboard-entry-gpx-dl" title="Download GPX">GPX</button>` : '';
+  const deleteBtnHtml = hasDelete ? `<button type="button" class="leaderboard-entry-delete" title="Delete entry">Del</button>` : '';
+  listItem.innerHTML = `
+    <div class="leaderboard-entry-row">
+      <span class="leaderboard-entry-main">${mainText}</span>
+      ${gpxBtnHtml}
+      ${deleteBtnHtml}
+    </div>
+    <span class="leaderboard-entry-meta">${metaParts.join(' | ')}</span>
+  `;
+  if (hasGpx) {
+    const btn = listItem.querySelector('.leaderboard-entry-gpx-dl');
+    if (btn) btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const res = await fetch(entry.gpxStorageUrl);
+      const gpxText = await res.text();
+      if (gpxText) downloadGpx(gpxText, nm, segmentName);
+    });
+  }
+  if (hasDelete) {
+    const delBtn = listItem.querySelector('.leaderboard-entry-delete');
+    if (delBtn) delBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm(`Delete entry: ${nm} - ${dur}?`)) return;
+      try {
+        if (entry.gpxStorageUrl && storage) {
+          storage.ref(`${STORAGE_GPX_PREFIX}/${docRef.id}.gpx`).delete().catch(() => {});
+        }
+        await docRef.delete();
+        setStatus('Entry deleted.');
+        refreshAllLeaderboards();
+      } catch (err) {
+        console.error(err);
+        setStatus('Failed to delete.', true);
+      }
+    });
+  }
+  listItem.addEventListener('click', (e) => {
+    if (e.target.closest('button')) return;
+    showLeaderboardSegmentOnMap(entry.segmentPts, segmentName);
+  });
+  listItem.classList.add('leaderboard-entry-clickable');
+  listEl.appendChild(listItem);
+}
+
 function buildLevelsList() {
   const container = document.getElementById('levels-list');
   if (!container) return;
@@ -396,8 +408,8 @@ function buildLevelsList() {
     details.dataset.trackName = track.name;
     const len = track.length != null ? track.length.toFixed(2) + ' km' : '—';
     const gain = track['elevation gain'] != null ? Math.round(track['elevation gain']) + ' m' : '—';
-    const loss = track['elevaiton loss'] != null ? Math.round(track['elevaiton loss']) + ' m' : '—';
-    const stats = `length ${len} · elevation gain ${gain} · elevaiton loss ${loss}`;
+    const loss = track['elevation loss'] != null ? Math.round(track['elevation loss']) + ' m' : '—';
+    const stats = `length ${len} · elevation gain ${gain} · elevation loss ${loss}`;
     details.innerHTML = `
       <summary class="leaderboard-segment-title">
         <span class="leaderboard-segment-name">Level - ${escapeHtml(track.name)}</span>
@@ -518,11 +530,16 @@ async function resetLeaderboard() {
   if (!confirm('Delete all leaderboard entries? This cannot be undone.')) return;
   setStatus('Resetting leaderboard…');
   try {
-    const snapshot = await db.collection('leaderboard').get();
+    if (storage) {
+      const ref = storage.ref(STORAGE_GPX_PREFIX);
+      const list = await ref.listAll();
+      await Promise.all(list.items.map((item) => item.delete()));
+    }
+    const snapshot = await db.collection(LEADERBOARD_COLLECTION).get();
     const BATCH_SIZE = 500;
     for (let i = 0; i < snapshot.docs.length; i += BATCH_SIZE) {
       const batch = db.batch();
-      snapshot.docs.slice(i, i + BATCH_SIZE).forEach(d => batch.delete(d.ref));
+      snapshot.docs.slice(i, i + BATCH_SIZE).forEach((d) => batch.delete(d.ref));
       await batch.commit();
     }
     setStatus(`Deleted ${snapshot.size} leaderboard entries.`);
@@ -546,7 +563,7 @@ let uploadedTracks = [];
 let lastMatchedSegments = [];
 let lastGpxText = '';
 let map = null;
-let mapLayers = { tracks: [], trackBounds: [], startMarkers: [], endMarkers: [], uploaded: [], matchedSegments: [], lookCircles: [], anchors: [], trackLabel: null };
+let mapLayers = { tracks: [], trackBounds: [], startMarkers: [], endMarkers: [], uploaded: [], matchedSegments: [], lookCircles: [], anchors: [], trackLabel: null, leaderboardSegment: null };
 let trackLabelFadeTimeout = null;
 let panelResizeObserver = null;
 
@@ -613,7 +630,7 @@ function formatSegmentDetails(seg) {
   const endHms = formatTimeHhmmss(seg.end_time);
   const sIdx = seg.start_idx ?? '?';
   const eIdx = seg.end_idx ?? '?';
-  return `OK! ..Track point ${sIdx} to track point ${eIdx} got matched. Your start time was ${startHms} and your end time was ${endHms}. The segement's distance was ${Math.round(dist)} m and the average speed was ${speedKmh.toFixed(1)} km/h`;
+  return `OK! ..Track point ${sIdx} to track point ${eIdx} got matched. Your start time was ${startHms} and your end time was ${endHms}. The segment's distance was ${Math.round(dist)} m and the average speed was ${speedKmh.toFixed(1)} km/h`;
 }
 
 // --- GeoJSON parsing (segments.geojson, tracks.geojson) ---
@@ -649,7 +666,7 @@ function parseGeoJsonTrackProps(p) {
   return {
     length: p?.length != null ? Number(p.length) : null,
     'elevation gain': p?.['elevation gain'] != null ? Number(p['elevation gain']) : null,
-    'elevaiton loss': p?.['elevaiton loss'] != null ? Number(p['elevaiton loss']) : null
+    'elevation loss': p?.['elevation loss'] != null ? Number(p['elevation loss']) : null
   };
 }
 
@@ -908,6 +925,25 @@ function panToSegmentBounds(segmentName) {
   fitBoundsWithOffset(bounds, { padding: [40, 40], maxZoom: 16 });
 }
 
+function showLeaderboardSegmentOnMap(pts, segmentName) {
+  if (!map) return;
+  clearLeaderboardSegmentLayer();
+  if (!pts || !Array.isArray(pts) || pts.length < 2) {
+    panToSegmentBounds(segmentName);
+    return;
+  }
+  const latlngs = pts.map(p => Array.isArray(p) ? [p[0], p[1]] : [p.lat, p.lng]);
+  const polyline = L.polyline(latlngs, {
+    color: SEGMENT_MATCH_COLOR,
+    weight: SEGMENT_MATCH_WEIGHT,
+    opacity: SEGMENT_MATCH_OPACITY
+  }).bindTooltip(segmentName, { permanent: false });
+  polyline.addTo(map);
+  mapLayers.leaderboardSegment = polyline;
+  const bounds = L.latLngBounds(latlngs);
+  fitBoundsWithOffset(bounds, { padding: [40, 40], maxZoom: 16 });
+}
+
 function showSection(sectionId, hasContent, openByDefault = true) {
   const el = document.getElementById(`collapse-${sectionId}`);
   if (!el) return;
@@ -1061,7 +1097,15 @@ function showTrackLabel(name, latlng) {
   }, 8000);
 }
 
+function clearLeaderboardSegmentLayer() {
+  if (mapLayers.leaderboardSegment) {
+    map.removeLayer(mapLayers.leaderboardSegment);
+    mapLayers.leaderboardSegment = null;
+  }
+}
+
 function clearMapLayers() {
+  clearLeaderboardSegmentLayer();
   ['tracks', 'trackBounds', 'startMarkers', 'endMarkers', 'uploaded', 'matchedSegments', 'lookCircles', 'anchors'].forEach(k => {
     mapLayers[k].forEach(l => map.removeLayer(l));
     mapLayers[k] = [];
@@ -1458,6 +1502,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   toggleAdminUI();
   window.addEventListener('hashchange', toggleAdminUI);
+  const panelMain = document.getElementById('panel-main');
+  const panelInfo = document.getElementById('panel-info');
+  const togglePanelContent = () => {
+    const showInfo = window.location.hash === '#infos';
+    if (panelMain) panelMain.hidden = showInfo;
+    if (panelInfo) panelInfo.hidden = !showInfo;
+  };
+  togglePanelContent();
+  window.addEventListener('hashchange', togglePanelContent);
+  panelInfo?.querySelector('.panel-info-close')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    if (panelMain) panelMain.hidden = false;
+    if (panelInfo) panelInfo.hidden = true;
+  });
   const hasLevels = standardTracks?.length > 0;
   showSection('levels', hasLevels, false);
   const leaderboardsCollapse = document.getElementById('collapse-leaderboards');

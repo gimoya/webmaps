@@ -8,7 +8,7 @@ service cloud.firestore {
         && request.resource.data.segmentName.size() > 0
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
-        && (!('gpx' in request.resource.data) || (request.resource.data.gpx is string && request.resource.data.gpx.size() <= 1048487));
+        && (!('gpxStorageUrl' in request.resource.data) || (request.resource.data.gpxStorageUrl is string && request.resource.data.gpxStorageUrl.size() > 0));
       allow update: if false;
       allow delete: if true;
     }

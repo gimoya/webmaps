@@ -18,15 +18,16 @@
     <div id="map"></div>
     <aside class="unified-panel" id="unified-panel">
       <div class="unified-panel-scroll">
-        <header class="panel-header">
+        <div id="panel-main" class="panel-content">
+          <header class="panel-header">
           <div class="panel-header-title-row">
-            <h1>GPX Blinduro</h1>
+            <h1>🦸‍♀️ GPX Blinduro<sup><a href="#infos" class="info-link" title="FAQs">ⓘ</a></sup></h1>
             <div class="track-nav" aria-label="Navigate tracks">
               <button type="button" class="track-nav-btn track-nav-prev" aria-label="Previous track">‹</button>
               <button type="button" class="track-nav-btn track-nav-next" aria-label="Next track">›</button>
             </div>
           </div>
-          <h2>🦸‍♀️ Upload your GPX to match segments</h2>
+          <h2>Upload your GPX to match segments</h2>
         </header>
         <div class="panel-section" id="section-controls">
           <div class="toolbar-row">
@@ -72,6 +73,32 @@
             <div id="leaderboards-container"></div>
           </div>
         </details>
+        </div>
+        <div id="panel-info" class="panel-content panel-info-content" hidden>
+          <div class="panel-info-header">
+            <h2>Info &amp; FAQs</h2>
+            <a href="#" class="panel-info-close" title="Close">×</a>
+          </div>
+          <dl class="info-faq">
+            <dt>How does it work?</dt>
+            <dd>Upload your GPX file. The app matches your track against defined segments (start/end checkpoints). When your track passes through both within the tolerance distance (20 m), you get a segment match with duration and travelled distance. After matching, you can submit to the leaderboard.</dd>
+
+            <dt>How do the Start and End Areas work?</dt>
+            <dd>For calculating your segment's duration and traveled distance, the last track point before leaving the Start Area and the first track point after entering the End Area are used.</dd>
+
+            <dt>Do I need timestamps in my GPX?</dt>
+            <dd>Yes. Segment duration is computed from track point timestamps. GPX files without timestamps cannot be matched.</dd>
+
+            <dt>Multiple laps?</dt>
+            <dd>If you do the same segment repeatedly, each lap is matched separately. You get one result per lap, each submittable.</dd>
+
+            <dt>Why is GPX required for submission?</dt>
+            <dd>Your GPX is not only needed for matching of segments but also stored as proof for your ranking. It archives the ride that produced the result.</dd>
+
+            <dt>Can I download GPX from the leaderboard?</dt>
+            <dd>Yes. Top 10 entries per segment show a GPX button to download the proof file.</dd>
+          </dl>
+        </div>
       </div>
     </aside>
   </div>
@@ -80,6 +107,7 @@
   <script src="https://unpkg.com/leaflet.locatecontrol@0.76.0/dist/L.Control.Locate.min.js" crossorigin=""></script>
   <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-storage-compat.js"></script>
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCRTbTdvK8O7tkLCoRfTaGPV-JZpoay7Zw",
