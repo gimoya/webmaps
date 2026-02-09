@@ -201,7 +201,9 @@ body.panel-hidden .unified-panel {
   letter-spacing: 0.04em;
 }
 
-.info-link {
+a.info-link,
+a.info-link:link,
+a.info-link:visited {
   font-size: 0.55em;
   color: var(--color-text-dim);
   text-decoration: none;
@@ -209,7 +211,7 @@ body.panel-hidden .unified-panel {
   margin-left: 0.1em;
 }
 
-.info-link:hover {
+a.info-link:hover {
   color: var(--color-accent);
 }
 
