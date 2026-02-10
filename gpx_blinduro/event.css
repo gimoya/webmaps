@@ -199,7 +199,7 @@ a, button, input, textarea {
 		left: 4%;
 		width: 100vw;
 		height: 80vh;
-		background-image: url('/images/poster.png');
+		background-image: url('images/poster.png');
 		background-size: cover;
 		background-position: right center;
 		background-repeat: no-repeat;
