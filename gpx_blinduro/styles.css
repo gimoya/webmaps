@@ -800,6 +800,25 @@ body.map-zoom-very-low .blinduro-marker span {
   border-color: var(--color-accent);
 }
 
+.btn-gpx-style {
+  flex-shrink: 0;
+  padding: 0.2rem 0.4rem;
+  font-size: var(--font-size-xxs);
+  font-family: var(--font-family-button);
+  background: var(--color-bg-panel-elevated);
+  color: var(--color-accent);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-gpx-style:hover {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}
+
 .leaderboard-entry-delete {
   flex-shrink: 0;
   margin-left: 0.25rem;

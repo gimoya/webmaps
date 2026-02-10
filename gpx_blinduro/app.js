@@ -209,7 +209,11 @@ async function submitLeaderboardEntry(seg, gpxText) {
     }
     const docRef = db.collection(LEADERBOARD_COLLECTION).doc();
     const ref = storage.ref(`${STORAGE_GPX_PREFIX}/${docRef.id}.gpx`);
-    await ref.put(new Blob([gpxText], { type: 'application/gpx+xml' }));
+    const gpxFilename = gpxDownloadFilename(segmentName, name.trim());
+    await ref.put(new Blob([gpxText], { type: 'application/gpx+xml' }), {
+      contentType: 'application/gpx+xml',
+      contentDisposition: `attachment; filename="${gpxFilename}"`
+    });
     doc.gpxStorageUrl = await ref.getDownloadURL();
     await docRef.set(doc);
     setStatus(`Submitted ${segmentName} (with GPX).`);
@@ -495,15 +499,21 @@ function escapeXml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 
-function downloadGpx(gpxText, name, segmentName) {
+function gpxDownloadFilename(segmentName, name) {
   const safe = (s) => String(s).replace(/[^a-zA-Z0-9-_]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'track';
-  const filename = `${safe(segmentName)}_${safe(name)}.gpx`;
+  return `${safe(segmentName)}_${safe(name)}.gpx`;
+}
+
+function downloadGpx(gpxText, name, segmentName) {
+  const filename = gpxDownloadFilename(segmentName, name);
   const blob = new Blob([gpxText], { type: 'application/gpx+xml' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = filename;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(a.href);
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 200);
 }
 
 async function refreshAllLeaderboards(highlightSegmentName, highlightEntry, newlySubmittedDoc) {
@@ -547,6 +557,80 @@ async function resetLeaderboard() {
   } catch (err) {
     console.error('Reset error:', err);
     setStatus('Error resetting leaderboard.', true);
+  }
+}
+
+function csvEscape(val) {
+  const s = String(val ?? '');
+  if (/[;"\r\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+async function exportLeaderboardCsv() {
+  if (!db) {
+    alert('Firebase not configured.');
+    return;
+  }
+  setStatus('Exporting CSV…');
+  try {
+    const snapshot = await db.collection(LEADERBOARD_COLLECTION).get();
+    const bySegment = {};
+    snapshot.docs.forEach((d) => {
+      const seg = safeStr(d.data().segmentName, '');
+      if (!bySegment[seg]) bySegment[seg] = [];
+      bySegment[seg].push({ id: d.id, ref: d.ref, data: d.data() });
+    });
+    const tsMs = (d) => {
+      const t = d.data.timestamp;
+      if (!t) return 0;
+      return t.toMillis ? t.toMillis() : (t.seconds || 0) * 1000;
+    };
+    const rows = [];
+    const header = ['name', 'segment name', 'duration', 'distance', 'current rank', 'gpx filename', 'gpx-download url'];
+    rows.push(header.map(csvEscape).join(';'));
+    Object.keys(bySegment).sort().forEach((segmentName) => {
+      const docs = bySegment[segmentName];
+      docs.sort((a, b) => {
+        const aSec = a.data.durationSeconds ?? 999999;
+        const bSec = b.data.durationSeconds ?? 999999;
+        if (aSec !== bSec) return aSec - bSec;
+        const aDist = safeNumber(a.data.distance);
+        const bDist = safeNumber(b.data.distance);
+        if (aDist !== bDist) return bDist - aDist;
+        return tsMs(b) - tsMs(a);
+      });
+      let prevRank = 0;
+      let prevSec = null;
+      let prevDist = null;
+      docs.forEach((doc, index) => {
+        const entry = doc.data;
+        const sec = entry.durationSeconds ?? 999999;
+        const dist = safeNumber(entry.distance);
+        const isTie = prevSec !== null && prevSec === sec && prevDist === dist;
+        const rank = isTie ? prevRank : index + 1;
+        prevRank = rank;
+        prevSec = sec;
+        prevDist = dist;
+        const name = safeStr(entry.name);
+        const duration = safeStr(entry.duration);
+        const distance = String(dist);
+        const gpxFilename = gpxDownloadFilename(segmentName, name);
+        const gpxUrl = safeStr(entry.gpxStorageUrl);
+        rows.push([name, segmentName, duration, distance, String(rank), gpxFilename, gpxUrl].map(csvEscape).join(';'));
+      });
+    });
+    const csv = rows.join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `leaderboard-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setStatus('');
+  } catch (err) {
+    console.error('Export error:', err);
+    setStatus('Error exporting CSV.', true);
   }
 }
 
@@ -1488,6 +1572,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const admin = isAdminMode();
     const maxDistRow = document.getElementById('max-dist-row');
     if (maxDistRow) maxDistRow.style.display = admin ? '' : 'none';
+    const exportCsvBtn = document.getElementById('admin-export-csv');
+    if (exportCsvBtn) exportCsvBtn.style.display = admin ? '' : 'none';
     const resetBtn = document.getElementById('reset-leaderboard');
     if (resetBtn) resetBtn.style.display = admin ? 'block' : 'none';
     const banner = document.getElementById('panel-resize-warning');
@@ -1534,4 +1620,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   const resetBtn = document.getElementById('reset-leaderboard');
   if (resetBtn) resetBtn.addEventListener('click', resetLeaderboard);
+  const exportCsvBtn = document.getElementById('admin-export-csv');
+  if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportLeaderboardCsv);
 });
