@@ -58,7 +58,8 @@ a, button, input, textarea {
    ============================================ */
 .content-wrapper {
 	position: relative;
-	width: 30%;
+	width: 100%;
+	max-width: 100%;
 	min-height: 100vh;
 	padding: 20px 0 40px 0;
 	box-sizing: border-box;
@@ -74,21 +75,26 @@ a, button, input, textarea {
 
 .title-main {
 	font-family: 'Frozbite', 'Saira Stencil One', cursive;
-	font-size: 64px;
+	font-size: clamp(1.5rem, 8vw, 64px);
 	line-height: 1.2;
 	letter-spacing: -1px;
 	margin-bottom: 10px;
 	color: #fff;
 	text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+	text-align: center;
+	white-space: nowrap;
+	max-width: 100%;
 }
 
 .title-sub {
 	font-family: 'gongnormal', 'Saira Stencil One', cursive;
-	font-size: 34px;
+	font-size: clamp(0.9rem, 4.5vw, 34px);
 	line-height: 1.3;
 	letter-spacing: -1.5px;
 	color: #fff;
 	text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+	text-align: center;
+	white-space: nowrap;
 }
 
 /* ============================================
@@ -106,7 +112,7 @@ a, button, input, textarea {
 	margin: 50px 0 15px 0;
 	color: #86a5c7;
 	text-shadow: 2px 2px 3px rgba(0, 0, 0, 0.8);
-	text-align: left;
+	text-align: center;
 }
 
 .subheader {
@@ -116,15 +122,17 @@ a, button, input, textarea {
 	margin: 20px 0 8px 0;
 	display: block;
 	font-family: 'Special Elite', cursive;
+	text-align: center;
+	padding-top: 10px;
 }
 
 .text {
 	font-family: 'Special Elite', cursive;
 	font-size: 16px;
-	text-align: left;
 	line-height: 1.5;
 	color: #e0e0e0;
 	margin-bottom: 15px;
+	text-align: justify;
 }
 
 .text ul {
@@ -225,7 +233,7 @@ a, button, input, textarea {
 	
 	.content-wrapper {
 		position: relative;
-		width: 30%;
+		width: 25%;
 		min-height: 100vh;
 		padding: 20px 0 40px 0;
 		box-sizing: border-box;
@@ -234,23 +242,23 @@ a, button, input, textarea {
 	}
 	
 	.title-main {
-		font-size: 64px;
-		text-align: left;
+		font-size: clamp(1.5rem, 8vw, 64px);
+		text-align: center;
 	}
 	
 	.title-sub {
-		font-size: 34px;
-		text-align: left;
+		font-size: clamp(0.9rem, 4.5vw, 34px);
+		text-align: center;
 	}
 	
 	.header {
 		font-size: 28px;
-		text-align: left;
+		text-align: center;
 	}
 	
 	.text {
 		font-size: 16px;
-		text-align: left;
+		text-align: justify;
 	}
 	
 	.button {
@@ -306,12 +314,12 @@ a, button, input, textarea {
 	}
 	
 	.title-main {
-		font-size: 48px;
+		font-size: clamp(1.5rem, 10vw, 48px);
 		text-align: center;
 	}
 	
 	.title-sub {
-		font-size: 24px;
+		font-size: clamp(0.9rem, 5vw, 24px);
 		text-align: center;
 	}
 	
@@ -322,6 +330,7 @@ a, button, input, textarea {
 	
 	.text {
 		font-size: 15px;
+		text-align: justify;
 	}
 	
 	.button {
@@ -339,11 +348,11 @@ a, button, input, textarea {
 	}
 	
 	.title-main {
-		font-size: 36px;
+		font-size: clamp(1.25rem, 8vw, 36px);
 	}
 	
 	.title-sub {
-		font-size: 20px;
+		font-size: clamp(0.8rem, 4.5vw, 20px);
 	}
 	
 	.header {
@@ -352,6 +361,7 @@ a, button, input, textarea {
 	
 	.text {
 		font-size: 14px;
+		text-align: justify;
 	}
 	
 	.button {
