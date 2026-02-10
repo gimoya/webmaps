@@ -61,7 +61,7 @@ a, button, input, textarea {
 	width: 100%;
 	max-width: 100%;
 	min-height: 100vh;
-	padding: 20px 0 40px 0;
+	padding: 20px 10px 40px 10px;
 	box-sizing: border-box;
 	z-index: 2;
 }
@@ -233,9 +233,9 @@ a, button, input, textarea {
 	
 	.content-wrapper {
 		position: relative;
-		width: 25%;
+		width:33%;
 		min-height: 100vh;
-		padding: 20px 0 40px 0;
+		padding: 20px 10px 40px 10px;
 		box-sizing: border-box;
 		z-index: 2;
 		background: transparent;
@@ -308,7 +308,7 @@ a, button, input, textarea {
 	.content-wrapper {
 		width: 100%;
 		background: rgba(0, 0, 0, 0.95);
-		padding: 30px 20px;
+		padding: 30px 44px;
 		flex: 1;
 		overflow-y: visible;
 	}
@@ -344,7 +344,7 @@ a, button, input, textarea {
    ============================================ */
 @media (max-width: 480px) {
 	.content-wrapper {
-		padding: 20px 15px;
+		padding: 20px 32px;
 	}
 	
 	.title-main {
