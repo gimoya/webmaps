@@ -186,26 +186,9 @@ L.control.locate({
 }).addTo(map);
 
 // Add the basemap control to the map -> positioned in column 2.
+
 new LayerToggle().addTo(map);
 
-
-/* Add download button to bottom left -> positioned in column 3.
-L.Control.downloadButton = L.Control.extend({
-    options: {
-        position: 'topright'
-    },
-    onAdd: function(map) {
-        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
-        const button = L.DomUtil.create('a', 'download-button', container);
-        button.innerHTML = '<i class="fas fa-download fa-lg"></i>';
-        button.title = 'Download GPX';
-        button.href = 'The_Hunt_25_Route.gpx';
-        button.download = 'The_Hunt_25_Route.gpx';
-        return container;
-    }
-});*/
-
-new L.Control.downloadButton().addTo(map);
 
 // Function to check if current date is before April 13, 2025 14:00 CET
 function getPopupContent(name, desc, lat, lon) {

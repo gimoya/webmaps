@@ -136,6 +136,10 @@ ul.nav.navbar-nav.navbar-right a {
 
 /*** Map Controls ***/
 
+.leaflet-control-container {
+  z-index: 1200;
+}
+
 .leaflet-control-zoom {
     margin-top: 30px !important;
     margin-right: 10px !important;
@@ -270,27 +274,6 @@ ul.nav.navbar-nav.navbar-right a {
 
 .custom-div-icon .start-flag {
     color: #02871c;
-}
-
-.download-button {
-    width: 35px;
-    height: 35px;
-    line-height: 35px;
-    text-align: center;
-    background: white;
-    color: #0099ff;
-    text-decoration: none;
-    display: block;
-}
-
-.download-button i {
-    font-size: 18px;
-    margin-top: 8px;
-}
-
-.download-button:hover {
-    background: #f8f8f8;
-    color: #0066cc;
 }
 
 /* Marker animations */
