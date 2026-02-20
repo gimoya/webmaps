@@ -185,18 +185,20 @@ body.panel-hidden .unified-panel {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.25rem;
+  line-height: 1.1;
 }
 
 .panel-header-title-row h1 {
   margin: 0;
   flex: 1;
   min-width: 0;
+  line-height: 1.1;
 }
 
 .unified-panel .panel-header h1 {
   font-family: var(--font-family-title);
-  line-height: var(--line-height-title);
+  line-height: 1.1;
   font-size: var(--font-size-title);
   letter-spacing: 0.04em;
 }
@@ -250,7 +252,7 @@ a.info-link:hover {
 }
 
 .unified-panel .panel-header h2 {
-  margin: 0;
+  margin: 0.15rem 0 0;
   color: var(--color-text-muted);
   font-size: var(--font-size-lg);
 }
