@@ -1398,6 +1398,16 @@ function initMap() {
   };
   const isPanelHidden = () => document.body.classList.contains('panel-hidden');
   const togglePanel = () => setPanelHidden(!isPanelHidden());
+  const syncPanelToFullscreenHash = () => {
+    if (window.location.hash === '#fullscreen') setPanelHidden(true);
+    else setPanelHidden(false);
+  };
+  if (window.location.hash === '#fullscreen') setPanelHidden(true);
+  window.addEventListener('hashchange', syncPanelToFullscreenHash);
+
+  const clearFullscreenHash = () => {
+    if (window.location.hash === '#fullscreen') history.replaceState(null, '', window.location.pathname + window.location.search);
+  };
 
   const PANEL_FADE_MS = 1000;
   const requestFs = document.documentElement.requestFullscreen ?? document.documentElement.webkitRequestFullscreen;
@@ -1422,10 +1432,12 @@ function initMap() {
           button.title = 'Fullscreen';
           button.innerHTML = '⛶';
           setPanelHidden(false);
+          clearFullscreenHash();
         } else {
           const hidden = isPanelHidden();
           button.title = hidden ? 'Show panel' : 'Hide panel';
           button.innerHTML = hidden ? '⟲' : '⛶';
+          if (!hidden) clearFullscreenHash();
         }
       };
 
@@ -1442,13 +1454,19 @@ function initMap() {
         if (hasFullscreen) {
           if (isFullscreen()) {
             await exitFs.call(document);
+            setPanelHidden(false);
+            clearFullscreenHash();
           } else {
             setPanelHidden(true);
+            window.location.hash = 'fullscreen';
             await new Promise((r) => setTimeout(r, PANEL_FADE_MS));
             await requestFs.call(document.documentElement);
           }
         } else {
+          const willHide = !isPanelHidden();
           togglePanel();
+          if (willHide) window.location.hash = 'fullscreen';
+          else clearFullscreenHash();
           updateButton();
         }
         setTimeout(() => map?.invalidateSize(), 50);
@@ -1542,6 +1560,7 @@ function handleFile(e) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if (window.location.hash === '#fullscreen') document.body.classList.add('panel-hidden');
   showSection('segments', false);
   showSection('tracks', false);
   await loadCheckpoints();
