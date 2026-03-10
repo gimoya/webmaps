@@ -173,6 +173,11 @@ async function submitLeaderboardEntry(seg, gpxText) {
     setStatus('Upload a GPX and match segments first. GPX is required as proof.', true);
     return;
   }
+  if (submittingNow) {
+    setStatus('Submitting… please wait.', true);
+    return;
+  }
+  submittingNow = true;
   const doc = {
     name: name.trim(),
     segmentName,
@@ -225,6 +230,8 @@ async function submitLeaderboardEntry(seg, gpxText) {
   } catch (err) {
     console.error('Firestore error:', err);
     alert('Error submitting. Check console and Firebase config.');
+  } finally {
+    submittingNow = false;
   }
 }
 
@@ -646,6 +653,7 @@ let trackNavIndex = 0;
 let uploadedTracks = [];
 let lastMatchedSegments = [];
 let lastGpxText = '';
+let submittingNow = false;
 let map = null;
 let mapLayers = { tracks: [], trackBounds: [], startMarkers: [], endMarkers: [], uploaded: [], matchedSegments: [], lookCircles: [], anchors: [], trackLabel: null, leaderboardSegment: null };
 let trackLabelFadeTimeout = null;
