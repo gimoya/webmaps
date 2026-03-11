@@ -256,7 +256,7 @@ async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmit
     const details = listEl.closest('.leaderboard-segment-collapse');
     const metaSpan = details?.querySelector('.leaderboard-segment-meta');
     if (snapshot.empty) {
-      listEl.innerHTML = '<li class="empty">No entries yet.</li>';
+      listEl.innerHTML = '<li class="empty">No entries yet... ⚡ Go RIDE!!</li>';
       if (metaSpan) metaSpan.textContent = '';
       return null;
     }

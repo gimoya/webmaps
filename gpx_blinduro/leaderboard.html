@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GPX Blinduro – Leaderboard</title>
+  <link rel="icon" href="favicons/favicon_2.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+  <link href="https://fonts.cdnfonts.com/css/raster-forge" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="leaderboard.css">
+</head>
+<body class="leaderboard-page">
+  <a href="event_spring.html" class="back-link">← GPX Blinduro</a>
+  <h1>Leaderboard</h1>
+  <div id="leaderboard-container">
+    <p class="loading">Loading…</p>
+  </div>
+  <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRTbTdvK8O7tkLCoRfTaGPV-JZpoay7Zw",
+      authDomain: "gpx-blinduro.firebaseapp.com",
+      projectId: "gpx-blinduro",
+      storageBucket: "gpx-blinduro.firebasestorage.app",
+      messagingSenderId: "58925827381",
+      appId: "1:58925827381:web:9c54e7dc69aa53df29b87c",
+      measurementId: "G-GXWNEBDGG3"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const LEADERBOARD_COLLECTION = 'leaderboard';
+
+    function parseGeoJsonSegmentDefinitions(data) {
+      const fc = typeof data === 'string' ? JSON.parse(data) : data;
+      if (fc?.type !== 'FeatureCollection' || !Array.isArray(fc.features)) return { segmentNames: [] };
+      const seen = new Set();
+      for (const f of fc.features) {
+        const g = f?.geometry;
+        const p = f?.properties;
+        if (!g || g.type !== 'Point' || !Array.isArray(g.coordinates) || g.coordinates.length < 2) continue;
+        const name = (p?.segmentName ?? p?.name ?? '').toString().trim();
+        const type = (p?.pointType ?? p?.type ?? '').toString().toLowerCase();
+        if (!name || (type !== 'start' && type !== 'end')) continue;
+        seen.add(name);
+      }
+      return { segmentNames: [...seen].sort() };
+    }
+
+    function safeNumber(v) {
+      const n = Number(v);
+      return (typeof v !== 'number' && isNaN(n)) ? 0 : n;
+    }
+
+    function formatRecordDate(val) {
+      if (!val) return '—';
+      const d = val.toDate ? val.toDate() : new Date(val);
+      if (isNaN(d.getTime())) return '—';
+      const day = d.getDate();
+      const month = d.toLocaleString('en', { month: 'short' });
+      const year = d.getFullYear();
+      return `${day}. ${month} ${year}`;
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    async function fetchSegmentLeaderboard(segmentName) {
+      const snapshot = await db.collection(LEADERBOARD_COLLECTION).where('segmentName', '==', segmentName).get();
+      const docs = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
+      const tsMs = (d) => {
+        const t = d.data.timestamp;
+        if (!t) return 0;
+        return t.toMillis ? t.toMillis() : (t.seconds || 0) * 1000;
+      };
+      docs.sort((a, b) => {
+        const aSec = a.data.durationSeconds ?? 999999;
+        const bSec = b.data.durationSeconds ?? 999999;
+        if (aSec !== bSec) return aSec - bSec;
+        const aDist = safeNumber(a.data.distance);
+        const bDist = safeNumber(b.data.distance);
+        if (aDist !== bDist) return bDist - aDist;
+        return tsMs(b) - tsMs(a);
+      });
+      return docs;
+    }
+
+    function renderTable(segmentName, docs) {
+      let prevRank = 0, prevSec = null, prevDist = null;
+      const rows = docs.map((doc, index) => {
+        const e = doc.data;
+        const sec = e.durationSeconds ?? 999999;
+        const dist = safeNumber(e.distance);
+        const isTie = prevSec !== null && prevSec === sec && prevDist === dist;
+        const rank = isTie ? prevRank : index + 1;
+        prevRank = rank;
+        prevSec = sec;
+        prevDist = dist;
+        const rankDisplay = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+        const name = escapeHtml(String(e.name ?? ''));
+        const duration = escapeHtml(String(e.duration ?? '—'));
+        const distance = dist > 0 ? (dist / 1000).toFixed(2) + ' km' : '—';
+        const date = formatRecordDate(e.startTime);
+        return `<tr><td>${rankDisplay}</td><td>${name}</td><td>${duration}</td><td>${distance}</td><td>${date}</td></tr>`;
+      }).join('');
+      const thead = '<thead><tr><th>#</th><th>Name</th><th>Duration</th><th>Distance</th><th>Date</th></tr></thead>';
+      const tbody = '<tbody>' + (rows || '') + '</tbody>';
+      return '<table>' + thead + tbody + '</table>';
+    }
+
+    const container = document.getElementById('leaderboard-container');
+    (async function () {
+      try {
+        const segRes = await fetch('data/segments.geojson');
+        if (!segRes.ok) throw new Error('Could not load segments.');
+        const segText = await segRes.text();
+        const { segmentNames } = parseGeoJsonSegmentDefinitions(segText);
+        if (!segmentNames.length) {
+          container.innerHTML = '<p class="empty">No segments defined.</p>';
+        } else {
+          container.innerHTML = '';
+          for (const segmentName of segmentNames) {
+            const block = document.createElement('div');
+            block.className = 'segment-block';
+            block.innerHTML = '<h2>' + escapeHtml(segmentName) + '</h2>';
+            container.appendChild(block);
+            try {
+              const docs = await fetchSegmentLeaderboard(segmentName);
+              if (docs.length === 0) {
+                block.innerHTML += '<p class="empty">No entries yet... ⚡ Go RIDE!!</p>';
+              } else {
+                block.innerHTML += renderTable(segmentName, docs);
+              }
+            } catch (err) {
+              block.innerHTML += '<p class="error">Could not load entries.</p>';
+            }
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = '<p class="error">Could not load leaderboard.</p>';
+      }
+    })();
+  </script>
+</body>
+</html>
