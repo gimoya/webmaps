@@ -38,7 +38,7 @@
             <input type="file" id="gpx-file" accept=".gpx" hidden>
             <label class="options-inline" id="max-dist-row" style="display:none">
               Max snap (m):
-              <input type="number" id="max-dist" value="20" min="1" max="500" step="1">
+              <input type="number" id="max-dist" value="25" min="1" max="500" step="1">
             </label>
             <button type="button" id="admin-export-csv" class="btn-gpx-style" style="display:none" title="Download all leaderboard entries as CSV">Export CSV</button>
             <div class="status" id="status" aria-live="polite"></div>
@@ -82,7 +82,7 @@
           </div>
           <dl class="info-faq">
             <dt>How does it work?</dt>
-            <dd>Upload your GPX file. The app matches your track against defined segments (start/end checkpoints). When your track passes through both within the tolerance distance (20 m), you get a segment match with duration and travelled distance. After matching, you can submit to the leaderboard.</dd>
+            <dd>Upload your GPX file. The app matches your track against defined segments (start/end checkpoints). When your track passes through both within the tolerance distance (25 m), you get a segment match with duration and travelled distance. After matching, you can submit to the leaderboard.</dd>
 
             <dt>How do the Start and End Areas work?</dt>
             <dd>For calculating your segment's duration and travelled distance, the last track point before leaving the Start Area and the first track point after entering the End Area are used.</dd>

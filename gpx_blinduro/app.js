@@ -7,7 +7,7 @@ const GPX_NS_11 = 'http://www.topografix.com/GPX/1/1';
 const GPX_NS_10 = 'http://www.topografix.com/GPX/1/0';
 const GPX_NAMESPACES = [GPX_NS_11, GPX_NS_10];
 
-const DEFAULT_MAX_DIST_M = 20;
+const DEFAULT_MAX_DIST_M = 25;
 const LEADERBOARD_COLLECTION = 'leaderboard';
 const STORAGE_GPX_PREFIX = 'leaderboard-gpx';
 

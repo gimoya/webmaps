@@ -38,6 +38,6 @@
 { "type": "Feature", "properties": { "segmentName": "Burgeck (take it easy baby!)", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.779164, 47.398193 ] } },
 { "type": "Feature", "properties": { "segmentName": "Burgeck (take it easy baby!)", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.781618, 47.39615 ] } },
 { "type": "Feature", "properties": { "segmentName": "Kristeneben (strong legs!)", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.275594, 47.246087 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Kristeneben (strong legs!)", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.281179, 47.245556 ] } }
+{ "type": "Feature", "properties": { "segmentName": "Kristeneben (strong legs!)", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.2856, 47.244796 ] } }
 ]
 }
