@@ -657,6 +657,7 @@ let submittingNow = false;
 let map = null;
 let mapLayers = { tracks: [], trackBounds: [], startMarkers: [], endMarkers: [], uploaded: [], matchedSegments: [], lookCircles: [], anchors: [], trackLabel: null, leaderboardSegment: null };
 let trackLabelFadeTimeout = null;
+let leaderboardHighlightTimeout = null;
 let panelResizeObserver = null;
 
 // --- Math ---
@@ -1019,6 +1020,10 @@ function panToSegmentBounds(segmentName) {
 
 function showLeaderboardSegmentOnMap(pts, segmentName) {
   if (!map) return;
+  if (leaderboardHighlightTimeout) {
+    clearTimeout(leaderboardHighlightTimeout);
+    leaderboardHighlightTimeout = null;
+  }
   clearLeaderboardSegmentLayer();
   if (!pts || !Array.isArray(pts) || pts.length < 2) {
     panToSegmentBounds(segmentName);
@@ -1034,6 +1039,10 @@ function showLeaderboardSegmentOnMap(pts, segmentName) {
   mapLayers.leaderboardSegment = polyline;
   const bounds = L.latLngBounds(latlngs);
   fitBoundsWithOffset(bounds, { padding: [40, 40], maxZoom: 16 });
+  leaderboardHighlightTimeout = setTimeout(() => {
+    clearLeaderboardSegmentLayer();
+    leaderboardHighlightTimeout = null;
+  }, 5000);
 }
 
 function showSection(sectionId, hasContent, openByDefault = true) {
