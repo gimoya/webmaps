@@ -106,10 +106,11 @@
         const name = escapeHtml(String(e.name ?? ''));
         const duration = escapeHtml(String(e.duration ?? '—'));
         const distance = dist > 0 ? (dist / 1000).toFixed(2) + ' km' : '—';
+        const speed = sec > 0 && dist > 0 ? ((dist / 1000) / (sec / 3600)).toFixed(1) + ' km/h' : '—';
         const date = formatRecordDate(e.startTime);
-        return `<tr><td>${rankDisplay}</td><td>${name}</td><td>${duration}</td><td>${distance}</td><td>${date}</td></tr>`;
+        return `<tr><td>${rankDisplay}</td><td>${name}</td><td>${duration}</td><td>${distance}</td><td>${speed}</td><td>${date}</td></tr>`;
       }).join('');
-      const thead = '<thead><tr><th>#</th><th>Name</th><th>Duration</th><th>Distance</th><th>Date</th></tr></thead>';
+      const thead = '<thead><tr><th>#</th><th>Name</th><th>Duration</th><th>Distance</th><th>Speed</th><th>Date</th></tr></thead>';
       const tbody = '<tbody>' + (rows || '') + '</tbody>';
       return '<table>' + thead + tbody + '</table>';
     }

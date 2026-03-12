@@ -62,6 +62,30 @@
   font-size: var(--font-size-sm);
 }
 
+@media (max-width: 600px) {
+  .leaderboard-page {
+    padding: 0.5rem 0.5rem;
+  }
+
+  .leaderboard-page h1 {
+    font-size: 2rem;
+  }
+
+  .leaderboard-page .segment-block h2 {
+    font-size: var(--font-size-lg);
+  }
+
+  .leaderboard-page th,
+  .leaderboard-page td {
+    padding: 0.35rem 0.4rem;
+    font-size: var(--font-size-xxs);
+  }
+
+  .leaderboard-page th {
+    font-size: var(--font-size-xxxs);
+  }
+}
+
 .leaderboard-page tr:last-child td {
   border-bottom: none;
 }
