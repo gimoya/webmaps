@@ -28,7 +28,7 @@
 { "type": "Feature", "properties": { "segmentName": "Notburga (don't clip a pedal! ..hikers!)", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.772902, 47.416455 ] } },
 { "type": "Feature", "properties": { "segmentName": "Notburga (don't clip a pedal! ..hikers!)", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.763861, 47.415367 ] } },
 { "type": "Feature", "properties": { "segmentName": "Mittersteig (tough one!)", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.313032, 47.249299 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Mittersteig (tough one!)", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.32053, 47.252551 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Mittersteig (tough one!)", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.320035, 47.252276 ] } },
 { "type": "Feature", "properties": { "segmentName": "Kammerland (hikers! ..stay safe!)", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 11.247904932004504, 47.236455074656149 ] } },
 { "type": "Feature", "properties": { "segmentName": "Kammerland (hikers! ..stay safe!)", "pointType": "end" }, "geometry": { "type": "Point", "coordinates": [ 11.254854, 47.242727 ] } },
 { "type": "Feature", "properties": { "segmentName": "Waalweg (techy stuff & endo turns! ..ride clean!)", "pointType": "start" }, "geometry": { "type": "Point", "coordinates": [ 10.951816904331865, 47.283913111006015 ] } },
