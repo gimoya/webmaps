@@ -24,15 +24,29 @@
   color: var(--color-accent-hover);
 }
 
+.leaderboard-page .level-group {
+  margin-bottom: 2.5rem;
+}
+
+.leaderboard-page .level-header {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-xl);
+  color: var(--color-text);
+  margin: 0 0 1rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
 .leaderboard-page .segment-block {
   margin-bottom: 2rem;
 }
 
-.leaderboard-page .segment-block h2 {
+.leaderboard-page .segment-block .segment-title {
   font-family: var(--font-family);
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-lg);
   color: var(--color-success);
   margin: 0 0 0.5rem;
+  font-weight: normal;
 }
 
 .leaderboard-page table {
@@ -71,8 +85,12 @@
     font-size: 2rem;
   }
 
-  .leaderboard-page .segment-block h2 {
+  .leaderboard-page .level-header {
     font-size: var(--font-size-lg);
+  }
+
+  .leaderboard-page .segment-block .segment-title {
+    font-size: var(--font-size-sm);
   }
 
   .leaderboard-page th,

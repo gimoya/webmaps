@@ -36,18 +36,26 @@
 
     function parseGeoJsonSegmentDefinitions(data) {
       const fc = typeof data === 'string' ? JSON.parse(data) : data;
-      if (fc?.type !== 'FeatureCollection' || !Array.isArray(fc.features)) return { segmentNames: [] };
-      const seen = new Set();
+      if (fc?.type !== 'FeatureCollection' || !Array.isArray(fc.features)) return { segmentsByLevel: {} };
+      const segmentLevel = {};
       for (const f of fc.features) {
         const g = f?.geometry;
         const p = f?.properties;
         if (!g || g.type !== 'Point' || !Array.isArray(g.coordinates) || g.coordinates.length < 2) continue;
         const name = (p?.segmentName ?? p?.name ?? '').toString().trim();
         const type = (p?.pointType ?? p?.type ?? '').toString().toLowerCase();
+        const level = (p?.level ?? '').toString().trim();
         if (!name || (type !== 'start' && type !== 'end')) continue;
-        seen.add(name);
+        if (!(name in segmentLevel)) segmentLevel[name] = level || null;
       }
-      return { segmentNames: [...seen].sort() };
+      const segmentsByLevel = {};
+      for (const [segName, level] of Object.entries(segmentLevel)) {
+        const key = level || '(no level)';
+        if (!segmentsByLevel[key]) segmentsByLevel[key] = [];
+        segmentsByLevel[key].push(segName);
+      }
+      for (const arr of Object.values(segmentsByLevel)) arr.sort();
+      return { segmentsByLevel };
     }
 
     function safeNumber(v) {
@@ -121,25 +129,34 @@
         const segRes = await fetch('data/segments.geojson');
         if (!segRes.ok) throw new Error('Could not load segments.');
         const segText = await segRes.text();
-        const { segmentNames } = parseGeoJsonSegmentDefinitions(segText);
-        if (!segmentNames.length) {
+        const { segmentsByLevel } = parseGeoJsonSegmentDefinitions(segText);
+        const levelNames = Object.keys(segmentsByLevel).filter(k => k !== '(no level)').sort();
+        if (segmentsByLevel['(no level)']) levelNames.push('(no level)');
+        if (!levelNames.length) {
           container.innerHTML = '<p class="empty">No segments defined.</p>';
         } else {
           container.innerHTML = '';
-          for (const segmentName of segmentNames) {
-            const block = document.createElement('div');
-            block.className = 'segment-block';
-            block.innerHTML = '<h2>' + escapeHtml(segmentName) + '</h2>';
-            container.appendChild(block);
-            try {
-              const docs = await fetchSegmentLeaderboard(segmentName);
-              if (docs.length === 0) {
-                block.innerHTML += '<p class="empty">No entries yet... ⚡ Go RIDE!!</p>';
-              } else {
-                block.innerHTML += renderTable(segmentName, docs);
+          for (const levelName of levelNames) {
+            const segmentNames = segmentsByLevel[levelName] || [];
+            const levelSection = document.createElement('div');
+            levelSection.className = 'level-group';
+            levelSection.innerHTML = '<h2 class="level-header">' + escapeHtml(levelName) + '</h2>';
+            container.appendChild(levelSection);
+            for (const segmentName of segmentNames) {
+              const block = document.createElement('div');
+              block.className = 'segment-block';
+              block.innerHTML = '<h3 class="segment-title">' + escapeHtml(segmentName) + '</h3>';
+              levelSection.appendChild(block);
+              try {
+                const docs = await fetchSegmentLeaderboard(segmentName);
+                if (docs.length === 0) {
+                  block.innerHTML += '<p class="empty">No entries yet... ⚡ Go RIDE!!</p>';
+                } else {
+                  block.innerHTML += renderTable(segmentName, docs);
+                }
+              } catch (err) {
+                block.innerHTML += '<p class="error">Could not load entries.</p>';
               }
-            } catch (err) {
-              block.innerHTML += '<p class="error">Could not load entries.</p>';
             }
           }
         }
