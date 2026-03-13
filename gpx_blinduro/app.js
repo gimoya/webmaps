@@ -280,8 +280,34 @@ async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmit
       if (aDist !== bDist) return bDist - aDist;
       return tsMs(b) - tsMs(a);
     });
-    const top10 = docs.slice(0, 10);
-    const firstPlace = safeStr(top10[0].data.name);
+    const byKey = new Map();
+    for (const d of docs) {
+      const key = normalizeKey(d.data.name);
+      const cur = byKey.get(key);
+      const sec = d.data.durationSeconds ?? 999999;
+      const dist = safeNumber(d.data.distance);
+      if (!cur) {
+        byKey.set(key, d);
+        continue;
+      }
+      const curSec = cur.data.durationSeconds ?? 999999;
+      const curDist = safeNumber(cur.data.distance);
+      if (sec < curSec || (sec === curSec && dist > curDist) || (sec === curSec && dist === curDist && tsMs(d) > tsMs(cur))) {
+        byKey.set(key, d);
+      }
+    }
+    const deduped = Array.from(byKey.values());
+    deduped.sort((a, b) => {
+      const aSec = a.data.durationSeconds ?? 999999;
+      const bSec = b.data.durationSeconds ?? 999999;
+      if (aSec !== bSec) return aSec - bSec;
+      const aDist = safeNumber(a.data.distance);
+      const bDist = safeNumber(b.data.distance);
+      if (aDist !== bDist) return bDist - aDist;
+      return tsMs(b) - tsMs(a);
+    });
+    const top10 = deduped.slice(0, 10);
+    const firstPlace = top10.length ? safeStr(top10[0].data.name) : '';
     if (metaSpan) metaSpan.textContent = `${totalCount} Attempt(s) · 🥇 1st: ${firstPlace}`;
     let highlightRank = null;
     let prevRank = 0;
@@ -344,6 +370,15 @@ async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmit
     if (metaSpan) metaSpan.textContent = '';
     return null;
   }
+}
+
+function normalizeKey(s) {
+  if (s == null || typeof s !== 'string') return '';
+  let t = s.toLowerCase().trim();
+  t = t.replace(/\u00df/g, 'ss').replace(/&/g, '').replace(/\s+/g, '');
+  t = t.replace(/(.)\1+/g, '$1');
+  t = t.replace(/[^a-z\u00e4\u00f6\u00fc0-9]/g, '');
+  return t;
 }
 
 function slugify(s) {
@@ -606,10 +641,36 @@ async function exportLeaderboardCsv() {
         if (aDist !== bDist) return bDist - aDist;
         return tsMs(b) - tsMs(a);
       });
+      const byKey = new Map();
+      for (const d of docs) {
+        const key = normalizeKey(d.data.name);
+        const cur = byKey.get(key);
+        const sec = d.data.durationSeconds ?? 999999;
+        const dist = safeNumber(d.data.distance);
+        if (!cur) {
+          byKey.set(key, d);
+          continue;
+        }
+        const curSec = cur.data.durationSeconds ?? 999999;
+        const curDist = safeNumber(cur.data.distance);
+        if (sec < curSec || (sec === curSec && dist > curDist) || (sec === curSec && dist === curDist && tsMs(d) > tsMs(cur))) {
+          byKey.set(key, d);
+        }
+      }
+      const deduped = Array.from(byKey.values());
+      deduped.sort((a, b) => {
+        const aSec = a.data.durationSeconds ?? 999999;
+        const bSec = b.data.durationSeconds ?? 999999;
+        if (aSec !== bSec) return aSec - bSec;
+        const aDist = safeNumber(a.data.distance);
+        const bDist = safeNumber(b.data.distance);
+        if (aDist !== bDist) return bDist - aDist;
+        return tsMs(b) - tsMs(a);
+      });
       let prevRank = 0;
       let prevSec = null;
       let prevDist = null;
-      docs.forEach((doc, index) => {
+      deduped.forEach((doc, index) => {
         const entry = doc.data;
         const sec = entry.durationSeconds ?? 999999;
         const dist = safeNumber(entry.distance);
