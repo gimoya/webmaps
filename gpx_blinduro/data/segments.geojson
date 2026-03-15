@@ -31,15 +31,17 @@
 { "type": "Feature", "properties": { "segmentName": "Mittersteig (tough one!)", "pointType": "end", "level": "IBK West II" }, "geometry": { "type": "Point", "coordinates": [ 11.320035, 47.252276 ] } },
 { "type": "Feature", "properties": { "segmentName": "Kammerland (hikers! ..stay safe!)", "pointType": "start", "level": "IBK West II" }, "geometry": { "type": "Point", "coordinates": [ 11.247904932004504, 47.236455074656149 ] } },
 { "type": "Feature", "properties": { "segmentName": "Kammerland (hikers! ..stay safe!)", "pointType": "end", "level": "IBK West II" }, "geometry": { "type": "Point", "coordinates": [ 11.254854, 47.242727 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Waalweg (techy stuff & endo turns! ..ride clean!)", "pointType": "start", "level": "Oberland" }, "geometry": { "type": "Point", "coordinates": [ 10.951816904331865, 47.283913111006015 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Waalweg (techy stuff & endo turns! ..ride clean!)", "pointType": "end", "level": "Oberland" }, "geometry": { "type": "Point", "coordinates": [ 10.954323874442945, 47.2853239397298 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Waalweg (..after road/fence go right!)", "pointType": "start", "level": "Oberland" }, "geometry": { "type": "Point", "coordinates": [ 10.951816904331865, 47.283913111006015 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Waalweg (..after road/fence go right!)", "pointType": "end", "level": "Oberland" }, "geometry": { "type": "Point", "coordinates": [ 10.954323874442945, 47.2853239397298 ] } },
 { "type": "Feature", "properties": { "segmentName": "Lago di Garda (..don't fall!)", "pointType": "start", "level": "IBK West I" }, "geometry": { "type": "Point", "coordinates": [ 11.255372447610293, 47.2764891708619 ] } },
 { "type": "Feature", "properties": { "segmentName": "Lago di Garda (..don't fall!)", "pointType": "end", "level": "IBK West I" }, "geometry": { "type": "Point", "coordinates": [ 11.254190829402267, 47.273962597316554 ] } },
 { "type": "Feature", "properties": { "segmentName": "Burgeck (take it easy baby!)", "pointType": "start", "level": "Unterland II" }, "geometry": { "type": "Point", "coordinates": [ 11.779164, 47.398193 ] } },
 { "type": "Feature", "properties": { "segmentName": "Burgeck (take it easy baby!)", "pointType": "end", "level": "Unterland II" }, "geometry": { "type": "Point", "coordinates": [ 11.781618, 47.39615 ] } },
 { "type": "Feature", "properties": { "segmentName": "Kristeneben (strong legs!)", "pointType": "start", "level": "IBK West II" }, "geometry": { "type": "Point", "coordinates": [ 11.275594, 47.246087 ] } },
 { "type": "Feature", "properties": { "segmentName": "Kristeneben (strong legs!)", "pointType": "end", "level": "IBK West II" }, "geometry": { "type": "Point", "coordinates": [ 11.2856, 47.244796 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Zirler Berg", "pointType": "start", "level": "IBK West I" }, "geometry": { "type": "Point", "coordinates": [ 11.228843, 47.28059 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Zirler Berg", "pointType": "end", "level": "IBK West I" }, "geometry": { "type": "Point", "coordinates": [ 11.236986, 47.278662 ] } }
+{ "type": "Feature", "properties": { "segmentName": "Zirler Berg (..start after sharp left;)", "pointType": "start", "level": "IBK West I" }, "geometry": { "type": "Point", "coordinates": [ 11.228843, 47.28059 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Zirler Berg (..start after sharp left;)", "pointType": "end", "level": "IBK West I" }, "geometry": { "type": "Point", "coordinates": [ 11.236986, 47.278662 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Rough Achberg (..steep & deep)", "pointType": "start", "level": "Oberland" }, "geometry": { "type": "Point", "coordinates": [ 11.04373870150809, 47.300699581118096 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Rough Achberg (..steep & deep)", "pointType": "end", "level": "Oberland" }, "geometry": { "type": "Point", "coordinates": [ 11.044517341618956, 47.29886489266832 ] } }
 ]
 }
