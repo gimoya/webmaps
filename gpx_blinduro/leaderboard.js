@@ -19,7 +19,8 @@ function parseGeoJsonSegmentDefinitions(data) {
     const g = f?.geometry;
     const p = f?.properties;
     if (!g || g.type !== 'Point' || !Array.isArray(g.coordinates) || g.coordinates.length < 2) continue;
-    const name = (p?.segmentName ?? p?.name ?? '').toString().trim();
+    const rawName = (p?.segmentName ?? p?.name ?? '').toString().trim();
+    const name = (p?.canonicalName ?? p?.name ?? (rawName ? segmentShortName(rawName) : '')).toString().trim();
     const type = (p?.pointType ?? p?.type ?? '').toString().toLowerCase();
     const level = (p?.level ?? '').toString().trim();
     if (!name || (type !== 'start' && type !== 'end')) continue;

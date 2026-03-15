@@ -181,6 +181,7 @@ async function submitLeaderboardEntry(seg, gpxText) {
   const doc = {
     name: name.trim(),
     segmentName,
+    segmentDisplayName: (seg.segmentDisplayName ?? segmentName).toString().trim(),
     duration,
     distance,
     startTime,
@@ -234,6 +235,7 @@ async function submitLeaderboardEntry(seg, gpxText) {
     submittingNow = false;
   }
 }
+
 
 async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmittedDoc) {
   if (!listEl) return null;
@@ -789,6 +791,12 @@ function formatSegmentDetails(seg) {
 
 // --- GeoJSON parsing (segments.geojson, tracks.geojson) ---
 
+function segmentShortName(segmentName) {
+  const s = String(segmentName ?? '').trim();
+  const idx = s.indexOf('(');
+  return idx >= 0 ? s.slice(0, idx).trim() || s : s;
+}
+
 function parseGeoJsonSegmentDefinitions(data) {
   const fc = typeof data === 'string' ? JSON.parse(data) : data;
   if (fc?.type !== 'FeatureCollection' || !Array.isArray(fc.features)) return { segments: {}, segmentNames: [] };
@@ -799,10 +807,12 @@ function parseGeoJsonSegmentDefinitions(data) {
     const p = f?.properties;
     if (!g || g.type !== 'Point' || !Array.isArray(g.coordinates) || g.coordinates.length < 2) continue;
     const pt = [g.coordinates[1], g.coordinates[0]];
-    const name = (p?.segmentName ?? p?.name ?? '').toString().trim();
+    const rawName = (p?.segmentName ?? p?.name ?? '').toString().trim();
+    const name = (p?.canonicalName ?? p?.name ?? (rawName ? segmentShortName(rawName) : '')).toString().trim();
+    const displayName = (p?.dsiplayName ?? p?.displayName ?? p?.segmentName ?? rawName ?? name).toString().trim();
     const type = (p?.pointType ?? p?.type ?? '').toString().toLowerCase();
     if (!name || (type !== 'start' && type !== 'end')) continue;
-    if (!segments[name]) segments[name] = { start: [], end: [] };
+    if (!segments[name]) segments[name] = { start: [], end: [], displayName };
     if (type === 'start') segments[name].start.push(pt);
     else segments[name].end.push(pt);
     seen.add(name);
@@ -1008,6 +1018,7 @@ function processGpx(xmlText, filename, maxDistM) {
         const durationStr = durationHhmmss(startTime, endTime);
         segments.push({
           segmentName: segName,
+          segmentDisplayName: seg?.displayName ?? segName,
           source_file: filename,
           start_idx: sIdx,
           end_idx: eIdx,
@@ -1086,6 +1097,7 @@ function showLeaderboardSegmentOnMap(pts, segmentName) {
     leaderboardHighlightTimeout = null;
   }
   clearLeaderboardSegmentLayer();
+  const displayName = checkpoints.segments?.[segmentName]?.displayName ?? segmentName;
   if (!pts || !Array.isArray(pts) || pts.length < 2) {
     panToSegmentBounds(segmentName);
     return;
@@ -1095,7 +1107,7 @@ function showLeaderboardSegmentOnMap(pts, segmentName) {
     color: SEGMENT_MATCH_COLOR,
     weight: SEGMENT_MATCH_WEIGHT,
     opacity: SEGMENT_MATCH_OPACITY
-  }).bindTooltip(segmentName, { permanent: false });
+  }).bindTooltip(displayName, { permanent: false });
   polyline.addTo(map);
   mapLayers.leaderboardSegment = polyline;
   const bounds = L.latLngBounds(latlngs);
@@ -1279,8 +1291,9 @@ function getAllStartEndPoints() {
   const starts = [];
   const ends = [];
   for (const [segName, seg] of Object.entries(checkpoints.segments || {})) {
-    if (seg.start) for (const pt of seg.start) starts.push({ pt, segmentName: segName });
-    if (seg.end) for (const pt of seg.end) ends.push({ pt, segmentName: segName });
+    const displayName = seg?.displayName ?? segName;
+    if (seg.start) for (const pt of seg.start) starts.push({ pt, segmentName: segName, displayName });
+    if (seg.end) for (const pt of seg.end) ends.push({ pt, segmentName: segName, displayName });
   }
   return { starts, ends };
 }
@@ -1374,9 +1387,9 @@ function renderMap() {
     iconSize: [28, 28],
     iconAnchor: [7, 36]
   });
-  for (const { pt: [lat, lon], segmentName } of starts) {
+  for (const { pt: [lat, lon], segmentName, displayName } of starts) {
     const m = L.marker([lat, lon], { icon: startIcon })
-      .bindTooltip(segmentName, MARKER_TOOLTIP_OPTS);
+      .bindTooltip(displayName ?? segmentName, MARKER_TOOLTIP_OPTS);
     m.addTo(map);
     mapLayers.startMarkers.push(m);
     const anchor = L.circleMarker([lat, lon], {
@@ -1390,9 +1403,9 @@ function renderMap() {
     mapLayers.anchors.push(anchor);
     allLatLngs.push([lat, lon]);
   }
-  for (const { pt: [lat, lon] } of ends) {
+  for (const { pt: [lat, lon], displayName } of ends) {
     const m = L.marker([lat, lon], { icon: endIcon })
-      .bindTooltip('End', MARKER_TOOLTIP_OPTS);
+      .bindTooltip(displayName ?? 'End', MARKER_TOOLTIP_OPTS);
     m.addTo(map);
     mapLayers.endMarkers.push(m);
     const anchor = L.circleMarker([lat, lon], {

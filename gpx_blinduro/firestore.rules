@@ -3,9 +3,11 @@ service cloud.firestore {
   match /databases/{database}/documents {
     match /leaderboard/{docId} {
       allow read: if true;
-      allow create: if request.resource.data.keys().hasAll(['name', 'segmentName', 'duration', 'distance', 'segmentInfo', 'timestamp'])
+      allow create: if request.resource.data.keys().hasAll(['name', 'segmentName', 'segmentDisplayName', 'duration', 'distance', 'segmentInfo', 'timestamp'])
         && request.resource.data.segmentName is string
         && request.resource.data.segmentName.size() > 0
+        && request.resource.data.segmentDisplayName is string
+        && request.resource.data.segmentDisplayName.size() > 0
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && (!('gpxStorageUrl' in request.resource.data) || (request.resource.data.gpxStorageUrl is string && request.resource.data.gpxStorageUrl.size() > 0));
