@@ -1473,9 +1473,9 @@ function renderMap() {
     mapLayers.anchors.push(anchor);
     allLatLngs.push([lat, lon]);
   }
-  for (const { pt: [lat, lon], displayName } of ends) {
+  for (const { pt: [lat, lon], segmentName } of ends) {
     const m = L.marker([lat, lon], { icon: endIcon })
-      .bindTooltip(displayName ?? 'End', MARKER_TOOLTIP_OPTS);
+      .bindTooltip('End ' + (segmentName || ''), MARKER_TOOLTIP_OPTS);
     m.addTo(map);
     mapLayers.endMarkers.push(m);
     const anchor = L.circleMarker([lat, lon], {
