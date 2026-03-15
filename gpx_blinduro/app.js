@@ -247,12 +247,12 @@ async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmit
   }
   listEl.innerHTML = '<li class="loading">Loading...</li>';
   try {
-    let q = db.collection(LEADERBOARD_COLLECTION).where('segmentName', '==', segmentName);
+    const q = db.collection(LEADERBOARD_COLLECTION).where('segmentName', '==', segmentName);
     let snapshot;
     try {
-      snapshot = await q.orderBy('durationSeconds', 'asc').limit(100).get();
+      snapshot = await q.orderBy('durationSeconds', 'asc').get();
     } catch (_) {
-      snapshot = await q.orderBy('duration').limit(100).get();
+      snapshot = await q.orderBy('duration').get();
     }
     listEl.innerHTML = '';
     const details = listEl.closest('.leaderboard-segment-collapse');
@@ -262,12 +262,39 @@ async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmit
       if (metaSpan) metaSpan.textContent = '';
       return null;
     }
-    let totalCount = snapshot.size;
-    try {
-      const countSnap = await db.collection(LEADERBOARD_COLLECTION).where('segmentName', '==', segmentName).count().get();
-      totalCount = countSnap.data().count;
-    } catch (_) {}
     const docs = snapshot.docs.map(d => ({ id: d.id, ref: d.ref, data: d.data() }));
+    const uniqueRiders = new Set(docs.map(d => normalizeKey(d.data.name)));
+    const totalCount = uniqueRiders.size;
+    if (isAdminMode()) {
+      const runKey = (d) => {
+        const st = d.data.startTime;
+        const et = d.data.endTime;
+        const s = st && typeof st.toDate === 'function' ? st.toDate().toISOString() : String(st ?? '');
+        const e = et && typeof et.toDate === 'function' ? et.toDate().toISOString() : String(et ?? '');
+        return s + '\t' + e;
+      };
+      const perDoc = docs.map(d => {
+        const st = d.data.startTime;
+        const et = d.data.endTime;
+        const isoSt = st && typeof st.toDate === 'function' ? st.toDate().toISOString() : (st != null ? String(st) : null);
+        const isoEt = et && typeof et.toDate === 'function' ? et.toDate().toISOString() : (et != null ? String(et) : null);
+        const name = (d.data.name ?? '').toString().trim();
+        const segmentInfo = d.data.segmentInfo;
+        const ts = d.data.timestamp;
+        const submittedAt = ts && typeof ts.toDate === 'function' ? ts.toDate().toISOString() : (ts && ts.seconds != null ? new Date(ts.seconds * 1000).toISOString() : null);
+        return {
+          name,
+          isoStart: isoSt,
+          isoEnd: isoEt,
+          key: runKey(d),
+          gpxFilename: gpxDownloadFilename(segmentName, name),
+          gpxSourceFile: segmentInfo?.sourceFile ?? null,
+          gpxStorageUrl: d.data.gpxStorageUrl ?? null,
+          submittedAt
+        };
+      });
+      console.log(`[${segmentName} attempts]`, { segmentName, docCount: docs.length, uniqueCount: uniqueRiders.size, perDoc });
+    }
     const tsMs = (d) => {
       const t = d.data.timestamp;
       if (!t) return 0;
@@ -308,14 +335,15 @@ async function fetchLeaderboard(segmentName, listEl, highlightEntry, newlySubmit
       if (aDist !== bDist) return bDist - aDist;
       return tsMs(b) - tsMs(a);
     });
-    const top10 = deduped.slice(0, 10);
-    const firstPlace = top10.length ? safeStr(top10[0].data.name) : '';
-    if (metaSpan) metaSpan.textContent = `${totalCount} Attempt(s) · 🥇 1st: ${firstPlace}`;
+    const displayList = isAdminMode() ? docs : deduped.slice(0, 10);
+    const firstPlace = deduped.length ? safeStr(deduped[0].data.name) : '';
+    const countForMeta = isAdminMode() ? docs.length : totalCount;
+    if (metaSpan) metaSpan.textContent = `${countForMeta} Attempt(s) · 🥇 1st: ${firstPlace}`;
     let highlightRank = null;
     let prevRank = 0;
     let prevSec = null;
     let prevDist = null;
-    top10.forEach((doc, index) => {
+    displayList.forEach((doc, index) => {
       const entry = doc.data;
       const useEntry = (newlySubmittedDoc && String(entry.startTime ?? '') === String(highlightEntry?.startTime ?? '') && String(entry.endTime ?? '') === String(highlightEntry?.endTime ?? ''))
         ? { ...entry, gpxStorageUrl: newlySubmittedDoc.gpxStorageUrl, segmentPts: newlySubmittedDoc.segmentPts }
@@ -546,6 +574,48 @@ function escapeXml(s) {
 function gpxDownloadFilename(segmentName, name) {
   const safe = (s) => String(s).replace(/[^a-zA-Z0-9-_]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'track';
   return `${safe(segmentName)}_${safe(name)}.gpx`;
+}
+
+/** Admin only: log attempts for all segments to console (segmentName, docCount, uniqueCount, perDoc with name, isoStart, isoEnd, key, gpxFilename, gpxSourceFile, gpxStorageUrl). */
+async function logAllSegmentAttempts() {
+  if (!isAdminMode()) return;
+  if (!db || !checkpoints.segmentNames?.length) {
+    console.warn('logAllSegmentAttempts: db or checkpoints not ready.');
+    return;
+  }
+  const runKey = (d) => {
+    const st = d.data.startTime;
+    const et = d.data.endTime;
+    const s = st && typeof st.toDate === 'function' ? st.toDate().toISOString() : String(st ?? '');
+    const e = et && typeof et.toDate === 'function' ? et.toDate().toISOString() : String(et ?? '');
+    return s + '\t' + e;
+  };
+  for (const segmentName of checkpoints.segmentNames) {
+    const snapshot = await db.collection(LEADERBOARD_COLLECTION).where('segmentName', '==', segmentName).get();
+    const docs = snapshot.docs.map(d => ({ id: d.id, ref: d.ref, data: d.data() }));
+    const uniqueRiders = new Set(docs.map(d => normalizeKey(d.data.name)));
+    const perDoc = docs.map(d => {
+      const st = d.data.startTime;
+      const et = d.data.endTime;
+      const isoSt = st && typeof st.toDate === 'function' ? st.toDate().toISOString() : (st != null ? String(st) : null);
+      const isoEt = et && typeof et.toDate === 'function' ? et.toDate().toISOString() : (et != null ? String(et) : null);
+      const name = (d.data.name ?? '').toString().trim();
+      const segmentInfo = d.data.segmentInfo;
+      const ts = d.data.timestamp;
+      const submittedAt = ts && typeof ts.toDate === 'function' ? ts.toDate().toISOString() : (ts && ts.seconds != null ? new Date(ts.seconds * 1000).toISOString() : null);
+      return {
+        name,
+        isoStart: isoSt,
+        isoEnd: isoEt,
+        key: runKey(d),
+        gpxFilename: gpxDownloadFilename(segmentName, name),
+        gpxSourceFile: segmentInfo?.sourceFile ?? null,
+        gpxStorageUrl: d.data.gpxStorageUrl ?? null,
+        submittedAt
+      };
+    });
+    console.log(`[${segmentName} attempts]`, { segmentName, docCount: docs.length, uniqueCount: uniqueRiders.size, perDoc });
+  }
 }
 
 function downloadGpx(gpxText, name, segmentName) {

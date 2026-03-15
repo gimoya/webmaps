@@ -110,6 +110,11 @@ function dedupeBestPerRider(docs) {
 async function fetchSegmentLeaderboard(segmentName) {
   const snapshot = await db.collection(LEADERBOARD_COLLECTION).where('segmentName', '==', segmentName).get();
   const docs = snapshot.docs.map(d => ({ id: d.id, data: d.data() }));
+  const countByRider = {};
+  for (const d of docs) {
+    const key = normalizeKey(d.data.name);
+    countByRider[key] = (countByRider[key] || 0) + 1;
+  }
   const tsMs = (d) => {
     const t = d.data.timestamp;
     if (!t) return 0;
@@ -124,10 +129,11 @@ async function fetchSegmentLeaderboard(segmentName) {
     if (aDist !== bDist) return bDist - aDist;
     return tsMs(b) - tsMs(a);
   });
-  return dedupeBestPerRider(docs);
+  const deduped = dedupeBestPerRider(docs);
+  return { docs: deduped, countByRider };
 }
 
-function renderTable(segmentName, docs) {
+function renderTable(segmentName, docs, countByRider = {}) {
   let prevRank = 0, prevSec = null, prevDist = null;
   const rows = docs.map((doc, index) => {
     const e = doc.data;
@@ -139,7 +145,10 @@ function renderTable(segmentName, docs) {
     prevSec = sec;
     prevDist = dist;
     const rankDisplay = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
-    const name = escapeHtml(String(e.name ?? ''));
+    const riderKey = normalizeKey(e.name);
+    const N = countByRider[riderKey] ?? 1;
+    const nameDisplay = N > 1 ? escapeHtml(String(e.name ?? '')) + ' <span class="rider-doc-count">(' + N + ')</span>' : escapeHtml(String(e.name ?? ''));
+    const name = nameDisplay;
     const duration = escapeHtml(String(e.duration ?? '—'));
     const distance = dist > 0 ? (dist / 1000).toFixed(2) + ' km' : '—';
     const speed = sec > 0 && dist > 0 ? ((dist / 1000) / (sec / 3600)).toFixed(1) + ' km/h' : '—';
@@ -184,7 +193,8 @@ function renderOverallLeaderboard(segmentData, allSegments) {
   const pointsByRider = {};
   const segmentN = {};
   for (const segmentName of allSegments) {
-    const docs = segmentData[segmentName] || [];
+    const seg = segmentData[segmentName];
+    const docs = seg && seg.docs ? seg.docs : (Array.isArray(seg) ? seg : []);
     const N = docs.length;
     segmentN[segmentName] = N;
     const ranked = rankDocsWithTies(docs);
@@ -279,11 +289,13 @@ const container = document.getElementById('leaderboard-container');
           block.className = 'segment-block';
           block.innerHTML = '<h3 class="segment-title">' + escapeHtml(segmentName) + '</h3>';
           levelSection.appendChild(block);
-          const docs = segmentData[segmentName] || [];
+          const seg = segmentData[segmentName];
+          const docs = seg && seg.docs ? seg.docs : (Array.isArray(seg) ? seg : []);
+          const countByRider = (seg && seg.countByRider) ? seg.countByRider : {};
           if (docs.length === 0) {
             block.innerHTML += '<p class="empty">No entries yet... ⚡ Go RIDE!!</p>';
           } else {
-            block.innerHTML += renderTable(segmentName, docs);
+            block.innerHTML += renderTable(segmentName, docs, countByRider);
           }
         }
       }

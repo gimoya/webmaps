@@ -76,6 +76,12 @@
   font-size: var(--font-size-sm);
 }
 
+.leaderboard-page .rider-doc-count {
+  font-size: var(--font-size-xs);
+  opacity: 0.85;
+  font-weight: normal;
+}
+
 @media (max-width: 600px) {
   .leaderboard-page {
     padding: 0.5rem 0.5rem;
