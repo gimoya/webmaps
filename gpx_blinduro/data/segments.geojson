@@ -38,6 +38,8 @@
 { "type": "Feature", "properties": { "segmentName": "Burgeck (take it easy baby!)", "pointType": "start", "level": "Unterland II" }, "geometry": { "type": "Point", "coordinates": [ 11.779164, 47.398193 ] } },
 { "type": "Feature", "properties": { "segmentName": "Burgeck (take it easy baby!)", "pointType": "end", "level": "Unterland II" }, "geometry": { "type": "Point", "coordinates": [ 11.781618, 47.39615 ] } },
 { "type": "Feature", "properties": { "segmentName": "Kristeneben (strong legs!)", "pointType": "start", "level": "IBK West II" }, "geometry": { "type": "Point", "coordinates": [ 11.275594, 47.246087 ] } },
-{ "type": "Feature", "properties": { "segmentName": "Kristeneben (strong legs!)", "pointType": "end", "level": "IBK West II" }, "geometry": { "type": "Point", "coordinates": [ 11.2856, 47.244796 ] } }
+{ "type": "Feature", "properties": { "segmentName": "Kristeneben (strong legs!)", "pointType": "end", "level": "IBK West II" }, "geometry": { "type": "Point", "coordinates": [ 11.2856, 47.244796 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Zirler Berg", "pointType": "start", "level": "IBK West I" }, "geometry": { "type": "Point", "coordinates": [ 11.228843, 47.28059 ] } },
+{ "type": "Feature", "properties": { "segmentName": "Zirler Berg", "pointType": "end", "level": "IBK West I" }, "geometry": { "type": "Point", "coordinates": [ 11.236986, 47.278662 ] } }
 ]
 }

@@ -206,7 +206,7 @@ function renderOverallLeaderboard(segmentData, allSegments) {
   };
   riderKeys.sort((a, b) => total(a) - total(b));
 
-  const dnsCell = (n) => n === 0 ? '0' : n + '+2';
+  const dnsCell = (n) => n === 0 ? '' : (n + 1) + '+1';
 
   const theadCells = ['Segment'].concat(riderKeys.map(key => escapeHtml(riderDisplayName[key])));
   const thead = '<thead><tr><th>' + theadCells.join('</th><th>') + '</th></tr></thead>';
@@ -226,7 +226,7 @@ function renderOverallLeaderboard(segmentData, allSegments) {
       } else {
         let label = 'DNS';
         if (n > 0) {
-          label += ' (' + n + '+2)';
+          label += ' (' + (n + 1) + '+1)';
         }
         cells.push('<span class="cell-dns">' + escapeHtml(label) + '</span>');
       }
