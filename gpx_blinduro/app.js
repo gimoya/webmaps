@@ -1490,12 +1490,14 @@ function initMap() {
     if (!skipSync) syncUrlToState();
   };
   const togglePanel = () => setPanelHidden(!isPanelHidden());
+  let refreshPanelToggle = () => {};
   const applyStateFromUrl = () => {
     const state = getStateFromUrl();
     if (map && state.lat != null && state.lng != null && state.zoom != null) {
       map.setView([state.lat, state.lng], state.zoom);
     }
     setPanelHidden(state.panelHidden, true);
+    refreshPanelToggle();
   };
   const syncUrlToState = () => {
     const panelHidden = isPanelHidden();
@@ -1510,11 +1512,38 @@ function initMap() {
   };
   applyStateFromUrl();
 
-  const PANEL_FADE_MS = 1000;
   const requestFs = document.documentElement.requestFullscreen ?? document.documentElement.webkitRequestFullscreen;
   const exitFs = document.exitFullscreen ?? document.webkitExitFullscreen;
   const hasFullscreen = !!(requestFs && exitFs);
   const isFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+
+  if (hasFullscreen) {
+    const FullscreenControl = L.Control.extend({
+      onAdd() {
+        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+        const button = L.DomUtil.create('a', 'leaflet-control-button', container);
+        button.href = '#';
+        button.style.cssText = 'width: 30px; height: 30px; line-height: 30px; text-align: center; font-size: 18px; display: block;';
+        L.DomEvent.disableClickPropagation(button);
+        const updateButton = () => {
+          button.title = isFullscreen() ? 'Exit fullscreen' : 'Fullscreen';
+          button.innerHTML = isFullscreen() ? '↖' : '⛶';
+        };
+        document.addEventListener('fullscreenchange', updateButton);
+        document.addEventListener('webkitfullscreenchange', updateButton);
+        updateButton();
+        L.DomEvent.on(button, 'click', async (e) => {
+          L.DomEvent.stopPropagation(e);
+          L.DomEvent.preventDefault(e);
+          if (isFullscreen()) await exitFs.call(document);
+          else await requestFs.call(document.documentElement);
+          setTimeout(() => map?.invalidateSize(), 50);
+        });
+        return container;
+      }
+    });
+    new FullscreenControl({ position: 'topleft' }).addTo(map);
+  }
 
   const PanelToggleControl = L.Control.extend({
     onAdd() {
@@ -1523,44 +1552,18 @@ function initMap() {
       button.href = '#';
       button.style.cssText = 'width: 30px; height: 30px; line-height: 30px; text-align: center; font-size: 18px; display: block;';
       L.DomEvent.disableClickPropagation(button);
-
       const updateButton = () => {
-        if (hasFullscreen && isFullscreen()) {
-          button.title = 'Exit fullscreen';
-          button.innerHTML = '⟲';
-        } else if (hasFullscreen) {
-          button.title = 'Fullscreen';
-          button.innerHTML = '⛶';
-        } else {
-          const hidden = isPanelHidden();
-          button.title = hidden ? 'Show panel' : 'Hide panel';
-          button.innerHTML = hidden ? '⟲' : '⛶';
-        }
+        const hidden = isPanelHidden();
+        button.title = hidden ? 'Show panel' : 'Hide panel';
+        button.innerHTML = hidden ? 'ⓘ' : '↖';
       };
-
-      if (hasFullscreen) {
-        document.addEventListener('fullscreenchange', updateButton);
-        document.addEventListener('webkitfullscreenchange', updateButton);
-      }
-
+      refreshPanelToggle = updateButton;
       updateButton();
-
-      L.DomEvent.on(button, 'click', async (e) => {
+      L.DomEvent.on(button, 'click', (e) => {
         L.DomEvent.stopPropagation(e);
         L.DomEvent.preventDefault(e);
-        if (hasFullscreen) {
-          if (isFullscreen()) {
-            await exitFs.call(document);
-          } else {
-            setPanelHidden(true);
-            await new Promise((r) => setTimeout(r, PANEL_FADE_MS));
-            await requestFs.call(document.documentElement);
-          }
-        } else {
-          const willHide = !isPanelHidden();
-          togglePanel();
-          updateButton();
-        }
+        togglePanel();
+        updateButton();
         setTimeout(() => map?.invalidateSize(), 50);
       });
       return container;
