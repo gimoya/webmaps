@@ -61,6 +61,36 @@ function isAdminMode() {
   return window.location.hash === '#admin';
 }
 
+function getStateFromUrl() {
+  const p = new URLSearchParams(window.location.search);
+  const panelHidden = p.get('panel') === 'hidden';
+  const lat = parseFloat(p.get('lat'));
+  const lng = parseFloat(p.get('lng'));
+  const zoom = parseInt(p.get('zoom'), 10);
+  const hasMap =
+    Number.isFinite(lat) && Number.isFinite(lng) && Number.isFinite(zoom) &&
+    zoom >= 0 && zoom <= 24;
+  return {
+    panelHidden,
+    lat: hasMap ? lat : null,
+    lng: hasMap ? lng : null,
+    zoom: hasMap ? zoom : null
+  };
+}
+
+function writeStateToUrl(state) {
+  const params = new URLSearchParams();
+  params.set('panel', state.panelHidden ? 'hidden' : 'visible');
+  if (state.lat != null && state.lng != null && state.zoom != null) {
+    params.set('lat', String(state.lat));
+    params.set('lng', String(state.lng));
+    params.set('zoom', String(state.zoom));
+  }
+  const search = params.toString();
+  const url = window.location.pathname + (search ? '?' + search : '') + (window.location.hash || '');
+  window.history.replaceState(null, '', url);
+}
+
 function initPanelResizeCheck() {
   if (!isAdminMode()) return;
   if (panelResizeObserver) {
@@ -671,106 +701,6 @@ async function resetLeaderboard() {
   } catch (err) {
     console.error('Reset error:', err);
     setStatus('Error resetting leaderboard.', true);
-  }
-}
-
-function csvEscape(val) {
-  const s = String(val ?? '');
-  if (/[;"\r\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
-  return s;
-}
-
-async function exportLeaderboardCsv() {
-  if (!db) {
-    alert('Firebase not configured.');
-    return;
-  }
-  setStatus('Exporting CSV…');
-  try {
-    const snapshot = await db.collection(LEADERBOARD_COLLECTION).get();
-    const bySegment = {};
-    snapshot.docs.forEach((d) => {
-      const seg = safeStr(d.data().segmentName, '');
-      if (!bySegment[seg]) bySegment[seg] = [];
-      bySegment[seg].push({ id: d.id, ref: d.ref, data: d.data() });
-    });
-    const tsMs = (d) => {
-      const t = d.data.timestamp;
-      if (!t) return 0;
-      return t.toMillis ? t.toMillis() : (t.seconds || 0) * 1000;
-    };
-    const rows = [];
-    const header = ['name', 'segment name', 'duration', 'distance', 'current rank', 'gpx filename', 'gpx-download url'];
-    rows.push(header.map(csvEscape).join(';'));
-    Object.keys(bySegment).sort().forEach((segmentName) => {
-      const docs = bySegment[segmentName];
-      docs.sort((a, b) => {
-        const aSec = a.data.durationSeconds ?? 999999;
-        const bSec = b.data.durationSeconds ?? 999999;
-        if (aSec !== bSec) return aSec - bSec;
-        const aDist = safeNumber(a.data.distance);
-        const bDist = safeNumber(b.data.distance);
-        if (aDist !== bDist) return bDist - aDist;
-        return tsMs(b) - tsMs(a);
-      });
-      const byKey = new Map();
-      for (const d of docs) {
-        const key = normalizeKey(d.data.name);
-        const cur = byKey.get(key);
-        const sec = d.data.durationSeconds ?? 999999;
-        const dist = safeNumber(d.data.distance);
-        if (!cur) {
-          byKey.set(key, d);
-          continue;
-        }
-        const curSec = cur.data.durationSeconds ?? 999999;
-        const curDist = safeNumber(cur.data.distance);
-        if (sec < curSec || (sec === curSec && dist > curDist) || (sec === curSec && dist === curDist && tsMs(d) > tsMs(cur))) {
-          byKey.set(key, d);
-        }
-      }
-      const deduped = Array.from(byKey.values());
-      deduped.sort((a, b) => {
-        const aSec = a.data.durationSeconds ?? 999999;
-        const bSec = b.data.durationSeconds ?? 999999;
-        if (aSec !== bSec) return aSec - bSec;
-        const aDist = safeNumber(a.data.distance);
-        const bDist = safeNumber(b.data.distance);
-        if (aDist !== bDist) return bDist - aDist;
-        return tsMs(b) - tsMs(a);
-      });
-      let prevRank = 0;
-      let prevSec = null;
-      let prevDist = null;
-      deduped.forEach((doc, index) => {
-        const entry = doc.data;
-        const sec = entry.durationSeconds ?? 999999;
-        const dist = safeNumber(entry.distance);
-        const isTie = prevSec !== null && prevSec === sec && prevDist === dist;
-        const rank = isTie ? prevRank : index + 1;
-        prevRank = rank;
-        prevSec = sec;
-        prevDist = dist;
-        const name = safeStr(entry.name);
-        const duration = safeStr(entry.duration);
-        const distance = String(dist);
-        const gpxFilename = gpxDownloadFilename(segmentName, name);
-        const gpxUrl = safeStr(entry.gpxStorageUrl);
-        rows.push([name, segmentName, duration, distance, String(rank), gpxFilename, gpxUrl].map(csvEscape).join(';'));
-      });
-    });
-    const csv = rows.join('\r\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `leaderboard-export-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    setStatus('');
-  } catch (err) {
-    console.error('Export error:', err);
-    setStatus('Error exporting CSV.', true);
   }
 }
 
@@ -1553,36 +1483,32 @@ function initMap() {
   const scheduleOffset = () => map.once('moveend', applyMapOffsetForPanel);
   map.on('locateactivate', scheduleOffset);
   map.on('locatelocationfound', scheduleOffset);
-  const setPanelHidden = (hidden) => {
+  const isPanelHidden = () => document.body.classList.contains('panel-hidden');
+  const setPanelHidden = (hidden, skipSync) => {
     if (hidden) document.body.classList.add('panel-hidden');
     else document.body.classList.remove('panel-hidden');
-    try {
-      localStorage.setItem('panelHidden', hidden ? '1' : '0');
-    } catch (_) {
-      // ignore storage errors
-    }
+    if (!skipSync) syncUrlToState();
   };
-  const isPanelHidden = () => document.body.classList.contains('panel-hidden');
   const togglePanel = () => setPanelHidden(!isPanelHidden());
-  const syncPanelToFullscreenHash = () => {
-    if (window.location.hash === '#fullscreen') {
-      setPanelHidden(true);
+  const applyStateFromUrl = () => {
+    const state = getStateFromUrl();
+    if (map && state.lat != null && state.lng != null && state.zoom != null) {
+      map.setView([state.lat, state.lng], state.zoom);
     }
+    setPanelHidden(state.panelHidden, true);
   };
-  // Initial panel state: prefer persisted flag, fall back to hash
-  try {
-    const stored = localStorage.getItem('panelHidden');
-    if (stored === '1') setPanelHidden(true);
-    else if (stored === '0') setPanelHidden(false);
-    else if (window.location.hash === '#fullscreen') setPanelHidden(true);
-  } catch (_) {
-    if (window.location.hash === '#fullscreen') setPanelHidden(true);
-  }
-  window.addEventListener('hashchange', syncPanelToFullscreenHash);
-
-  const clearFullscreenHash = () => {
-    if (window.location.hash === '#fullscreen') history.replaceState(null, '', window.location.pathname + window.location.search);
+  const syncUrlToState = () => {
+    const panelHidden = isPanelHidden();
+    let lat = null, lng = null, zoom = null;
+    if (map) {
+      const c = map.getCenter();
+      lat = c.lat;
+      lng = c.lng;
+      zoom = map.getZoom();
+    }
+    writeStateToUrl({ panelHidden, lat, lng, zoom });
   };
+  applyStateFromUrl();
 
   const PANEL_FADE_MS = 1000;
   const requestFs = document.documentElement.requestFullscreen ?? document.documentElement.webkitRequestFullscreen;
@@ -1602,17 +1528,13 @@ function initMap() {
         if (hasFullscreen && isFullscreen()) {
           button.title = 'Exit fullscreen';
           button.innerHTML = '⟲';
-          setPanelHidden(true);
         } else if (hasFullscreen) {
           button.title = 'Fullscreen';
           button.innerHTML = '⛶';
-          setPanelHidden(false);
-          clearFullscreenHash();
         } else {
           const hidden = isPanelHidden();
           button.title = hidden ? 'Show panel' : 'Hide panel';
           button.innerHTML = hidden ? '⟲' : '⛶';
-          if (!hidden) clearFullscreenHash();
         }
       };
 
@@ -1629,19 +1551,14 @@ function initMap() {
         if (hasFullscreen) {
           if (isFullscreen()) {
             await exitFs.call(document);
-            setPanelHidden(false);
-            clearFullscreenHash();
           } else {
             setPanelHidden(true);
-            window.location.hash = 'fullscreen';
             await new Promise((r) => setTimeout(r, PANEL_FADE_MS));
             await requestFs.call(document.documentElement);
           }
         } else {
           const willHide = !isPanelHidden();
           togglePanel();
-          if (willHide) window.location.hash = 'fullscreen';
-          else clearFullscreenHash();
           updateButton();
         }
         setTimeout(() => map?.invalidateSize(), 50);
@@ -1659,8 +1576,20 @@ function initMap() {
   };
   map.on('zoomend', updateZoomLabels);
   updateZoomLabels();
+  let moveendDebounce = null;
+  map.on('moveend', () => {
+    if (moveendDebounce != null) clearTimeout(moveendDebounce);
+    moveendDebounce = setTimeout(() => {
+      moveendDebounce = null;
+      syncUrlToState();
+    }, 400);
+  });
   setTimeout(() => map?.invalidateSize(), 0);
   window.addEventListener('resize', () => map?.invalidateSize());
+  window.addEventListener('popstate', applyStateFromUrl);
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted) applyStateFromUrl();
+  });
   wireTrackNav();
 }
 
@@ -1765,8 +1694,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const admin = isAdminMode();
     const maxDistRow = document.getElementById('max-dist-row');
     if (maxDistRow) maxDistRow.style.display = admin ? '' : 'none';
-    const exportCsvBtn = document.getElementById('admin-export-csv');
-    if (exportCsvBtn) exportCsvBtn.style.display = admin ? '' : 'none';
     const resetBtn = document.getElementById('reset-leaderboard');
     if (resetBtn) resetBtn.style.display = admin ? 'block' : 'none';
     const banner = document.getElementById('panel-resize-warning');
@@ -1813,6 +1740,4 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   const resetBtn = document.getElementById('reset-leaderboard');
   if (resetBtn) resetBtn.addEventListener('click', resetLeaderboard);
-  const exportCsvBtn = document.getElementById('admin-export-csv');
-  if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportLeaderboardCsv);
 });
