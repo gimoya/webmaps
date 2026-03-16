@@ -1556,14 +1556,28 @@ function initMap() {
   const setPanelHidden = (hidden) => {
     if (hidden) document.body.classList.add('panel-hidden');
     else document.body.classList.remove('panel-hidden');
+    try {
+      localStorage.setItem('panelHidden', hidden ? '1' : '0');
+    } catch (_) {
+      // ignore storage errors
+    }
   };
   const isPanelHidden = () => document.body.classList.contains('panel-hidden');
   const togglePanel = () => setPanelHidden(!isPanelHidden());
   const syncPanelToFullscreenHash = () => {
-    if (window.location.hash === '#fullscreen') setPanelHidden(true);
-    else setPanelHidden(false);
+    if (window.location.hash === '#fullscreen') {
+      setPanelHidden(true);
+    }
   };
-  if (window.location.hash === '#fullscreen') setPanelHidden(true);
+  // Initial panel state: prefer persisted flag, fall back to hash
+  try {
+    const stored = localStorage.getItem('panelHidden');
+    if (stored === '1') setPanelHidden(true);
+    else if (stored === '0') setPanelHidden(false);
+    else if (window.location.hash === '#fullscreen') setPanelHidden(true);
+  } catch (_) {
+    if (window.location.hash === '#fullscreen') setPanelHidden(true);
+  }
   window.addEventListener('hashchange', syncPanelToFullscreenHash);
 
   const clearFullscreenHash = () => {
@@ -1721,7 +1735,6 @@ function handleFile(e) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  if (window.location.hash === '#fullscreen') document.body.classList.add('panel-hidden');
   showSection('segments', false);
   showSection('tracks', false);
   await loadCheckpoints();
