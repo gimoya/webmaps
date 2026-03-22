@@ -1480,6 +1480,12 @@ function initMap() {
     markerStyle: { weight: 2, opacity: 0.8, fillOpacity: 0.3 },
     circleStyle: { weight: 2, opacity: 0.8, fillOpacity: 0.3 }
   }).addTo(map);
+  L.control.scale({
+    position: 'bottomleft',
+    imperial: false,
+    metric: true,
+    maxWidth: 160
+  }).addTo(map);
   const scheduleOffset = () => map.once('moveend', applyMapOffsetForPanel);
   map.on('locateactivate', scheduleOffset);
   map.on('locatelocationfound', scheduleOffset);

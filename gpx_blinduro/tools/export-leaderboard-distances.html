@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Export leaderboard distances (CSV)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
+    button { padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; }
+    #status { margin-top: 1rem; color: #444; }
+    .err { color: #b00; }
+  </style>
+</head>
+<body>
+  <h1>Leaderboard distances → CSV</h1>
+  <p>Loads all documents from the <code>leaderboard</code> Firestore collection and downloads CSV: <strong>segmentName</strong>, <strong>distance</strong> (stored field, m), <strong>distanceFromPts</strong> (haversine sum along <code>segmentPts</code>, same logic as the app).</p>
+  <p><button type="button" id="btn">Download distances.csv</button></p>
+  <p id="status"></p>
+  <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: 'AIzaSyCRTbTdvK8O7tkLCoRfTaGPV-JZpoay7Zw',
+      authDomain: 'gpx-blinduro.firebaseapp.com',
+      projectId: 'gpx-blinduro',
+      storageBucket: 'gpx-blinduro.firebasestorage.app',
+      messagingSenderId: '58925827381',
+      appId: '1:58925827381:web:9c54e7dc69aa53df29b87c',
+      measurementId: 'G-GXWNEBDGG3'
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const statusEl = document.getElementById('status');
+    function csvCell(s) {
+      const t = String(s ?? '');
+      if (/[",\r\n]/.test(t)) return '"' + t.replace(/"/g, '""') + '"';
+      return t;
+    }
+
+    function haversineM(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
+      const φ1 = (lat1 * Math.PI) / 180;
+      const φ2 = (lat2 * Math.PI) / 180;
+      const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+      const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+      const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    /** Sum of great-circle segments between consecutive segmentPts (matches app.js buildEdges + segmentFromEdges). */
+    function distanceFromSegmentPts(pts) {
+      if (!Array.isArray(pts) || pts.length < 2) return null;
+      let sum = 0;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i];
+        const b = pts[i + 1];
+        const lat0 = a.lat != null ? a.lat : a[0];
+        const lon0 = a.lng != null ? a.lng : a[1];
+        const lat1 = b.lat != null ? b.lat : b[0];
+        const lon1 = b.lng != null ? b.lng : b[1];
+        if (!Number.isFinite(lat0) || !Number.isFinite(lon0) || !Number.isFinite(lat1) || !Number.isFinite(lon1)) continue;
+        sum += haversineM(lat0, lon0, lat1, lon1);
+      }
+      return sum;
+    }
+
+    document.getElementById('btn').addEventListener('click', async () => {
+      statusEl.textContent = 'Loading…';
+      statusEl.classList.remove('err');
+      try {
+        const snap = await db.collection('leaderboard').get();
+        const lines = snap.docs.map((d) => {
+          const data = d.data();
+          const seg = csvCell(data.segmentName ?? '');
+          const v = data.distance;
+          let distDoc = '';
+          if (v != null && v !== '') {
+            const n = Number(v);
+            distDoc = Number.isFinite(n) ? String(n) : csvCell(String(v));
+          }
+          const calc = distanceFromSegmentPts(data.segmentPts);
+          const distPts = calc == null || !Number.isFinite(calc) ? '' : String(Math.round(calc));
+          return `${seg},${distDoc},${distPts}`;
+        });
+        const body = ['segmentName,distance,distanceFromPts', ...lines].join('\n');
+        const bom = '\uFEFF';
+        const blob = new Blob([bom + body], { type: 'text/csv;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'leaderboard-distances.csv';
+        a.click();
+        URL.revokeObjectURL(a.href);
+        statusEl.textContent = `Done: ${snap.size} row(s) (+ header).`;
+      } catch (e) {
+        console.error(e);
+        statusEl.classList.add('err');
+        statusEl.textContent = String(e.message || e);
+      }
+    });
+  </script>
+</body>
+</html>
