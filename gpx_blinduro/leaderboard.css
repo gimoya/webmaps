@@ -1,7 +1,30 @@
 .leaderboard-page {
+  padding: 0;
+  max-width: none;
+  margin: 0;
+}
+
+body.leaderboard-page {
+  overflow: hidden;
+}
+
+#leaderboard-scroll,
+.leaderboard-scroll {
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 1rem 1.5rem;
   max-width: 900px;
   margin: 0 auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge Legacy */
+}
+
+#leaderboard-scroll::-webkit-scrollbar,
+.leaderboard-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .leaderboard-page h1 {
@@ -83,7 +106,7 @@
 }
 
 @media (max-width: 600px) {
-  .leaderboard-page {
+  .leaderboard-scroll {
     padding: 0.5rem 0.5rem;
   }
 
@@ -151,6 +174,39 @@
   max-width: 80vw;
   height: auto;
   image-rendering: pixelated;
+}
+
+.leaderboard-reveal-target {
+  opacity: 0;
+  transition: opacity var(--leaderboard-reveal-fade-ms, 450ms) ease;
+  will-change: opacity;
+}
+
+.leaderboard-reveal-target.is-revealed {
+  opacity: 1;
+}
+
+.pixel-reveal-overlay {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.pixel-reveal-overlay .pixel {
+  position: absolute;
+  background: transparent;
+  opacity: 1;
+  transition: opacity var(--leaderboard-pixel-tile-fade-ms, 55ms) linear;
+  image-rendering: pixelated;
+}
+
+.pixel-reveal-overlay .pixel.is-gone {
+  opacity: 0;
 }
 
 .leaderboard-page .error {

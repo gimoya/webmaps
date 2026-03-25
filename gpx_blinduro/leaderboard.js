@@ -250,10 +250,123 @@ function renderOverallLeaderboard(segmentData, allSegments) {
   return '<div class="overall-leaderboard"><h2 class="level-header">OVERALL ➡  lowest sum wins 🏆</h2><div class="overall-table-wrap"><table class="overall-matrix">' + thead + tbody + '</table></div></div>';
 }
 
+function runPixelDissolveReveal(targetEls, { gridSize = 42, durationMs = 1200 } = {}) {
+  if (!Array.isArray(targetEls) || targetEls.length === 0) return;
+
+  const rects = targetEls
+    .map(el => (el && el.getBoundingClientRect) ? el.getBoundingClientRect() : null)
+    .filter(r => r && r.width > 1 && r.height > 1);
+
+  if (!rects.length) return;
+
+  const left = Math.min(...rects.map(r => r.left));
+  const top = Math.min(...rects.map(r => r.top));
+  const right = Math.max(...rects.map(r => r.right));
+  const bottom = Math.max(...rects.map(r => r.bottom));
+  const width = Math.ceil(right - left);
+  const height = Math.ceil(bottom - top);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'pixel-reveal-overlay';
+  overlay.setAttribute('aria-hidden', 'true');
+  overlay.style.left = `${left}px`;
+  overlay.style.top = `${top}px`;
+  overlay.style.width = `${width}px`;
+  overlay.style.height = `${height}px`;
+
+  const pixels = [];
+  const pixelWrap = document.createElement('div');
+  pixelWrap.style.position = 'absolute';
+  pixelWrap.style.inset = '0';
+  overlay.appendChild(pixelWrap);
+
+  // Keep tiles 1:1 (square). `gridSize` is the target tile count on the smaller side.
+  // Also cap tile count to avoid scheduling thousands of timeouts (performance).
+  let tileSize = Math.max(2, Math.min(width, height) / gridSize);
+  let gridCols = Math.ceil(width / tileSize);
+  let gridRows = Math.ceil(height / tileSize);
+  const maxTiles = 2500;
+  let totalTiles = gridCols * gridRows;
+  if (totalTiles > maxTiles) {
+    const scale = Math.sqrt(totalTiles / maxTiles);
+    tileSize = Math.max(2, tileSize * scale);
+    gridCols = Math.ceil(width / tileSize);
+    gridRows = Math.ceil(height / tileSize);
+    totalTiles = gridCols * gridRows;
+  }
+
+  for (let row = 0; row < gridRows; row++) {
+    for (let col = 0; col < gridCols; col++) {
+      const px = document.createElement('div');
+      px.className = 'pixel';
+      px.style.width = `${tileSize}px`;
+      px.style.height = `${tileSize}px`;
+      px.style.left = `${col * tileSize}px`;
+      px.style.top = `${row * tileSize}px`;
+      pixelWrap.appendChild(px);
+      pixels.push(px);
+    }
+  }
+  document.body.appendChild(overlay);
+
+  // Hide targets instantly while the colored pixels dissolve.
+  // (No fade; keeps the effect simple + fast.)
+  const prevTargetStyles = new Map();
+  for (const el of targetEls) {
+    prevTargetStyles.set(el, { opacity: el.style.opacity, transition: el.style.transition });
+    el.style.opacity = '0';
+    el.style.transition = 'none';
+  }
+
+  // Finer-grained reveal: hide pixels in a random order (dither-style dissolve).
+  const total = pixels.length;
+  const order = Array.from({ length: total }, (_, i) => i);
+  for (let i = total - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = order[i];
+    order[i] = order[j];
+    order[j] = tmp;
+  }
+
+  const palette = ['	rgb(255, 0, 0)', 'rgb(255, 156, 0)', 'rgb(0, 255, 255)'];
+  const pickColor = () => palette[Math.floor(Math.random() * palette.length)];
+
+  // Give each tile a starting color.
+  for (let i = 0; i < pixels.length; i++) {
+    pixels[i].style.backgroundColor = pickColor();
+    pixels[i].style.transition = 'none';
+  }
+
+  let revealed = 0;
+  const startTs = performance.now();
+  const dissolveTick = () => {
+    const elapsed = performance.now() - startTs;
+    const targetCount = Math.min(total, Math.floor((elapsed / durationMs) * total));
+    while (revealed < targetCount) {
+      pixels[order[revealed]].classList.add('is-gone');
+      revealed++;
+    }
+    if (elapsed < durationMs) {
+      requestAnimationFrame(dissolveTick);
+      return;
+    }
+
+    // End: remove overlay and restore target visibility.
+    overlay.remove();
+    for (const el of targetEls) {
+      const prev = prevTargetStyles.get(el);
+      el.style.opacity = (prev && prev.opacity != null) ? prev.opacity : '';
+      el.style.transition = (prev && prev.transition != null) ? prev.transition : '';
+    }
+  };
+  requestAnimationFrame(dissolveTick);
+}
+
 const overallContainer = document.getElementById('overall-leaderboard-container');
 const container = document.getElementById('leaderboard-container');
 const loadingOverlay = document.getElementById('loading-overlay');
 (async function () {
+  let loadingOverlayRemoved = false;
   try {
     const segRes = await fetch('data/segments.geojson');
     if (!segRes.ok) throw new Error('Could not load segments.');
@@ -300,14 +413,91 @@ const loadingOverlay = document.getElementById('loading-overlay');
           }
         }
       }
+
+      // Fade + pixel dissolve reveal over the newly rendered leaderboard.
+      const revealTargets = [];
+      if (overallContainer && overallContainer.innerHTML && overallContainer.innerHTML.trim()) {
+        revealTargets.push(overallContainer);
+      }
+      if (container && container.innerHTML && container.innerHTML.trim()) {
+        revealTargets.push(container);
+      }
+      if (revealTargets.length) {
+        loadingOverlay?.remove();
+        loadingOverlayRemoved = true;
+        runPixelDissolveReveal(revealTargets, { gridSize: 42, durationMs: 240 });
+      }
     }
   } catch (err) {
     console.error(err);
     container.innerHTML = '<p class="error">Could not load leaderboard.</p>';
-  } finally {
     loadingOverlay?.remove();
+    loadingOverlayRemoved = true;
+  } finally {
+    if (!loadingOverlayRemoved) loadingOverlay?.remove();
   }
 })();
+
+function enableMouseDragScroll(containerEl) {
+  if (!containerEl) return;
+
+  let isDown = false;
+  let startY = 0;
+  let startScrollTop = 0;
+  let rafId = 0;
+  let lastY = 0;
+
+  const shouldStartDrag = (target) => {
+    if (!target) return false;
+    const el = target instanceof Element ? target : null;
+    if (!el) return false;
+    if (el.closest('a, button, input, textarea, select, summary')) return false;
+    return true;
+  };
+
+  const onPointerDown = (e) => {
+    if (e.pointerType !== 'mouse') return;
+    if (e.button !== 0) return;
+    if (!shouldStartDrag(e.target)) return;
+
+    isDown = true;
+    lastY = e.clientY;
+    startY = e.clientY;
+    startScrollTop = containerEl.scrollTop;
+    containerEl.classList.add('is-drag-scrolling');
+
+    containerEl.setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+  };
+
+  const onPointerMove = (e) => {
+    if (!isDown) return;
+    lastY = e.clientY;
+
+    if (rafId) return;
+    rafId = requestAnimationFrame(() => {
+      rafId = 0;
+      const dy = lastY - startY;
+      containerEl.scrollTop = startScrollTop - dy;
+    });
+  };
+
+  const stopDrag = () => {
+    isDown = false;
+    containerEl.classList.remove('is-drag-scrolling');
+  };
+
+  containerEl.addEventListener('pointerdown', onPointerDown);
+  containerEl.addEventListener('pointermove', onPointerMove);
+  containerEl.addEventListener('pointerup', stopDrag);
+  containerEl.addEventListener('pointercancel', stopDrag);
+  containerEl.addEventListener('pointerleave', stopDrag);
+}
+
+if (document.body?.classList?.contains('leaderboard-page')) {
+  const scrollEl = document.getElementById('leaderboard-scroll');
+  enableMouseDragScroll(scrollEl || document.body);
+}
 
 const infoOverlay = document.getElementById('leaderboard-info');
 const infoCloseBtn = infoOverlay?.querySelector('.leaderboard-info-close');
