@@ -126,6 +126,33 @@
   text-align: center;
 }
 
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+.loading-overlay-text {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  text-transform: lowercase;
+}
+
+.loading-overlay img {
+  width: 420px;
+  max-width: 80vw;
+  height: auto;
+  image-rendering: pixelated;
+}
+
 .leaderboard-page .error {
   color: var(--color-error);
   padding: 1rem;

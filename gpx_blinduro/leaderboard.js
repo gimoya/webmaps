@@ -252,6 +252,7 @@ function renderOverallLeaderboard(segmentData, allSegments) {
 
 const overallContainer = document.getElementById('overall-leaderboard-container');
 const container = document.getElementById('leaderboard-container');
+const loadingOverlay = document.getElementById('loading-overlay');
 (async function () {
   try {
     const segRes = await fetch('data/segments.geojson');
@@ -303,6 +304,8 @@ const container = document.getElementById('leaderboard-container');
   } catch (err) {
     console.error(err);
     container.innerHTML = '<p class="error">Could not load leaderboard.</p>';
+  } finally {
+    loadingOverlay?.remove();
   }
 })();
 
