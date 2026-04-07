@@ -925,12 +925,12 @@ body.map-zoom-very-low .blinduro-marker span {
   line-height: 1.5;
 }
 
-.info-faq dd a {
+.info-faq dt a {
   color: var(--color-accent);
   text-decoration: none;
 }
 
-.info-faq dd a:hover {
+.info-faq dt a:hover {
   color: var(--color-accent-hover);
   text-decoration: underline;
 }

@@ -36,15 +36,18 @@ body.leaderboard-page {
 }
 
 .leaderboard-page .back-link {
-  display: inline-block;
-  margin-bottom: 1.5rem;
-  color: var(--color-accent);
-  text-decoration: none;
+  font-family: var(--font-family-heading);
   font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-success);
+  margin: 1rem 0 0.35rem;
+  text-decoration: none;
 }
+
 
 .leaderboard-page .back-link:hover {
   color: var(--color-accent-hover);
+  text-decoration: underline;
 }
 
 .leaderboard-page .level-group {
