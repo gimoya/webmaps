@@ -42,9 +42,7 @@ var mapbox_Attr = 'Tiles &copy; <a href="google.com">Google Maps</a>, <a href="o
 
 var mapbox_satelliteUrl = '//mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
 
-var maptiler_key = 'luZxg9l38dVBSQGjrelS';
-
-var map_topoUrl = `https://api.maptiler.com/maps/outdoor-v4/{z}/{x}/{y}.png?key=${maptiler_key}`;
+var map_topoUrl = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
 
 var mapbox_satelliteLayer = L.tileLayer(mapbox_satelliteUrl, {
   attribution: mapbox_Attr,
@@ -52,11 +50,10 @@ var mapbox_satelliteLayer = L.tileLayer(mapbox_satelliteUrl, {
 });
 
 var map_topoLayer = L.tileLayer(map_topoUrl, {
-  tileSize: 512,
-  zoomOffset: -1,
   minZoom: 1,
-  maxZoom: 18,
-  attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>',
+  maxZoom: 17,
+  attribution:
+    '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors, <a href="https://viewfinderpanoramas.org" target="_blank">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org" target="_blank">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank">CC-BY-SA</a>)',
   crossOrigin: true
 });
 
