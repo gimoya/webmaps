@@ -43,7 +43,8 @@ const ZOOM_FLAGS_SMALL = 12;
 const ZOOM_LABELS_HIDE = 13;
 
 const FIT_BOUNDS_OPTS = { padding: [40, 40], maxZoom: 16 };
-const MAP_TILE_URL = 'https://api.maptiler.com/maps/topo-v2/{z}/{x}/{y}.png?key=luZxg9l38dVBSQGjrelS';
+/** OpenTopoMap tiles (no API key); subdomains a–c. Max zoom 17 on tile server. */
+const MAP_TILE_URL = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
 const TRACK_TOOLTIP_OPTS = { permanent: true, direction: 'top', offset: [0, -12], className: 'blinduro-segment-label blinduro-track-label' };
 const TRACK_BOUNDS_STYLE = {
   color: '#4a4a52',
@@ -1466,9 +1467,13 @@ function initMap() {
   const center = starts[0]?.pt ?? ends[0]?.pt ?? firstTrackCoords?.[0] ?? [0, 0];
   map = L.map('map').setView(center, 14);
   L.tileLayer(MAP_TILE_URL, {
-    tileSize: 512,
-    zoomOffset: -1,
-    attribution: '© <a href="https://www.maptiler.com/copyright/">MapTiler</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    maxZoom: 17,
+    subdomains: 'abc',
+    attribution:
+      'Map: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> ' +
+      '(<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>), ' +
+      'data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, ' +
+      '<a href="http://viewfinderpanoramas.org">SRTM</a>'
   }).addTo(map);
   L.control.locate({
     position: 'topleft',
