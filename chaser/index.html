@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chaser</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+  <link href="https://fonts.cdnfonts.com/css/raster-forge" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol@0.76.0/dist/L.Control.Locate.min.css" crossorigin="">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-layout">
+    <div id="map"></div>
+
+    <aside class="unified-panel" id="unified-panel">
+      <div class="unified-panel-scroll">
+        <header class="panel-header">
+          <h1>Chaser</h1>
+          <h2>Live multi-user map</h2>
+        </header>
+
+        <section class="panel-section">
+          <div class="status-row">
+            <div class="status-label">Connection</div>
+            <div id="connection-status" class="status-pill status-offline">offline</div>
+          </div>
+          <div class="status-row">
+            <div class="status-label">Writer interval</div>
+            <div class="status-value">10s</div>
+          </div>
+          <div class="status-row">
+            <div class="status-label">Stale timeout</div>
+            <div class="status-value">60s</div>
+          </div>
+        </section>
+
+        <section class="panel-section panel-controls">
+          <input id="display-name" type="text" maxlength="30" placeholder="Display name">
+          <button id="start-share" type="button">Start sharing</button>
+          <button id="stop-share" type="button" class="ghost" disabled>Stop sharing</button>
+        </section>
+
+        <section class="panel-section">
+          <h3>Active users</h3>
+          <ul id="user-list" class="user-list"></ul>
+        </section>
+
+        <section class="panel-section panel-footnote">
+          Configure Firebase in <code>app.js</code> via <code>window.CHASER_FIREBASE_CONFIG</code>.
+        </section>
+      </div>
+    </aside>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.locatecontrol@0.76.0/dist/L.Control.Locate.min.js" crossorigin=""></script>
+  <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-compat.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

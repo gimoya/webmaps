@@ -86,7 +86,7 @@ var centerView = L.easyButton({
 	icon: '<i class="fas fa-compress"></i>',
 	title: 'Center View',		
 	onClick: function(control) {
-	map.fitBounds(trails_json.getBounds(), {maxZoom: 16});
+	map.fitBounds(trails_json.getBounds(), {maxZoom: 12});
 	}
   }]
 });	
@@ -443,10 +443,7 @@ $.getJSON('my_trails_z.geojson', function(json) {
 		layer.bindPopup(popupContent, {closeOnClick: true, className: 'trailPopupClass'});
 	});
 	
-	// Center map on trails and set zoom level
-	var bounds = trails_json.getBounds();
-	var center = bounds.getCenter();
-	map.setView(center, 16);
+	map.fitBounds(trails_json.getBounds());
 });
 
 /*** Add event listener for click events on document ***/

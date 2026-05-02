@@ -87,6 +87,7 @@ main {
 
 .info-wrapper {
     position: absolute;
+    background-color: rgba(255, 255, 255, 0.5);
     top: 18vh;
     left: 10px;
     z-index: 1000;
@@ -107,7 +108,7 @@ main {
     background-color: rgb(255, 255, 255);
     overflow-y: auto;
     padding: 20px;
-    border: 12px solid rgb(255, 255, 255);
+    border: 6px solid rgb(255, 255, 255);
     border-radius: 3px;
     padding-bottom: 60px;
     scrollbar-width: thin;
@@ -138,6 +139,13 @@ main {
 
 .legend-label:hover {
     background-color: #bbbbbb;
+}
+
+/* Landscape: tab sits tight on panel edge at fixed -90px; nudge outward without affecting portrait */
+@media (orientation: landscape) {
+    .legend-label {
+        right: min(-11vw, -128px);
+    }
 }
 
 #info-div > th, td {
