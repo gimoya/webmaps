@@ -7,17 +7,18 @@
 # =============================================================================
 
 echo "Starting reprojection process..."
-echo "Converting my_trails_z_epsg3857.gpkg to my_trails_z.geojson"
+echo "Converting my_trails_z_epsg3857.gpkg to data/my_trails_z.geojson"
 echo ""
 
+mkdir -p data
 # Run the reprojection
-ogr2ogr my_trails_z.geojson work/my_trails_z_epsg3857.gpkg -s_srs EPSG:900913 -t_srs EPSG:4326
+ogr2ogr data/my_trails_z.geojson work/my_trails_z_epsg3857.gpkg -s_srs EPSG:900913 -t_srs EPSG:4326
 
 # Check if successful
 if [ $? -eq 0 ]; then
     echo ""
     echo "SUCCESS: Reprojection to WGS84 completed!"
-    echo "Output file: my_trails_z.geojson"
+    echo "Output file: data/my_trails_z.geojson"
 else
     echo ""
     echo "ERROR: Reprojection failed!"

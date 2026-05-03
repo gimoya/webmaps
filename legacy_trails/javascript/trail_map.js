@@ -36,16 +36,93 @@ var map = L.map('map', {
   attributionControl: false
 });
 
+/*** URL query: ?z= or ?zoom=, ?lat=, ?lng= or ?lon= — shareable view; synced on pan/zoom ***/
+var _legacyUrlSyncTimer = null;
+var _legacyUrlSyncSuppressed = false;
+/** Default map center/zoom when URL has no lat/lng/z (new loads / shared bookmark). */
+var LEGACY_DEFAULT_START_VIEW = { lat: 47.24358, lng: 11.45393, zoom: 11 };
+
+function legacyParseUrlMapView() {
+	var params = new URLSearchParams(window.location.search);
+	var zRaw = params.get('z');
+	if (zRaw == null || zRaw === '') zRaw = params.get('zoom');
+	var lat = parseFloat(params.get('lat'));
+	var lng = parseFloat(params.get('lng'));
+	if (lng !== lng) lng = parseFloat(params.get('lon'));
+	if (zRaw == null || zRaw === '' || lat !== lat || lng !== lng) return null;
+	var z = parseInt(zRaw, 10);
+	if (z !== z) return null;
+	if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+	return { lat: lat, lng: lng, zoom: z };
+}
+
+function legacyClampZoom(z) {
+	var minZ = map.getMinZoom();
+	var maxZ = map.getMaxZoom();
+	if (!isFinite(minZ)) minZ = 1;
+	if (!isFinite(maxZ)) maxZ = 18;
+	return Math.max(minZ, Math.min(maxZ, z));
+}
+
+function legacyWriteUrlFromMap() {
+	if (_legacyUrlSyncSuppressed) return;
+	try {
+		var c = map.getCenter();
+		var z = map.getZoom();
+		var u = new URL(window.location.href);
+		u.searchParams.set('lat', c.lat.toFixed(5));
+		u.searchParams.set('lng', c.lng.toFixed(5));
+		u.searchParams.set('z', String(z));
+		history.replaceState(null, '', u.pathname + u.search + u.hash);
+	} catch (e) { /* opaque URL or no history */ }
+}
+
+function legacyScheduleUrlSync() {
+	if (_legacyUrlSyncSuppressed) return;
+	if (_legacyUrlSyncTimer) clearTimeout(_legacyUrlSyncTimer);
+	_legacyUrlSyncTimer = setTimeout(function () {
+		_legacyUrlSyncTimer = null;
+		legacyWriteUrlFromMap();
+	}, 300);
+}
+
+function legacyApplyParsedView(view, options) {
+	options = options || {};
+	if (!view) return false;
+	var z = legacyClampZoom(view.zoom);
+	_legacyUrlSyncSuppressed = true;
+	map.setView([view.lat, view.lng], z, { animate: options.animate !== false });
+	setTimeout(function () {
+		_legacyUrlSyncSuppressed = false;
+		if (!options.skipUrl) legacyWriteUrlFromMap();
+	}, 50);
+	return true;
+}
+
+window.legacyTrailsMapHooks = {
+	parseViewFromUrl: legacyParseUrlMapView,
+	applyView: function (lat, lng, zoom, opts) {
+		return legacyApplyParsedView({ lat: lat, lng: lng, zoom: zoom }, opts || {});
+	},
+	refreshUrlFromMap: function () {
+		legacyWriteUrlFromMap();
+	},
+	getMap: function () {
+		return map;
+	},
+	defaultStartView: LEGACY_DEFAULT_START_VIEW
+};
+
 /*** Set Up Base Map Layers ***/
 
-var mapbox_Attr = 'Tiles &copy; <a href="google.com">Google Maps</a>, <a href="openstreetmap.org">OSM</a> | Design &copy; <a href="http://www.tiroltrailhead.com/guiding">Tirol Trailhead</a>';  
+var map_Attr = 'Tiles &copy; <a href="google.com">Google Maps</a>, <a href="openstreetmap.org">OSM</a> | Design &copy; <a href="http://www.tiroltrailhead.com/guiding">Tirol Trailhead</a>';  
 
-var mapbox_satelliteUrl = '//mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
+var map_satelliteUrl = '//mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
 
 var map_topoUrl = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
 
-var mapbox_satelliteLayer = L.tileLayer(mapbox_satelliteUrl, {
-  attribution: mapbox_Attr,
+var map_satelliteLayer = L.tileLayer(map_satelliteUrl, {
+  attribution: map_Attr,
   maxZoom: 18,  
 });
 
@@ -58,7 +135,7 @@ var map_topoLayer = L.tileLayer(map_topoUrl, {
 });
 
 /*** Setting Default Base Map ***/
-mapbox_satelliteLayer.addTo(map);	
+map_topoLayer.addTo(map);	
 
 /*** Strava TMS not working 
 var strava_proxyUrl = 'https://proxy.nakarte.me/https/heatmap-external-a.strava.com/tiles-auth/ride/hot/{z}/{x}/{y}.png';
@@ -101,7 +178,7 @@ var toggle = L.easyButton({
 	icon: '<span class="custom-control">S</span>',
 	title: 'Hintergrundkarte Luftbild/Topo',
 	onClick: function(control) {
-	  map.removeLayer(mapbox_satelliteLayer);
+	  map.removeLayer(map_satelliteLayer);
 	  map.addLayer(map_topoLayer);
 	  control.state('basemap-outdoor');
 	}
@@ -111,7 +188,7 @@ var toggle = L.easyButton({
 	title: 'Hintergrundkarte Topo/Luftbild',		
 	onClick: function(control) {
 	  map.removeLayer(map_topoLayer);
-	  map.addLayer(mapbox_satelliteLayer);
+	  map.addLayer(map_satelliteLayer);
 	  control.state('basemap-satellite');
 	}
   }]
@@ -215,8 +292,14 @@ function updateTrailsInView() {
 
 
 // Add event listeners for map movement
-map.on('moveend', updateTrailsInView);
-map.on('zoomend', updateTrailsInView);
+map.on('moveend', function () {
+	updateTrailsInView();
+	legacyScheduleUrlSync();
+});
+map.on('zoomend', function () {
+	updateTrailsInView();
+	legacyScheduleUrlSync();
+});
 
 // Initial update
 updateTrailsInView();
@@ -341,7 +424,7 @@ map.getPane('ptsPane').style.zIndex = 600;
 
 /*** Add Trails ***/
 
-$.getJSON('my_trails_z.geojson', function(json) {
+$.getJSON('data/my_trails_z.geojson', function(json) {
 	// Filter out trails where HIDE = 1
 	json.features = json.features.filter(feature => feature.properties.HIDE !== 1);
 	
@@ -425,25 +508,34 @@ $.getJSON('my_trails_z.geojson', function(json) {
 		gpxLink.href = window.URL.createObjectURL(bb);
 		
 		var popupContent = 
-		'<p><div class="pop_cont_name">' + feature.properties.name + '</div></p>'
-		+ '<div class="pop_cont_text">' + feature.properties.Trail_Text + '</div>' 
-		+ '<div class="pop_gpx_text">🤝 ' +  gpxLink.outerHTML + ' 🚩'+ '</div>'
-		+ '<div class="kofi_reminder">'
-		+ '<p>🚴 Dein GPX-Track wird heruntergeladen..</p>'
-		+ '<p>💲 Die Downloads auf dieser Seite sind gratis, aber der Betrieb dieser <strong>Webseite kostet Geld!</strong></p>'
-		+ '<p>🤝 Mit einem kleinen Beitrag für den GPX-Download kannst Du helfen!</p>'
-		+ '<p>💓 Bitte haltet das Projekt am Leben!</p>'
-		+ '<div class="kofi_button"><a href="https://ko-fi.com/C1C74GQ0I" target="_blank">'
-		+ 	'<img id="kofi_img_div" class="kofi_img" src="./images/kofi_s_logo_nolabel.png">'
-		+	'<button type="button">Support!👋</button></a>'
-		+ '</div>'
-		+ '</div>'
-		+ '</div>';
-		
+			'<p><div class="pop_cont_name">' + feature.properties.name + '</div></p>' +
+			'<div class="pop_cont_text">' + feature.properties.Trail_Text + '</div>' +
+			'<div class="pop_gpx_text">🤝 ' + gpxLink.outerHTML + ' 🚩' + '</div>' +
+			'<div class="kofi_reminder">' +
+				'<p>👾 Dein GPX-Track wird heruntergeladen..</p>' +
+				'<hr>' +
+				'<p>GPX-Downloads auf dieser Seite sind gratis, aber der Betrieb dieser <strong>Webseite kostet Geld!</strong></p>' +
+				'<hr>' +
+				'<p>🤝 Mit einem kleinen 💲 Beitrag für den GPX-Download kannst Du helfen 💓 das Projekt am Leben zu halten!</p>' +
+				'<hr>' +
+				'<div class="kofi_button"><a href="https://ko-fi.com/C1C74GQ0I" target="_blank">' +
+					'<img id="kofi_img_div" class="kofi_img" src="./images/kofi_s_logo_nolabel.png">' +
+					'<button type="button">Support!👋</button></a>' +
+				'</div>' +
+			'</div>';
 		layer.bindPopup(popupContent, {closeOnClick: true, className: 'trailPopupClass'});
 	});
 	
-	map.fitBounds(trails_json.getBounds());
+	var urlView = legacyParseUrlMapView();
+	/* Valid ?lat=&lng=&z= (or zoom/lon) wins; anything else uses LEGACY_DEFAULT_START_VIEW */
+	var startView = urlView || LEGACY_DEFAULT_START_VIEW;
+	legacyApplyParsedView(startView, { animate: false });
+	if (urlView) {
+		window.dispatchEvent(new CustomEvent('legacytrails:urlview', { detail: urlView }));
+	}
+	window.dispatchEvent(new Event('legacytrails:mapready'));
+}).fail(function () {
+	window.dispatchEvent(new Event('legacytrails:mapready'));
 });
 
 /*** Add event listener for click events on document ***/

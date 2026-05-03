@@ -1,5 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Trade+Winds&display=swap');
 
+/*** Initial load screen (hidden after window load + map/trails ready) ***/
+#page-loader {
+    transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+.page-loader-lottie {
+    width: 88px;
+    height: 88px;
+    max-width: 24vmin;
+    max-height: 24vmin;
+}
+html.dom-ready #page-loader {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
 /*** General ***/
 
 html, body {
@@ -8,6 +24,17 @@ html, body {
     margin: 0;
     padding: 0;
     overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Allow selection on controls and real links only */
+a, button, input, textarea, select, option,
+[href],
+[role="button"],
+[contenteditable="true"] {
+    -webkit-user-select: auto;
+    user-select: auto;
 }
 
 body {
@@ -28,7 +55,7 @@ header {
     right: 0px;
     bottom: auto;
     z-index: 1001;
-    background: rgba(115, 115, 115, 0.55);
+    background: rgba(197, 195, 195, 0.33);
     padding-left: 10px;
     padding-bottom: 5px;
     text-align: left;
@@ -108,7 +135,7 @@ main {
     background-color: rgb(255, 255, 255);
     overflow-y: auto;
     padding: 20px;
-    border: 6px solid rgb(255, 255, 255);
+    border: 9px solid rgb(255, 255, 255);
     border-radius: 3px;
     padding-bottom: 60px;
     scrollbar-width: thin;
@@ -144,7 +171,7 @@ main {
 /* Landscape: tab sits tight on panel edge at fixed -90px; nudge outward without affecting portrait */
 @media (orientation: landscape) {
     .legend-label {
-        right: min(-11vw, -128px);
+        right: min(-6.5vw, -95px);
     }
 }
 
