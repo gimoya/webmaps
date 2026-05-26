@@ -24,6 +24,7 @@ const urlsToCache = [
 
 // Install event - cache static resources for faster loading
 self.addEventListener('install', function(event) {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) {
@@ -95,6 +96,7 @@ function isMapTile(url) {
   return url.includes('tile') || 
          url.includes('google.com/vt') || 
          url.includes('opentopomap') ||
+         url.includes('openmaps.fr') ||
          url.includes('maptiler.com/maps') ||
          url.includes('/{z}/') ||
          /\/(\d+)\/(\d+)\/(\d+)/.test(url); // Matches tile coordinate pattern
@@ -176,7 +178,7 @@ self.addEventListener('fetch', function(event) {
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and claim all clients immediately
 self.addEventListener('activate', function(event) {
   event.waitUntil(
     caches.keys().then(function(cacheNames) {
@@ -188,6 +190,8 @@ self.addEventListener('activate', function(event) {
           }
         })
       );
+    }).then(function() {
+      return self.clients.claim();
     })
   );
 });

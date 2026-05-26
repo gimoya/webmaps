@@ -119,7 +119,7 @@ var map_Attr = 'Tiles &copy; <a href="google.com">Google Maps</a>, <a href="open
 
 var map_satelliteUrl = '//mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
 
-var map_topoUrl = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
+var map_topoUrl = 'https://tile.openmaps.fr/openhikingmap/{z}/{x}/{y}.png';
 
 var map_satelliteLayer = L.tileLayer(map_satelliteUrl, {
   attribution: map_Attr,
@@ -130,7 +130,10 @@ var map_topoLayer = L.tileLayer(map_topoUrl, {
   minZoom: 1,
   maxZoom: 17,
   attribution:
-    '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors, <a href="https://viewfinderpanoramas.org" target="_blank">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org" target="_blank">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank">CC-BY-SA</a>)',
+    '&copy; <a href="https://wiki.openstreetmap.org/wiki/Hiking/openhikingmap" target="_blank">OpenHikingMap</a> '
+    + '<a href="https://liberapay.com/openmaps.fr/donate" target="_blank">&#10084;&#65039; Donation</a> '
+    + '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> '
+    + '| <a href="http://www.tiroltrailhead.com/guiding" target="_blank">Tirol Trailhead</a>',
   crossOrigin: true
 });
 
@@ -174,22 +177,22 @@ centerView.addTo(map);
 var toggle = L.easyButton({
   position: 'topright',
   states: [{
-	stateName: 'basemap-satellite',
+	stateName: 'basemap-topo',
 	icon: '<span class="custom-control">S</span>',
-	title: 'Hintergrundkarte Luftbild/Topo',
-	onClick: function(control) {
-	  map.removeLayer(map_satelliteLayer);
-	  map.addLayer(map_topoLayer);
-	  control.state('basemap-outdoor');
-	}
-  }, {
-	stateName: 'basemap-outdoor',
-	icon: '<span class="custom-control">T</span>',
-	title: 'Hintergrundkarte Topo/Luftbild',		
+	title: 'Hintergrundkarte Luftbild',
 	onClick: function(control) {
 	  map.removeLayer(map_topoLayer);
 	  map.addLayer(map_satelliteLayer);
 	  control.state('basemap-satellite');
+	}
+  }, {
+	stateName: 'basemap-satellite',
+	icon: '<span class="custom-control">T</span>',
+	title: 'Hintergrundkarte Topo',
+	onClick: function(control) {
+	  map.removeLayer(map_satelliteLayer);
+	  map.addLayer(map_topoLayer);
+	  control.state('basemap-topo');
 	}
   }]
 });
