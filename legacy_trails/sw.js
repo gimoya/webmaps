@@ -121,26 +121,22 @@ self.addEventListener('fetch', function(event) {
           const response = await fetch(event.request);
           
           if (response.ok) {
-            // Clone response to cache
-            const responseToCache = response.clone();
-            
-            // Add timestamp header for LRU eviction
-            const headers = new Headers(responseToCache.headers);
+            const body = await response.clone().arrayBuffer();
+            const responseSize = body.byteLength;
+
+            const headers = new Headers(response.headers);
             headers.set('sw-cache-time', Date.now().toString());
-            const modifiedResponse = new Response(responseToCache.body, {
-              status: responseToCache.status,
-              statusText: responseToCache.statusText,
+            const modifiedResponse = new Response(body, {
+              status: response.status,
+              statusText: response.statusText,
               headers: headers
             });
-            
-            // Check cache size before adding
+
             const currentSize = await getCacheSize(TILE_CACHE_NAME);
-            const responseSize = (await response.blob()).size;
-            
+
             if (currentSize + responseSize <= MAX_CACHE_SIZE) {
               await cache.put(event.request, modifiedResponse);
             } else {
-              // Evict old tiles and try again
               await evictOldTiles();
               const newSize = await getCacheSize(TILE_CACHE_NAME);
               if (newSize + responseSize <= MAX_CACHE_SIZE) {
@@ -148,7 +144,7 @@ self.addEventListener('fetch', function(event) {
               }
             }
           }
-          
+
           return response;
         } catch (error) {
           console.error('Failed to fetch tile:', error);
