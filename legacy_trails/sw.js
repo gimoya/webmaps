@@ -1,5 +1,5 @@
 // Service Worker for Legacy Trails Tirol PWA - Performance Caching with Tile Cache Limit
-const CACHE_NAME = 'legacy-trails-v3';
+const CACHE_NAME = 'legacy-trails-v4';
 const TILE_CACHE_NAME = 'legacy-trails-tiles';
 const MAX_CACHE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
 
@@ -91,6 +91,29 @@ async function evictOldTiles() {
   }
 }
 
+function isLocalAppUrl(url) {
+  try {
+    return new URL(url).origin === self.location.origin && !isMapTile(url);
+  } catch (e) {
+    return false;
+  }
+}
+
+// Network-first: fresh after deploy when online; cache fallback for offline use.
+function networkFirst(request, cacheName) {
+  return fetch(request).then(function(response) {
+    if (response && response.ok) {
+      var copy = response.clone();
+      caches.open(cacheName).then(function(cache) {
+        cache.put(request, copy);
+      });
+    }
+    return response;
+  }).catch(function() {
+    return caches.match(request);
+  });
+}
+
 // Check if URL is a map tile
 function isMapTile(url) {
   return url.includes('tile') || 
@@ -164,14 +187,11 @@ self.addEventListener('fetch', function(event) {
     return fetch(event.request);
   }
   
-  // For local resources, try cache first, then network
-  event.respondWith(
-    caches.match(event.request)
-      .then(function(response) {
-        return response || fetch(event.request);
-      }
-    )
-  );
+  // Local app files: network-first so repo updates reach all users when online
+  if (isLocalAppUrl(url)) {
+    event.respondWith(networkFirst(event.request, CACHE_NAME));
+    return;
+  }
 });
 
 // Activate event - clean up old caches and claim all clients immediately
