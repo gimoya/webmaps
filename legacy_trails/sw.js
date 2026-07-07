@@ -10,6 +10,7 @@ const urlsToCache = [
   './css/leaflet.elevation-0.0.4.css',
   './css/L.Control.Locate.min.css',
   './javascript/trail_map.js',
+  './javascript/page_loader_lottie.js',
   './javascript/leaflet.elevation-0.0.4.min.js',
   './javascript/leaflet.togpx.js',
   './javascript/leaflet.textpath.js',

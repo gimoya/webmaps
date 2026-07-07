@@ -56,58 +56,24 @@
 			<div id="lottie-loader" class="page-loader-lottie" aria-hidden="true"></div>
 		</div>
 		<script src="https://unpkg.com/lottie-web@5.12.2/build/player/lottie.min.js"></script>
-		<script>
-			(function () {
-				var t0 = performance.now();
-				var minShowMs = 1600;
-				var flags = { load: false, map: false, lottie: false };
-				var finished = false;
-				var el = document.getElementById('lottie-loader');
-				if (el && typeof lottie !== 'undefined') {
-					var anim = lottie.loadAnimation({
-						container: el,
-						renderer: 'svg',
-						loop: true,
-						autoplay: true,
-						path: encodeURI('./data/Loading Circle With Dots.json')
-					});
-					window._pageLoaderLottie = anim;
-					function lottieDone() {
-						flags.lottie = true;
-						tryFinish();
-					}
-					anim.addEventListener('data_ready', lottieDone);
-					anim.addEventListener('data_failed', lottieDone);
-				} else {
-					flags.lottie = true;
-				}
-				function finish() {
-					if (finished) return;
-					finished = true;
-					var wait = Math.max(0, minShowMs - (performance.now() - t0));
-					setTimeout(function () {
-						if (window._pageLoaderLottie) {
-							window._pageLoaderLottie.destroy();
-							window._pageLoaderLottie = null;
-						}
-						document.documentElement.classList.add('dom-ready');
-						var l = document.getElementById('page-loader');
-						if (l) l.setAttribute('aria-busy', 'false');
-					}, wait);
-				}
-				function tryFinish() {
-					if (flags.load && flags.map && flags.lottie) finish();
-				}
-				window.addEventListener('load', function () { flags.load = true; tryFinish(); });
-				window.addEventListener('legacytrails:mapready', function () { flags.map = true; tryFinish(); });
-				setTimeout(function () {
-					if (!finished) {
-						flags.load = flags.map = true;
-						finish();
-					}
-				}, 12000);
-			})();
-		</script>
+		<script type="text/javascript" src="javascript/page_loader_lottie.js"></script>
+		<div id="trails-welcome-overlay" class="trails-welcome-overlay is-hidden" hidden aria-hidden="true" role="dialog" aria-labelledby="trails-welcome-title">
+			<div class="trails-welcome-frame">
+				<button type="button" class="legacy-panel-close" aria-label="Schließen">&times;</button>
+				<div class="trails-welcome-box">
+					<h2 id="trails-welcome-title">Legacy💎Trails Tirol</h2>
+					<p class="trails-welcome-count"></p>
+					<div class="legacy-panel-rule" aria-hidden="true"></div>
+					<p>..zuletzt hinzugefügte Trails:</p>
+					<ul class="trails-welcome-list"></ul>
+					<div class="legacy-panel-rule" aria-hidden="true"></div>
+					<div class="trails-welcome-donate">
+						<p class="trails-welcome-donate-text">🤝 Diese Karte ist gratis — mit einem kleinen Beitrag hilfst du, das Projekt am Leben zu halten!</p>
+						<a href="https://ko-fi.com/C1C74GQ0I" class="legacy-action-btn" target="_blank" rel="noopener noreferrer">💓 SUPPORT! 👋</a>
+					</div>
+				</div>
+			</div>
+		</div>
 		<!-- Hidden checkbox for CSS-only info panel toggle -->
 		<input type="checkbox" id="info-toggle">
 		
@@ -116,7 +82,8 @@
 		</header>
 		<main>
 			<div class="info-wrapper">
-				<div id="info-div">
+				<div class="legacy-panel-frame info-panel-frame">
+				<div id="info-div" class="legacy-panel-inner">
 					<div class="legend-content">			
 					<h2>Legende & Trails &#8595</h2>
 					<hr>
@@ -264,6 +231,7 @@
 				</div>
 				<div class="trails-list">
 					<h2>Trails im Ausschnitt</h2>
+				</div>
 				</div>
 				</div>
 				<button class="legend-label" onclick="document.getElementById('info-toggle').click()">Legende & Trails</button>

@@ -115,25 +115,21 @@ window.legacyTrailsMapHooks = {
 
 /*** Set Up Base Map Layers ***/
 
-var map_Attr = 'Tiles &copy; <a href="google.com">Google Maps</a>, <a href="openstreetmap.org">OSM</a> | Design &copy; <a href="http://www.tiroltrailhead.com/guiding">Tirol Trailhead</a>';  
-
 var map_satelliteUrl = '//mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
 
 var map_topoUrl = 'https://tile.openmaps.fr/openhikingmap/{z}/{x}/{y}.png';
 
 var map_satelliteLayer = L.tileLayer(map_satelliteUrl, {
-  attribution: map_Attr,
-  maxZoom: 18,  
+  attribution: '&copy; <a href="https://www.google.com/maps">Google</a>',
+  maxZoom: 18,
 });
 
 var map_topoLayer = L.tileLayer(map_topoUrl, {
   minZoom: 1,
   maxZoom: 17,
   attribution:
-    '&copy; <a href="https://wiki.openstreetmap.org/wiki/Hiking/openhikingmap" target="_blank">OpenHikingMap</a> '
-    + '<a href="https://liberapay.com/openmaps.fr/donate" target="_blank">&#10084;&#65039; Donation</a> '
-    + '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> '
-    + '| <a href="http://www.tiroltrailhead.com/guiding" target="_blank">Tirol Trailhead</a>',
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> · '
+    + '<a href="https://wiki.openstreetmap.org/wiki/Hiking/openhikingmap">OpenHiking</a>',
   crossOrigin: true
 });
 
@@ -151,8 +147,10 @@ var strava_Layer = L.tileLayer(strava_proxyUrl, {
 
 /*** Map Selection and Zoom Controls ***/
 
-/* Source Map Attribution */
-new L.control.attribution({position: 'bottomright'}).addTo(map);
+/* Source Map Attribution — Tirol Trailhead once, layer credits swap on basemap toggle */
+var attribution = L.control.attribution({ position: 'bottomright', prefix: false });
+attribution.addTo(map);
+attribution.addAttribution('<a href="https://tiroltrailhead.com/guiding">Tirol Trailhead</a>');
 
 /* Zoom */
 new L.Control.Zoom({ position: 'topright' }).addTo(map);
@@ -226,7 +224,7 @@ var el = L.control.elevation({
 			interpolation: "linear", //see https://github.com/mbostock/d3/wiki/SVG-Shapes#wiki-area_interpolate
 			hoverNumber: {
 				decimalsX: 2, //decimals on distance (always in km)
-				decimalsY: 0, //deciamls on hehttps://www.npmjs.com/package/leaflet.coordinatesight (always in m)
+				decimalsY: 0, //decimals on height (always in m)
 				formatter: undefined //custom formatter function may be injected
 			},
 			xTicks: undefined, //number of ticks in x axis, calculated by default according to width
@@ -302,6 +300,10 @@ map.on('moveend', function () {
 map.on('zoomend', function () {
 	updateTrailsInView();
 	legacyScheduleUrlSync();
+});
+
+map.on('popupopen', function (e) {
+	legacyMountPopupCloseInFrame(e.popup);
 });
 
 // Initial update
@@ -383,6 +385,36 @@ function select (layer) {  // ..use inside onClick Function doClickStuff() to se
     }
 }
 
+function legacyLinkTrailLayers(clickLayer, trailsLayer) {
+	var clickByName = {};
+	clickLayer.eachLayer(function (layer) {
+		clickByName[layer.feature.properties.name] = layer;
+	});
+	trailsLayer.eachLayer(function (layer) {
+		var clickLyr = clickByName[layer.feature.properties.name];
+		if (clickLyr) {
+			layer._clickLayer = clickLyr;
+		}
+	});
+}
+
+function legacyFocusTrailByName(trailName) {
+	if (!trails_json || !trailName) return;
+	trails_json.eachLayer(function (layer) {
+		if (layer.feature.properties.name !== trailName) return;
+		map.fitBounds(layer.getBounds());
+		var clickLayer = layer._clickLayer;
+		if (clickLayer) {
+			var center = layer.getBounds().getCenter();
+			clickLayer.fire('click', {
+				latlng: center,
+				layer: clickLayer,
+				target: clickLayer
+			});
+		}
+	});
+}
+
 function doClickStuff(e) {
     lyr = e.target;
     ftr = e.target.feature;
@@ -425,6 +457,119 @@ map.createPane('ptsPane');
 map.getPane('ptsPane').style.zIndex = 600;
 
 
+/*** Session welcome overlay ***/
+// Dismiss hides panel until next full page load (F5 / reopen URL). Old builds used sessionStorage key legacy_trails_welcome_dismissed.
+
+var LEGACY_WELCOME_DISMISS_MODE = 'per_load';
+var _legacyWelcomeDismissed = false;
+
+function legacyWhenDomReady(callback) {
+	if (document.documentElement.classList.contains('dom-ready')) {
+		callback();
+		return;
+	}
+	var observer = new MutationObserver(function () {
+		if (document.documentElement.classList.contains('dom-ready')) {
+			observer.disconnect();
+			callback();
+		}
+	});
+	observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+}
+
+function legacySetKofiFloatingVisible(visible) {
+	document.documentElement.classList.toggle('legacy-welcome-open', !visible);
+}
+
+function legacyMountPopupCloseInFrame(popup) {
+	var el = popup && popup.getElement();
+	if (!el || !el.classList.contains('trailPopupClass')) {
+		return;
+	}
+	var wrapper = el.querySelector('.leaflet-popup-content-wrapper');
+	var closeBtn = el.querySelector('.leaflet-popup-close-button');
+	if (!wrapper || !closeBtn) {
+		return;
+	}
+	closeBtn.classList.add('legacy-panel-close');
+	if (closeBtn.parentElement !== wrapper) {
+		wrapper.insertBefore(closeBtn, wrapper.firstChild);
+	}
+}
+
+function legacyDismissWelcomePanel(overlay) {
+	if (!overlay) return;
+	_legacyWelcomeDismissed = true;
+	overlay.classList.add('is-hidden');
+	overlay.setAttribute('aria-hidden', 'true');
+	overlay.setAttribute('hidden', '');
+	legacySetKofiFloatingVisible(true);
+}
+
+function legacyInitWelcomePanel(visibleFeatures) {
+	if (_legacyWelcomeDismissed) return;
+
+	var overlay = document.getElementById('trails-welcome-overlay');
+	if (!overlay) return;
+
+	var countEl = overlay.querySelector('.trails-welcome-count');
+	var listEl = overlay.querySelector('.trails-welcome-list');
+	if (!countEl || !listEl) return;
+
+	var count = visibleFeatures.length;
+	countEl.textContent = '..mit ' + count + (count === 1 ? ' Trail in der Karte!' : ' Trails in der Karte!');
+
+	var newest = visibleFeatures.slice().sort(function (a, b) {
+		return (b.properties.ID || 0) - (a.properties.ID || 0);
+	}).slice(0, 3);
+
+	listEl.textContent = '';
+	newest.forEach(function (feature) {
+		var props = feature.properties || {};
+		var trailName = props.name || ('Trail ' + props.ID);
+		var li = document.createElement('li');
+		li.className = 'trails-welcome-item';
+		li.setAttribute('data-trail-name', trailName);
+		li.setAttribute('role', 'button');
+		li.tabIndex = 0;
+		var nameSpan = document.createElement('span');
+		nameSpan.className = 'trails-welcome-name';
+		nameSpan.textContent = trailName;
+		var charSpan = document.createElement('span');
+		charSpan.className = 'trails-welcome-char';
+		charSpan.textContent = props.Trail_Char || '?';
+		li.appendChild(charSpan);
+		li.appendChild(nameSpan);
+		li.addEventListener('click', function () {
+			legacyFocusTrailByName(trailName);
+			legacyDismissWelcomePanel(overlay);
+		});
+		li.addEventListener('keydown', function (e) {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				legacyFocusTrailByName(trailName);
+				legacyDismissWelcomePanel(overlay);
+			}
+		});
+		listEl.appendChild(li);
+	});
+
+	var closeBtn = overlay.querySelector('.legacy-panel-close');
+	if (closeBtn && !closeBtn._legacyWelcomeBound) {
+		closeBtn._legacyWelcomeBound = true;
+		closeBtn.addEventListener('click', function () {
+			legacyDismissWelcomePanel(overlay);
+		});
+	}
+
+	legacyWhenDomReady(function () {
+		overlay.removeAttribute('hidden');
+		overlay.setAttribute('aria-hidden', 'false');
+		overlay.classList.remove('is-hidden');
+		legacySetKofiFloatingVisible(false);
+	});
+}
+
 /*** Add Trails ***/
 
 $.getJSON('data/my_trails_z.geojson', function(json) {
@@ -459,6 +604,8 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 			'click': doClickStuff
 		});
 	});
+
+	legacyLinkTrailLayers(click_layer, trails_json);
 	
 	// Add start/end markers and popups to main layer
 	trails_json.eachLayer(function(layer) {
@@ -505,29 +652,27 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 		// Add popup to main layer
 		var bb = new Blob([togpx(feature)], {type: 'application/gpx+xml'});	
 		var gpxLink = document.createElement("a");
+		gpxLink.className = "legacy-action-btn";
 		gpxLink.download = feature.properties.name + ".gpx";
-		gpxLink.innerHTML = "GPX-Download";	
+		gpxLink.textContent = "GPX-Download";
 		gpxLink.id = "gpxLink_ID";
 		gpxLink.href = window.URL.createObjectURL(bb);
 		
 		var popupContent = 
 			'<p><div class="pop_cont_name">' + feature.properties.name + '</div></p>' +
 			'<div class="pop_cont_text">' + feature.properties.Trail_Text + '</div>' +
-			'<div class="pop_gpx_text">🤝 ' + gpxLink.outerHTML + ' 🚩' + '</div>' +
+			gpxLink.outerHTML +
 			'<div class="kofi_reminder">' +
 				'<p>👾 Dein GPX-Track wird heruntergeladen..</p>' +
-				'<hr>' +
-				'<p>GPX-Downloads auf dieser Seite sind gratis, aber der Betrieb dieser <strong>Webseite kostet Geld!</strong></p>' +
-				'<hr>' +
-				'<p>🤝 Mit einem kleinen 💲 Beitrag für den GPX-Download kannst Du helfen 💓 das Projekt am Leben zu halten!</p>' +
-				'<hr>' +
-				'<div class="kofi_button"><a href="https://ko-fi.com/C1C74GQ0I" target="_blank">' +
-					'<img id="kofi_img_div" class="kofi_img" src="./images/kofi_s_logo_nolabel.png">' +
-					'<button type="button">Support!👋</button></a>' +
-				'</div>' +
+				'<div class="legacy-panel-rule" aria-hidden="true"></div>' +
+				'<a class="legacy-action-btn" href="https://ko-fi.com/C1C74GQ0I" target="_blank" rel="noopener noreferrer">💓 SUPPORT! 👋</a>' +
+				'<div class="legacy-panel-rule" aria-hidden="true"></div>' +
+				'<p>🤝 Mit einem kleinen 💲 Beitrag für den GPX-Download hilfst Du 💓 das Projekt am Leben zu halten!</p>' +
 			'</div>';
-		layer.bindPopup(popupContent, {closeOnClick: true, className: 'trailPopupClass'});
+		layer.bindPopup(popupContent, { closeOnClick: true, className: 'trailPopupClass', maxWidth: 440 });
 	});
+
+	legacyInitWelcomePanel(json.features);
 	
 	var urlView = legacyParseUrlMapView();
 	/* Valid ?lat=&lng=&z= (or zoom/lon) wins; anything else uses LEGACY_DEFAULT_START_VIEW */
@@ -544,7 +689,7 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 /*** Add event listener for click events on document ***/
 
 document.addEventListener('click', function(event) {
-  if (event.target === document.getElementById('gpxLink_ID')) {
+  if (event.target.closest('#gpxLink_ID')) {
     var kofiReminder = document.querySelector('.kofi_reminder');
     if (kofiReminder) {
       kofiReminder.style.visibility = 'visible';

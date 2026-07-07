@@ -16,6 +16,405 @@ html.dom-ready #page-loader {
     pointer-events: none;
 }
 
+/*** Session welcome overlay (first visit per tab session) ***/
+
+:root {
+    --legacy-panel-inner-bg: #fafbf9;
+    --legacy-panel-inner-bg-image:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(250, 252, 251, 0.97) 45%, rgba(244, 248, 246, 0.98) 100%),
+        repeating-radial-gradient(
+            circle at 50% 130%,
+            transparent 0,
+            transparent 11px,
+            rgba(45, 106, 79, 0.045) 11px,
+            rgba(45, 106, 79, 0.045) 12px
+        );
+    --legacy-panel-font: Helvetica, Arial, sans-serif;
+    --legacy-panel-text: #3d5c50;
+    --legacy-panel-title: #1e3d32;
+    --legacy-panel-radius-outer: 14px;
+    --legacy-panel-radius-inner: 11px;
+    --legacy-panel-padding: 22px 26px;
+    --legacy-panel-border-gradient: linear-gradient(
+        135deg,
+        #2d6a4f 0%,
+        #00b9fe 28%,
+        #d4a72c 52%,
+        #2d6a4f 78%,
+        #00b9fe 100%
+    );
+    --legacy-panel-accent-box-bg: linear-gradient(180deg, rgba(0, 185, 254, 0.06), rgba(45, 106, 79, 0.05));
+    --legacy-panel-accent-box-border: 1px dashed rgba(45, 106, 79, 0.22);
+    --legacy-panel-frame-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.15) inset,
+        0 24px 48px rgba(0, 0, 0, 0.35),
+        0 0 40px rgba(0, 185, 254, 0.12);
+}
+
+@keyframes trailsWelcomeBorder {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+/* Shared gradient frame (welcome, legend, popup wrapper) */
+.legacy-panel-frame,
+.trails-welcome-frame,
+.trailPopupClass .leaflet-popup-content-wrapper {
+    position: relative;
+    padding: 3px;
+    border-radius: var(--legacy-panel-radius-outer);
+    background: var(--legacy-panel-border-gradient);
+    background-size: 200% 200%;
+    animation: trailsWelcomeBorder 8s ease infinite;
+    box-shadow: var(--legacy-panel-frame-shadow);
+    overflow: visible;
+}
+
+.trails-welcome-frame::before,
+.trails-welcome-frame::after {
+    content: '';
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0.85;
+}
+
+.trails-welcome-frame::before {
+    top: 10px;
+    left: 10px;
+    border-top: 2px solid rgba(212, 167, 44, 0.9);
+    border-left: 2px solid rgba(212, 167, 44, 0.9);
+    border-radius: 4px 0 0 0;
+}
+
+.trails-welcome-frame::after {
+    bottom: 10px;
+    right: 10px;
+    border-bottom: 2px solid rgba(212, 167, 44, 0.9);
+    border-right: 2px solid rgba(212, 167, 44, 0.9);
+    border-radius: 0 0 4px 0;
+}
+
+.legacy-panel-inner,
+.trails-welcome-box {
+    position: relative;
+    width: 100%;
+    border-radius: var(--legacy-panel-radius-inner);
+    font-family: var(--legacy-panel-font);
+    color: var(--legacy-panel-text);
+    line-height: 1.45;
+    background-color: var(--legacy-panel-inner-bg);
+    background-image: var(--legacy-panel-inner-bg-image);
+    mask-image: linear-gradient(#000, #000);
+    -webkit-mask-image: linear-gradient(#000, #000);
+}
+
+.legacy-panel-inner::before,
+.trails-welcome-box::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--legacy-panel-radius-inner);
+    padding: 1px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(45, 106, 79, 0.12));
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+.trails-welcome-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background:
+        radial-gradient(ellipse 80% 60% at 50% 40%, rgba(45, 106, 79, 0.18), transparent 70%),
+        rgba(10, 18, 14, 0.55);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+.trails-welcome-overlay.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.trails-welcome-overlay[hidden] {
+    display: none;
+}
+
+.trails-welcome-overlay:not(.is-hidden):not([hidden]) {
+    display: flex;
+}
+
+html.legacy-welcome-open [id^="kofi-widget-overlay-"],
+html.legacy-welcome-open .floating-chat-kofi-popup-iframe,
+html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
+    visibility: hidden !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+}
+
+.trails-welcome-overlay:not(.is-hidden):not([hidden]) .trails-welcome-frame {
+    animation: trailsWelcomeIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes trailsWelcomeIn {
+    from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.trails-welcome-frame {
+    width: min(90vw, 440px);
+    max-height: 88dvh;
+}
+
+.trails-welcome-box {
+    max-height: calc(88dvh - 6px);
+    overflow-y: auto;
+    padding: var(--legacy-panel-padding);
+    font-size: clamp(12px, 1vw, 16px);
+    scrollbar-width: thin;
+    scrollbar-color: #888 #f1f1f1;
+}
+
+.trails-welcome-box h2 {
+    font-family: 'Trade Winds', cursive;
+    font-size: clamp(26px, 6.5vw, 40px);
+    letter-spacing: 0.08em;
+    margin: 0 28px 12px 0;
+    color: var(--legacy-panel-title);
+    line-height: 1.25;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.trails-welcome-box h3 {
+    font-size: clamp(14px, 1.2vw, 18px);
+    margin: 4px 0 10px;
+    color: #2d4a3e;
+    font-weight: 700;
+}
+
+.trails-welcome-count {
+    margin: 0;
+    color: #3d5c50;
+}
+
+.legacy-panel-rule {
+    height: 1px;
+    margin: 14px 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(45, 106, 79, 0.35) 15%,
+        rgba(0, 185, 254, 0.5) 50%,
+        rgba(45, 106, 79, 0.35) 85%,
+        transparent
+    );
+    position: relative;
+}
+
+.legacy-panel-rule::after {
+    content: '◆';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 9px;
+    color: #d4a72c;
+    background: var(--legacy-panel-inner-bg);
+    padding: 0 8px;
+    line-height: 1;
+}
+
+.trails-welcome-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.trails-welcome-list li {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    margin-bottom: 6px;
+    border-radius: 6px;
+    border: 1px solid rgba(45, 106, 79, 0.12);
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.7), rgba(240, 248, 244, 0.5));
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.trails-welcome-list li.trails-welcome-item {
+    cursor: pointer;
+}
+
+.trails-welcome-list li.trails-welcome-item:hover {
+    border-color: rgba(0, 185, 254, 0.45);
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(230, 245, 240, 0.85));
+    box-shadow: 0 2px 10px rgba(45, 106, 79, 0.1);
+}
+
+.trails-welcome-list li.trails-welcome-item:active {
+    background: rgba(220, 236, 228, 0.95);
+}
+
+.trails-welcome-list li.trails-welcome-item:focus-visible {
+    outline: 2px solid rgba(0, 185, 254, 0.55);
+    outline-offset: 2px;
+}
+
+.trails-welcome-char {
+    font-family: monospace;
+    font-size: 1.15em;
+    white-space: nowrap;
+    color: #1e3d32;
+    flex-shrink: 0;
+    padding: 2px 8px;
+    margin: 0;
+    border-radius: 4px;
+    background: rgba(212, 167, 44, 0.12);
+    border: 1px solid rgba(212, 167, 44, 0.25);
+}
+
+.trails-welcome-name {
+    flex: 1;
+    min-width: 0;
+    line-height: 1.35;
+    color: #2a3f36;
+}
+
+.legacy-panel-close,
+.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    z-index: 20;
+    width: 34px;
+    height: 34px;
+    border: 2px solid #d4a72c;
+    background-color: #f4f8f6;
+    font-size: 22px;
+    line-height: 1;
+    color: #3d5c50;
+    cursor: pointer;
+    border-radius: 50%;
+    padding: 0;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    opacity: 1;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-family: var(--legacy-panel-font);
+    font-weight: normal;
+}
+
+.legacy-panel-close span {
+    line-height: 1;
+    font-size: 1em;
+}
+
+.legacy-panel-close:hover,
+.legacy-panel-close:focus-visible,
+.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close:hover,
+.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close:focus-visible {
+    color: #1a3028;
+    background-color: #dce8e2;
+    border-color: #2d6a4f;
+    opacity: 1;
+    outline: none;
+}
+
+.legacy-panel-close:active,
+.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close:active {
+    background-color: #c8dbd2;
+}
+
+.trails-welcome-donate {
+    margin-top: 6px;
+    text-align: center;
+    padding: 14px 12px 8px;
+    border-radius: 8px;
+    background: var(--legacy-panel-accent-box-bg);
+    border: var(--legacy-panel-accent-box-border);
+}
+
+.trails-welcome-donate-text {
+    margin: 0 0 14px;
+    font-size: clamp(12px, 1.05vw, 15px);
+    line-height: 1.45;
+    color: #3d5c50;
+}
+
+.legacy-action-btn,
+.legacy-action-btn:hover,
+.legacy-action-btn:focus,
+.legacy-action-btn:focus-visible,
+.legacy-action-btn:visited,
+.legacy-action-btn:active {
+    text-decoration: none;
+}
+
+.legacy-action-btn {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: var(--legacy-panel-font);
+    font-size: clamp(15px, 1.35vw, 19px);
+    text-align: center;
+    border-radius: 8px;
+    background: var(--legacy-panel-accent-box-bg);
+    border: var(--legacy-panel-accent-box-border);
+    padding: 12px 14px;
+    word-break: break-word;
+    margin-top: 8px;
+    color: #a51717;
+    font-weight: bold;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.legacy-action-btn:hover,
+.legacy-action-btn:focus-visible {
+    background: linear-gradient(180deg, rgba(0, 185, 254, 0.12), rgba(45, 106, 79, 0.1));
+    border-color: rgba(45, 106, 79, 0.35);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    color: #1a3028;
+    outline: none;
+}
+
+.trailPopupClass .legacy-action-btn {
+    font-size: 16px;
+    padding: 11px 14px;
+}
+
 /*** General ***/
 
 html, body {
@@ -114,13 +513,35 @@ main {
 
 .info-wrapper {
     position: absolute;
-    background-color: rgba(255, 255, 255, 0.5);
     top: 18vh;
     left: 10px;
     z-index: 1000;
+    width: clamp(300px, 32vw, 400px);
     transition: transform 0.3s ease;
     transform: translateX(-100%);
     will-change: transform;
+}
+
+.info-panel-frame {
+    height: 70dvh;
+    height: 70vh;
+    max-height: 70dvh;
+    max-height: 70vh;
+}
+
+#info-div.legacy-panel-inner {
+    height: 100%;
+    max-height: calc(70dvh - 6px);
+    max-height: calc(70vh - 6px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 18px 20px 50px;
+    font-size: clamp(12px, 1vw, 16px);
+    scrollbar-width: thin;
+    scrollbar-color: #888 #f1f1f1;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    pointer-events: auto;
 }
 
 /* Show info-wrapper when checkbox is checked */
@@ -128,20 +549,8 @@ main {
     transform: translateX(0);
 }
 
-#info-div {
-    width: 32%;
-    height: 70dvh; /* Dynamic viewport height for mobile browsers */
-    height: 70vh; /* Fallback for older browsers */
-    background-color: rgb(255, 255, 255);
-    overflow-y: auto;
-    padding: 20px;
-    border: 9px solid rgb(255, 255, 255);
-    border-radius: 3px;
-    padding-bottom: 60px;
-    scrollbar-width: thin;
-    scrollbar-color: #888 #f1f1f1;
-    font-size: clamp(12px, 1vw, 16px);
-    pointer-events: auto;
+#info-div > th, td {
+	padding-right: 10px;
 }
 
 .legend-label {
@@ -149,23 +558,33 @@ main {
     right: -90px;
     bottom: 100px;
     transform: rotate(90deg);
-    background-color: rgb(255, 255, 255);
-    padding: 4px 10px;
+    padding: 6px 14px;
+    border: 2px solid transparent;
     border-radius: 999px;
     font-family: 'Trade Winds', cursive;
-    font-size: clamp(14px, 1vw, 18px);
+    font-size: clamp(13px, 1vw, 16px);
     font-weight: bold;
-    color: #333;
+    color: var(--legacy-panel-title);
     white-space: nowrap;
     z-index: 1001;
     cursor: pointer;
-    transition: background-color 0.2s ease;
-    border: none;
     outline: none;
+    background:
+        linear-gradient(var(--legacy-panel-inner-bg), var(--legacy-panel-inner-bg)) padding-box,
+        var(--legacy-panel-border-gradient) border-box;
+    background-size: auto, 200% 200%;
+    animation: trailsWelcomeBorder 8s ease infinite;
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.15) inset,
+        0 4px 14px rgba(0, 0, 0, 0.2);
+    transition: box-shadow 0.2s ease, filter 0.2s ease;
 }
 
 .legend-label:hover {
-    background-color: #bbbbbb;
+    filter: brightness(0.97);
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.2) inset,
+        0 6px 18px rgba(0, 0, 0, 0.24);
 }
 
 /* Landscape: tab sits tight on panel edge at fixed -90px; nudge outward without affecting portrait */
@@ -175,17 +594,14 @@ main {
     }
 }
 
-#info-div > th, td {
-	padding-right: 10px;
-}
-
 
 .leaflet-control-zoom {
     margin-top: 18vh !important;
 }
 
 .leaflet-control-attribution {
-   font-size: 1.4em;
+    font-size: clamp(9px, 2.5vw, 11px);
+    line-height: 1.35;
 }
 
 .leaflet-control-locate, .leaflet-bar button {
@@ -194,11 +610,53 @@ main {
 }
 
 .leaflet-popup-tip {
-    display:none;
+    display: none;
+}
+
+.trailPopupClass.leaflet-popup {
+    overflow: visible !important;
+}
+
+.trailPopupClass .leaflet-popup-content-wrapper {
+    text-align: left;
+    border-radius: var(--legacy-panel-radius-outer) !important;
+    width: min(94vw, 340px) !important;
+    max-width: min(94vw, 340px);
+    height: auto !important;
+}
+
+.trailPopupClass .leaflet-popup-content {
+    position: relative;
+    margin: 0;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible;
+    line-height: 1.4;
+    border-radius: var(--legacy-panel-radius-inner);
+    padding: var(--legacy-panel-padding);
+    font-family: var(--legacy-panel-font);
+    font-size: 14px;
+    color: var(--legacy-panel-text);
+    background-color: var(--legacy-panel-inner-bg);
+    background-image: var(--legacy-panel-inner-bg-image);
+    box-sizing: border-box;
+}
+
+.trailPopupClass .leaflet-popup-content p {
+    margin: 0.65em 0;
+}
+
+.trailPopupClass .leaflet-popup-content p:first-child {
+    margin-top: 0;
+}
+
+.trailPopupClass .leaflet-popup-content p:last-child {
+    margin-bottom: 0;
 }
 
 .leaflet-popup-content {
-    line-height:1;
+    line-height: 1.45;
 }
 
 .leaflet-popup-content p {
@@ -229,19 +687,51 @@ main {
 }
 
 .pop_cont_name {
-    font-weight: bold;
-    font-size: clamp(16px, 1.5vw, 24px);
+    font-family: 'Trade Winds', cursive;
+    font-weight: normal;
+    font-size: clamp(22px, 5.5vw, 40px);
+    letter-spacing: 0.06em;
+    line-height: 1.25;
+    color: var(--legacy-panel-title);
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.8);
     word-break: break-word;
+    margin-bottom: 10px;
 }
 
-.pop_gpx_text {
-    font-size: clamp(14px, 1.2vw, 20px);
-    text-align: center;
-    border-radius: 3px;
-    background-color: #cdb50a;
-    padding: 10px;
-    word-break: break-word;
+.trailPopupClass .pop_cont_name {
+    font-size: 17px;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
 }
+
+.pop_cont_text {
+    margin: 10px 0 12px;
+    color: var(--legacy-panel-text);
+    line-height: 1.4;
+    font-size: clamp(12px, 1vw, 16px);
+}
+
+.trailPopupClass .pop_cont_text {
+    margin: 10px 0 12px;
+    font-size: 13px;
+    line-height: 1.35;
+    text-align: left;
+}
+
+.trailPopupClass .pop_cont_text pre {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    white-space: pre;
+    tab-size: 3;
+    -moz-tab-size: 3;
+    text-align: left;
+    margin: 0;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+/*** Shared action button (GPX download, support links) ***/
 
 /* font awesome hack */
 .fa {
@@ -264,85 +754,28 @@ main {
 
 /*** popup contents ***/
 
-.elevation.lime-theme.leaflet-control {
-    font-size: 1.5em;
+.elevation.lime-theme.leaflet-control,
+.elevation.lime-theme.leaflet-control .axis text,
+.elevation.lime-theme.leaflet-control .mouse-focus-label-x,
+.elevation.lime-theme.leaflet-control .mouse-focus-label-y {
+    font-size: clamp(10px, 2.8vw, 12px);
 }
 
-.trailPopupClass .leaflet-popup-content-wrapper {
-    padding: 5px;
-    text-align: left;
-    border-radius: 0px!important;
-    width: 300px;
-}	
-
-/*** KO-FI Styles ***/
-.kofi_reminder {
-	padding: 10px;
-	font-family: Helvetica, Arial, sans-serif;
-	font-size:2em;
-	transition:1s;
-	opacity:0;
-	visibility:hidden;
-	position:absolute;
-	top:0px;
-	left:0px;
-	width:100%;
-	height:100%;
-	background-color:rgb(200,200,200);
-}
-
-.kofi_img {
-  animation: shake 2s;
-  animation-iteration-count: infinite;
-}
-
-.kofi_button {
-	position:absolute;
-	bottom: 3%;
-	width:94%;
-    font-size: 2em;
-    text-align: center;
-    padding: 5px;
-	background-color:none;
-}
-
-.kofi_button button {
-	border-radius:5px ;
-	border-color:white;
-	padding: 5px;  
-    transition: 0.3s;
-}
-
-.kofi_button button:hover {
-   background-color: #cdb90a80;
-}
-
-#kofi_img_div {
-  height: 36px;
-  margin: 0px 15px 5px 0px;
-}
-
-#kofi_img_float {
-  position: fixed;
-  bottom: 20px;
-  left: 20px;
-  border: 0px;
-  height: 36px;
-  z-index: 99999;
-}
-
-@keyframes shake {
-  0% { transform: translate(1px, 1px) rotate(0deg); }
-  10% { transform: translate(-1px, -2px) rotate(-1deg); }
-  20% { transform: translate(-3px, 0px) rotate(1deg); }
-  30% { transform: translate(3px, 2px) rotate(0deg); }
-  40% { transform: translate(1px, -1px) rotate(1deg); }
-  50% { transform: translate(-1px, 2px) rotate(-1deg); }
-  60% { transform: translate(-3px, 1px) rotate(0deg); }
-  70% { transform: translate(3px, 1px) rotate(-1deg); }
-  80% { transform: translate(-1px, -1px) rotate(1deg); }
-  90% { transform: translate(1px, 2px) rotate(0deg); }
-  100% { transform: translate(1px, -2px) rotate(-1deg); }
+.trailPopupClass .kofi_reminder {
+    padding: var(--legacy-panel-padding);
+    font-family: var(--legacy-panel-font);
+    font-size: 14px;
+    line-height: 1.4;
+    border-radius: var(--legacy-panel-radius-inner);
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    opacity: 0;
+    visibility: hidden;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgb(200, 200, 200);
+    box-sizing: border-box;
 }
 
 
@@ -385,7 +818,7 @@ main {
 }
 
 .trail-item h3 {
-    font-size: clamp(16px, 1.5vw, 20px);
+    font-size: clamp(14px, 1.3vw, 18px);
     color: #FF5F1F;
     word-break: break-word;
     font-weight: bold;
@@ -393,7 +826,7 @@ main {
 
 .trail-item p {
     margin: 0;
-    font-size: clamp(12px, 1vw, 14px);
+    font-size: clamp(12px, 1.1vw, 14px);
     color: #666;
     word-break: break-word;
 }
@@ -404,13 +837,6 @@ main {
     cursor: default;
     background-color: transparent !important;
 }
-
-.info-div h2 {
-    padding-top: 10px;
-    color: #333;
-    font-size: clamp(14px, 1.5vw, 18px);
-}
-
 
 /* Webkit browsers (Chrome, Safari) */
 #info-div::-webkit-scrollbar {
@@ -429,48 +855,19 @@ main {
     background: #555;
 }
 
-/* Firefox */
-#info-div {
-    scrollbar-width: thin;
-    scrollbar-color: #888 #f1f1f1;
-}
+/* Firefox scrollbar — covered by #info-div.legacy-panel-inner */
 
 #info-div .legend-content h2,
 #info-div .trails-list h2 {
     padding-top: 5px;
-    color: #0380ae;
+    color: var(--legacy-panel-title);
     font-size: clamp(20px, 2.2vw, 28px) !important;
     margin-top: 0;
-}
-
-/* Clean responsive design - no horizontal scroll in info-div */
-.info-wrapper {
-    width: clamp(300px, 32vw, 400px);
-}
-
-#info-div {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: hidden;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
 }
 
 .legend-content h3 {
     font-size: clamp(16px, 1.4vw, 20px);
     margin-top: 20px;
     margin-bottom: 10px;
-}
-
-.trail-item h3 {
-    font-size: clamp(14px, 1.3vw, 18px);
-    color: #FF5F1F;
-    word-break: break-word;
-    font-weight: bold;
-}
-
-.trail-item p {
-    font-size: clamp(12px, 1.1vw, 14px);
-    word-break: break-word;
 }
      
