@@ -164,7 +164,8 @@ var centerView = L.easyButton({
 	icon: '<i class="fas fa-compress"></i>',
 	title: 'Center View',		
 	onClick: function(control) {
-	map.fitBounds(trails_json.getBounds(), {maxZoom: 12});
+		legacyCloseAllPanelsAndShowHeader();
+		map.fitBounds(trails_json.getBounds(), {maxZoom: 12});
 	}
   }]
 });	
@@ -304,7 +305,11 @@ map.on('zoomend', function () {
 
 map.on('popupopen', function (e) {
 	legacyMountPopupCloseInFrame(e.popup);
+	legacyBindGpxKofiReminder(e.popup);
 });
+
+legacyBindHeaderHideOnMapUse();
+legacyBindPanelClickIsolation();
 
 // Initial update
 updateTrailsInView();
@@ -481,11 +486,64 @@ function legacySetKofiFloatingVisible(visible) {
 	document.documentElement.classList.toggle('legacy-welcome-open', !visible);
 }
 
+function legacySetHeaderVisible(visible) {
+	document.documentElement.classList.toggle('legacy-header-visible', visible);
+}
+
+function legacyStopClickPropagation(el) {
+	if (!el || el._legacyClickStopBound) {
+		return;
+	}
+	el._legacyClickStopBound = true;
+	L.DomEvent.on(el, 'click dblclick mousedown touchstart', L.DomEvent.stopPropagation);
+}
+
+function legacyBindPanelClickIsolation() {
+	legacyStopClickPropagation(document.getElementById('trails-welcome-overlay'));
+	legacyStopClickPropagation(document.querySelector('.info-wrapper'));
+	legacyStopClickPropagation(document.querySelector('header'));
+}
+
+function legacyCloseAllPanelsAndShowHeader() {
+	legacySetHeaderVisible(true);
+	map.closePopup();
+	var infoToggle = document.getElementById('info-toggle');
+	if (infoToggle) {
+		infoToggle.checked = false;
+	}
+	var welcomeOverlay = document.getElementById('trails-welcome-overlay');
+	if (welcomeOverlay && !welcomeOverlay.classList.contains('is-hidden')) {
+		legacyDismissWelcomePanel(welcomeOverlay);
+	}
+	if (typeof el !== 'undefined') {
+		el.clear();
+		map.removeControl(el);
+	}
+	map.invalidateSize();
+}
+
+function legacyBindHeaderHideOnMapUse() {
+	if (map._legacyHeaderHideBound) {
+		return;
+	}
+	map._legacyHeaderHideBound = true;
+	function hideHeader() {
+		legacySetHeaderVisible(false);
+	}
+	map.on('dragstart', hideHeader);
+	map.on('zoomstart', function (e) {
+		if (e.originalEvent) {
+			hideHeader();
+		}
+	});
+}
+
 function legacyMountPopupCloseInFrame(popup) {
 	var el = popup && popup.getElement();
 	if (!el || !el.classList.contains('trailPopupClass')) {
 		return;
 	}
+	legacyStopClickPropagation(el);
 	var wrapper = el.querySelector('.leaflet-popup-content-wrapper');
 	var closeBtn = el.querySelector('.leaflet-popup-close-button');
 	if (!wrapper || !closeBtn) {
@@ -495,6 +553,23 @@ function legacyMountPopupCloseInFrame(popup) {
 	if (closeBtn.parentElement !== wrapper) {
 		wrapper.insertBefore(closeBtn, wrapper.firstChild);
 	}
+}
+
+function legacyBindGpxKofiReminder(popup) {
+	var el = popup && popup.getElement();
+	if (!el || !el.classList.contains('trailPopupClass')) {
+		return;
+	}
+	var gpxLink = el.querySelector('#gpxLink_ID');
+	var kofiReminder = el.querySelector('.kofi_reminder');
+	if (!gpxLink || !kofiReminder || gpxLink._legacyKofiReminderBound) {
+		return;
+	}
+	gpxLink._legacyKofiReminderBound = true;
+	gpxLink.addEventListener('click', function () {
+		kofiReminder.style.visibility = 'visible';
+		kofiReminder.style.opacity = '1';
+	});
 }
 
 function legacyDismissWelcomePanel(overlay) {
@@ -567,6 +642,7 @@ function legacyInitWelcomePanel(visibleFeatures) {
 		overlay.setAttribute('aria-hidden', 'false');
 		overlay.classList.remove('is-hidden');
 		legacySetKofiFloatingVisible(false);
+		legacySetHeaderVisible(true);
 	});
 }
 
@@ -669,7 +745,7 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 				'<div class="legacy-panel-rule" aria-hidden="true"></div>' +
 				'<p>🤝 Mit einem kleinen 💲 Beitrag für den GPX-Download hilfst Du 💓 das Projekt am Leben zu halten!</p>' +
 			'</div>';
-		layer.bindPopup(popupContent, { closeOnClick: true, className: 'trailPopupClass', maxWidth: 440 });
+		layer.bindPopup(popupContent, { closeOnClick: true, className: 'trailPopupClass', maxWidth: 380 });
 	});
 
 	legacyInitWelcomePanel(json.features);
@@ -686,17 +762,6 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 	window.dispatchEvent(new Event('legacytrails:mapready'));
 });
 
-/*** Add event listener for click events on document ***/
-
-document.addEventListener('click', function(event) {
-  if (event.target.closest('#gpxLink_ID')) {
-    var kofiReminder = document.querySelector('.kofi_reminder');
-    if (kofiReminder) {
-      kofiReminder.style.visibility = 'visible';
-	  kofiReminder.style.opacity = 1;
-    }
-  }
-});
 
 /*
 Points of interest

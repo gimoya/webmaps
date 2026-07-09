@@ -101,6 +101,24 @@ function isLocalAppUrl(url) {
 }
 
 // Network-first: fresh after deploy when online; cache fallback for offline use.
+function cacheFallback(request, cacheName) {
+  return caches.open(cacheName).then(function(cache) {
+    return cache.match(request).then(function(cached) {
+      if (cached) return cached;
+      return cache.match(request, { ignoreSearch: true });
+    }).then(function(cached) {
+      if (cached) return cached;
+      var path = new URL(request.url).pathname;
+      if (request.mode === 'navigate' || /\/index\.html$/.test(path) || path.endsWith('/')) {
+        return cache.match('./index.html').then(function(page) {
+          return page || cache.match('./');
+        });
+      }
+      return null;
+    });
+  });
+}
+
 function networkFirst(request, cacheName) {
   return fetch(request).then(function(response) {
     if (response && response.ok) {
@@ -111,7 +129,7 @@ function networkFirst(request, cacheName) {
     }
     return response;
   }).catch(function() {
-    return caches.match(request);
+    return cacheFallback(request, cacheName);
   });
 }
 

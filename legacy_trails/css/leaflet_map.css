@@ -35,6 +35,7 @@ html.dom-ready #page-loader {
     --legacy-panel-radius-outer: 14px;
     --legacy-panel-radius-inner: 11px;
     --legacy-panel-padding: 22px 26px;
+    --legacy-panel-popup-padding: 20px 16px 22px 20px;
     --legacy-panel-border-gradient: linear-gradient(
         135deg,
         #2d6a4f 0%,
@@ -458,6 +459,18 @@ header {
     padding-left: 10px;
     padding-bottom: 5px;
     text-align: left;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-10px);
+    transition: opacity 0.4s ease, visibility 0.4s ease, transform 0.4s ease;
+}
+
+html.legacy-header-visible header {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
 }
 
 header h1 {
@@ -620,9 +633,16 @@ main {
 .trailPopupClass .leaflet-popup-content-wrapper {
     text-align: left;
     border-radius: var(--legacy-panel-radius-outer) !important;
-    width: min(94vw, 340px) !important;
-    max-width: min(94vw, 340px);
+    width: min(96vw, 340px) !important;
+    max-width: min(88vw, 300px);
     height: auto !important;
+}
+
+@media (max-width: 540px) and (orientation: portrait) {
+    .trailPopupClass .leaflet-popup-content-wrapper {
+        width: min(98vw, 380px) !important;
+        max-width: min(98vw, 380px);
+    }
 }
 
 .trailPopupClass .leaflet-popup-content {
@@ -634,7 +654,7 @@ main {
     overflow: visible;
     line-height: 1.4;
     border-radius: var(--legacy-panel-radius-inner);
-    padding: var(--legacy-panel-padding);
+    padding: var(--legacy-panel-popup-padding);
     font-family: var(--legacy-panel-font);
     font-size: 14px;
     color: var(--legacy-panel-text);
@@ -699,9 +719,13 @@ main {
 }
 
 .trailPopupClass .pop_cont_name {
-    font-size: 17px;
-    letter-spacing: 0.04em;
+    font-size: clamp(19px, 4.5vw, 22px);
+    letter-spacing: 0.05em;
     margin-bottom: 8px;
+    text-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.65),
+        0 2px 6px rgba(0, 0, 0, 0.35),
+        0 0 10px rgba(30, 61, 50, 0.25);
 }
 
 .pop_cont_text {
