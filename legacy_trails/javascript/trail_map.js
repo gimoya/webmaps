@@ -41,6 +41,8 @@ var _legacyUrlSyncTimer = null;
 var _legacyUrlSyncSuppressed = false;
 /** Default map center/zoom when URL has no lat/lng/z (new loads / shared bookmark). */
 var LEGACY_DEFAULT_START_VIEW = { lat: 47.24358, lng: 11.45393, zoom: 11 };
+var LEGACY_TRAILS_VERSION = '2.1.0';
+var LEGACY_TRAIL_BBOX_PAD_M = 100;
 
 function legacyParseUrlMapView() {
 	var params = new URLSearchParams(window.location.search);
@@ -115,42 +117,43 @@ window.legacyTrailsMapHooks = {
 
 /*** Set Up Base Map Layers ***/
 
-var map_satelliteUrl = '//mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
+var LEGACY_TILE_OPTS = {
+	updateWhenIdle: true,
+	updateWhenZooming: false,
+	keepBuffer: 2,
+	crossOrigin: true,
+};
+
+var map_satelliteUrl = 'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
 
 var map_topoUrl = 'https://tile.openmaps.fr/openhikingmap/{z}/{x}/{y}.png';
 
-var map_satelliteLayer = L.tileLayer(map_satelliteUrl, {
-  attribution: '&copy; <a href="https://www.google.com/maps">Google</a>',
-  maxZoom: 18,
-});
+var map_satelliteLayer = L.tileLayer(map_satelliteUrl, Object.assign({}, LEGACY_TILE_OPTS, {
+	attribution: '&copy; <a href="https://www.google.com/maps">Google</a>',
+	maxZoom: 18,
+	subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+}));
 
-var map_topoLayer = L.tileLayer(map_topoUrl, {
-  minZoom: 1,
-  maxZoom: 17,
-  attribution:
-    '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> · '
-    + '<a href="https://wiki.openstreetmap.org/wiki/Hiking/openhikingmap">OpenHiking</a>',
-  crossOrigin: true
-});
+var map_topoLayer = L.tileLayer(map_topoUrl, Object.assign({}, LEGACY_TILE_OPTS, {
+	minZoom: 1,
+	maxZoom: 17,
+	attribution:
+		'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> · '
+		+ '<a href="https://wiki.openstreetmap.org/wiki/Hiking/openhikingmap">OpenHiking</a>',
+}));
 
 /*** Setting Default Base Map ***/
 map_topoLayer.addTo(map);	
-
-/*** Strava TMS not working 
-var strava_proxyUrl = 'https://proxy.nakarte.me/https/heatmap-external-a.strava.com/tiles-auth/ride/hot/{z}/{x}/{y}.png';
-var strava_Layer = L.tileLayer(strava_proxyUrl, {
-    tms: true
-}).addTo(map);
-***/
-
-
 
 /*** Map Selection and Zoom Controls ***/
 
 /* Source Map Attribution — Tirol Trailhead once, layer credits swap on basemap toggle */
 var attribution = L.control.attribution({ position: 'bottomright', prefix: false });
 attribution.addTo(map);
-attribution.addAttribution('<a href="https://tiroltrailhead.com/guiding">Tirol Trailhead</a>');
+attribution.addAttribution(
+	'<a href="https://tiroltrailhead.com/guiding">Tirol Trailhead</a>'
+	+ ' · <span class="legacy-attribution-version">v' + LEGACY_TRAILS_VERSION + '</span>'
+);
 
 /* Zoom */
 new L.Control.Zoom({ position: 'topright' }).addTo(map);
@@ -420,6 +423,22 @@ function legacyFocusTrailByName(trailName) {
 	});
 }
 
+function legacyPadLatLngBounds(bounds, padM) {
+	if (!bounds || !padM) {
+		return bounds;
+	}
+	var sw = bounds.getSouthWest();
+	var ne = bounds.getNorthEast();
+	var midLat = (sw.lat + ne.lat) / 2;
+	var cos = Math.cos(midLat * Math.PI / 180);
+	var dLat = padM / 110540;
+	var dLng = padM / (111320 * cos);
+	return L.latLngBounds(
+		[sw.lat - dLat, sw.lng - dLng],
+		[ne.lat + dLat, ne.lng + dLng]
+	);
+}
+
 function doClickStuff(e) {
     lyr = e.target;
     ftr = e.target.feature;
@@ -453,6 +472,14 @@ function doClickStuff(e) {
             popup.setLatLng(e.latlng);
             popup.openOn(map);
         }
+
+        window.dispatchEvent(new CustomEvent('legacytrails:trailclick', {
+            detail: {
+                trailId: ftr.properties.ID,
+                trailName: ftr.properties.name,
+                bounds: legacyPadLatLngBounds(mainLayer.getBounds(), LEGACY_TRAIL_BBOX_PAD_M),
+            },
+        }));
     }
 }
 
@@ -745,7 +772,7 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 				'<div class="legacy-panel-rule" aria-hidden="true"></div>' +
 				'<p>🤝 Mit einem kleinen 💲 Beitrag für den GPX-Download hilfst Du 💓 das Projekt am Leben zu halten!</p>' +
 			'</div>';
-		layer.bindPopup(popupContent, { closeOnClick: true, className: 'trailPopupClass', maxWidth: 380 });
+		layer.bindPopup(popupContent, { closeOnClick: true, className: 'trailPopupClass', maxWidth: 280 });
 	});
 
 	legacyInitWelcomePanel(json.features);

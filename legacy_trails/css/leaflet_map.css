@@ -35,7 +35,7 @@ html.dom-ready #page-loader {
     --legacy-panel-radius-outer: 14px;
     --legacy-panel-radius-inner: 11px;
     --legacy-panel-padding: 22px 26px;
-    --legacy-panel-popup-padding: 20px 16px 22px 20px;
+    --legacy-panel-popup-padding: 8px 10px 10px;
     --legacy-panel-border-gradient: linear-gradient(
         135deg,
         #2d6a4f 0%,
@@ -308,7 +308,8 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
 }
 
 .legacy-panel-close,
-.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close {
+.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close,
+.legacy-trail-photos-popup-wrap a.leaflet-popup-close-button.legacy-panel-close {
     position: absolute;
     top: -10px;
     right: -10px;
@@ -343,7 +344,9 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
 .legacy-panel-close:hover,
 .legacy-panel-close:focus-visible,
 .trailPopupClass a.leaflet-popup-close-button.legacy-panel-close:hover,
-.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close:focus-visible {
+.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close:focus-visible,
+.legacy-trail-photos-popup-wrap a.leaflet-popup-close-button.legacy-panel-close:hover,
+.legacy-trail-photos-popup-wrap a.leaflet-popup-close-button.legacy-panel-close:focus-visible {
     color: #1a3028;
     background-color: #dce8e2;
     border-color: #2d6a4f;
@@ -352,7 +355,8 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
 }
 
 .legacy-panel-close:active,
-.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close:active {
+.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close:active,
+.legacy-trail-photos-popup-wrap a.leaflet-popup-close-button.legacy-panel-close:active {
     background-color: #c8dbd2;
 }
 
@@ -412,8 +416,9 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
 }
 
 .trailPopupClass .legacy-action-btn {
-    font-size: 16px;
-    padding: 11px 14px;
+    font-size: 15px;
+    margin-top: 4px;
+    padding: 8px 10px;
 }
 
 /*** General ***/
@@ -617,6 +622,11 @@ main {
     line-height: 1.35;
 }
 
+.legacy-attribution-version {
+    opacity: 0.85;
+    white-space: nowrap;
+}
+
 .leaflet-control-locate, .leaflet-bar button {
    font-size: 12px;
    font-family: unset;
@@ -633,15 +643,16 @@ main {
 .trailPopupClass .leaflet-popup-content-wrapper {
     text-align: left;
     border-radius: var(--legacy-panel-radius-outer) !important;
-    width: min(96vw, 340px) !important;
-    max-width: min(88vw, 300px);
+    width: min(92vw, 260px) !important;
+    max-width: min(88vw, 260px);
     height: auto !important;
+    padding: 2px;
 }
 
 @media (max-width: 540px) and (orientation: portrait) {
     .trailPopupClass .leaflet-popup-content-wrapper {
-        width: min(98vw, 380px) !important;
-        max-width: min(98vw, 380px);
+        width: min(94vw, 280px) !important;
+        max-width: min(94vw, 280px);
     }
 }
 
@@ -664,7 +675,7 @@ main {
 }
 
 .trailPopupClass .leaflet-popup-content p {
-    margin: 0.65em 0;
+    margin: 0.2em 0;
 }
 
 .trailPopupClass .leaflet-popup-content p:first-child {
@@ -719,9 +730,9 @@ main {
 }
 
 .trailPopupClass .pop_cont_name {
-    font-size: clamp(19px, 4.5vw, 22px);
-    letter-spacing: 0.05em;
-    margin-bottom: 8px;
+    font-size: clamp(17px, 4vw, 20px);
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
     text-shadow:
         0 1px 0 rgba(255, 255, 255, 0.65),
         0 2px 6px rgba(0, 0, 0, 0.35),
@@ -736,8 +747,8 @@ main {
 }
 
 .trailPopupClass .pop_cont_text {
-    margin: 10px 0 12px;
-    font-size: 13px;
+    margin: 2px 0 6px;
+    font-size: 12px;
     line-height: 1.35;
     text-align: left;
 }
