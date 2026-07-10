@@ -220,7 +220,7 @@ var el = L.control.elevation({
 			height: 160,
 			margins: {
 				top: 20,
-				right: 20,
+				right: 36,
 				bottom: 30,
 				left: 60
 			},
@@ -456,7 +456,8 @@ function doClickStuff(e) {
         
         L.DomEvent.stopPropagation(e);
         el.addData(ftr, mainLayer);
-        map.addControl(el);	
+        map.addControl(el);
+        legacyMountElevationFrame(el);
         
         /*** make all non-selected trails opaque, after resetting styles (ftr selected before)***/ 
         trails_json.eachLayer(function(layer){ 
@@ -515,6 +516,28 @@ function legacySetKofiFloatingVisible(visible) {
 
 function legacySetHeaderVisible(visible) {
 	document.documentElement.classList.toggle('legacy-header-visible', visible);
+}
+
+function legacyMountElevationFrame(elevationControl) {
+	var container = elevationControl && elevationControl.getContainer && elevationControl.getContainer();
+	if (!container || container._legacyElevationFrameBound) {
+		return;
+	}
+	container._legacyElevationFrameBound = true;
+	container.classList.add('legacy-panel-frame', 'legacy-elevation-frame');
+
+	var svg = container.querySelector('svg.background');
+	if (!svg) {
+		return;
+	}
+	if (svg.parentElement && svg.parentElement.classList.contains('legacy-elevation-inner')) {
+		return;
+	}
+
+	var wrap = document.createElement('div');
+	wrap.className = 'legacy-panel-inner legacy-elevation-inner';
+	svg.parentNode.insertBefore(wrap, svg);
+	wrap.appendChild(svg);
 }
 
 function legacyStopClickPropagation(el) {
@@ -768,9 +791,9 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 			'<div class="kofi_reminder">' +
 				'<p>👾 Dein GPX-Track wird heruntergeladen..</p>' +
 				'<div class="legacy-panel-rule" aria-hidden="true"></div>' +
-				'<a class="legacy-action-btn" href="https://ko-fi.com/C1C74GQ0I" target="_blank" rel="noopener noreferrer">💓 SUPPORT! 👋</a>' +
+				'<a class="legacy-action-btn" href="https://ko-fi.com/C1C74GQ0I" target="_blank" rel="noopener noreferrer">💓 SUPPORT 👋</a>' +
 				'<div class="legacy-panel-rule" aria-hidden="true"></div>' +
-				'<p>🤝 Mit einem kleinen 💲 Beitrag für den GPX-Download hilfst Du 💓 das Projekt am Leben zu halten!</p>' +
+				'<p>🤝 Auch Mit einem kleinen Beitrag hilfst Du 💓 das Projekt am Leben zu halten!..</p>' +
 			'</div>';
 		layer.bindPopup(popupContent, { closeOnClick: true, className: 'trailPopupClass', maxWidth: 280 });
 	});
