@@ -657,13 +657,14 @@ function legacyInitWelcomePanel(visibleFeatures) {
 		li.setAttribute('data-trail-name', trailName);
 		li.setAttribute('role', 'button');
 		li.tabIndex = 0;
+		var tapSpan = document.createElement('span');
+		tapSpan.className = 'trails-welcome-tap';
+		tapSpan.setAttribute('aria-hidden', 'true');
+		tapSpan.textContent = '👉';
 		var nameSpan = document.createElement('span');
 		nameSpan.className = 'trails-welcome-name';
 		nameSpan.textContent = trailName;
-		var charSpan = document.createElement('span');
-		charSpan.className = 'trails-welcome-char';
-		charSpan.textContent = props.Trail_Char || '?';
-		li.appendChild(charSpan);
+		li.appendChild(tapSpan);
 		li.appendChild(nameSpan);
 		li.addEventListener('click', function () {
 			legacyFocusTrailByName(trailName);
@@ -795,7 +796,7 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 				'<div class="legacy-panel-rule" aria-hidden="true"></div>' +
 				'<p>🤝 Auch Mit einem kleinen Beitrag hilfst Du 💓 das Projekt am Leben zu halten!..</p>' +
 			'</div>';
-		layer.bindPopup(popupContent, { closeOnClick: true, className: 'trailPopupClass', maxWidth: 280 });
+		layer.bindPopup(popupContent, { closeOnClick: true, className: 'trailPopupClass', maxWidth: 220 });
 	});
 
 	legacyInitWelcomePanel(json.features);

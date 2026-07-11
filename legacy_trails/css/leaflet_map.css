@@ -187,27 +187,58 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
 }
 
 .trails-welcome-frame {
-    width: min(90vw, 440px);
+    width: min(88vw, 360px);
     max-height: 88dvh;
 }
 
 .trails-welcome-box {
     max-height: calc(88dvh - 6px);
     overflow-y: auto;
-    padding: var(--legacy-panel-padding);
-    font-size: clamp(12px, 1vw, 16px);
+    padding: 12px 18px 14px;
+    font-size: clamp(13px, 1vw, 16px);
+    font-weight: 600;
+    line-height: 1.3;
     scrollbar-width: thin;
     scrollbar-color: #888 #f1f1f1;
 }
 
-.trails-welcome-box h2 {
+.trails-welcome-head {
+    display: grid;
+    grid-template-columns: 1fr minmax(52px, 26%);
+    align-items: stretch;
+}
+
+.trails-welcome-head-main {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    padding: 0;
+    gap: 8px;
+}
+
+.trails-welcome-head-line {
+    display: block;
     font-family: 'Trade Winds', cursive;
-    font-size: clamp(26px, 6.5vw, 40px);
-    letter-spacing: 0.08em;
-    margin: 0 28px 12px 0;
+    font-size: clamp(15px, 4vw, 23px);
+    letter-spacing: 0.06em;
     color: var(--legacy-panel-title);
-    line-height: 1.25;
+    line-height: 1.05;
     text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.8);
+    text-transform: uppercase;
+}
+
+.trails-welcome-head-divider {
+    display: none;
+}
+
+.trails-welcome-head-gem {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(30px, 7vw, 42px);
+    line-height: 1;
+    padding: 0;
 }
 
 .trails-welcome-box h3 {
@@ -220,6 +251,16 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
 .trails-welcome-count {
     margin: 0;
     color: #3d5c50;
+    font-weight: 500;
+}
+
+.trails-welcome-box > p {
+    margin: 0 0 5px;
+    font-weight: 500;
+}
+
+.trails-welcome-box .legacy-panel-rule {
+    margin: 7px 0;
 }
 
 .legacy-panel-rule {
@@ -259,9 +300,9 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 10px;
-    padding: 11px 12px;
-    margin-bottom: 6px;
+    gap: 8px;
+    padding: 6px 10px;
+    margin-bottom: 4px;
     border-radius: 6px;
     border: 1px solid rgba(45, 106, 79, 0.12);
     background: linear-gradient(90deg, rgba(255, 255, 255, 0.7), rgba(240, 248, 244, 0.5));
@@ -287,24 +328,22 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
     outline-offset: 2px;
 }
 
-.trails-welcome-char {
-    font-family: monospace;
-    font-size: 1.15em;
-    white-space: nowrap;
-    color: #1e3d32;
+.trails-welcome-list li:last-child {
+    margin-bottom: 0;
+}
+
+.trails-welcome-tap {
     flex-shrink: 0;
-    padding: 2px 8px;
-    margin: 0;
-    border-radius: 4px;
-    background: rgba(212, 167, 44, 0.12);
-    border: 1px solid rgba(212, 167, 44, 0.25);
+    font-size: 1.05em;
+    line-height: 1;
 }
 
 .trails-welcome-name {
     flex: 1;
     min-width: 0;
-    line-height: 1.35;
+    line-height: 1.25;
     color: #2a3f36;
+    font-weight: 600;
 }
 
 .legacy-panel-close,
@@ -361,18 +400,19 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
 }
 
 .trails-welcome-donate {
-    margin-top: 6px;
+    margin-top: 0;
     text-align: center;
-    padding: 14px 12px 8px;
+    padding: 8px 10px 6px;
     border-radius: 8px;
     background: var(--legacy-panel-accent-box-bg);
     border: var(--legacy-panel-accent-box-border);
 }
 
 .trails-welcome-donate-text {
-    margin: 0 0 14px;
-    font-size: clamp(12px, 1.05vw, 15px);
-    line-height: 1.45;
+    margin: 0 0 8px;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.3;
     color: #3d5c50;
 }
 
@@ -413,6 +453,11 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     color: #1a3028;
     outline: none;
+}
+
+.trails-welcome-donate .legacy-action-btn {
+    margin-top: 0;
+    padding: 10px 12px;
 }
 
 .trailPopupClass .legacy-action-btn {
@@ -651,8 +696,8 @@ main {
 
 @media (max-width: 540px) and (orientation: portrait) {
     .trailPopupClass .leaflet-popup-content-wrapper {
-        width: min(94vw, 280px) !important;
-        max-width: min(94vw, 280px);
+        width: min(76vw, 210px) !important;
+        max-width: min(76vw, 210px);
     }
 }
 
@@ -888,7 +933,8 @@ main {
     }
 }
 
-.trailPopupClass .kofi_reminder .legacy-action-btn {
+.trailPopupClass .kofi_reminder .legacy-action-btn,
+.trails-welcome-donate .legacy-action-btn {
     font-size: 16px;
     font-weight: 800;
     padding: 12px 14px;
@@ -903,7 +949,9 @@ main {
 }
 
 .trailPopupClass .kofi_reminder .legacy-action-btn:hover,
-.trailPopupClass .kofi_reminder .legacy-action-btn:focus-visible {
+.trailPopupClass .kofi_reminder .legacy-action-btn:focus-visible,
+.trails-welcome-donate .legacy-action-btn:hover,
+.trails-welcome-donate .legacy-action-btn:focus-visible {
     animation-play-state: paused;
     background: linear-gradient(180deg, rgba(255, 138, 168, 0.58), rgba(233, 30, 99, 0.42));
     border-color: rgba(244, 81, 130, 1);
