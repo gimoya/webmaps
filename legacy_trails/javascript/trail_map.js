@@ -796,7 +796,7 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 				'<div class="legacy-panel-rule" aria-hidden="true"></div>' +
 				'<p>🤝 Auch Mit einem kleinen Beitrag hilfst Du 💓 das Projekt am Leben zu halten!..</p>' +
 			'</div>';
-		layer.bindPopup(popupContent, { closeOnClick: true, className: 'trailPopupClass', maxWidth: 220 });
+		layer.bindPopup(popupContent, { closeOnClick: true, className: 'trailPopupClass', maxWidth: 232 });
 	});
 
 	legacyInitWelcomePanel(json.features);
