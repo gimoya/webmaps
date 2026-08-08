@@ -143,7 +143,7 @@ var map_topoLayer = L.tileLayer(map_topoUrl, Object.assign({}, LEGACY_TILE_OPTS,
 }));
 
 /*** Setting Default Base Map ***/
-map_topoLayer.addTo(map);	
+map_satelliteLayer.addTo(map);	
 
 /*** Map Selection and Zoom Controls ***/
 
@@ -175,19 +175,10 @@ var centerView = L.easyButton({
 
 centerView.addTo(map);
 
-/* Base Map Toggle */
+/* Base Map Toggle — starts on satellite (Luftbild) */
 var toggle = L.easyButton({
   position: 'topright',
   states: [{
-	stateName: 'basemap-topo',
-	icon: '<span class="custom-control">S</span>',
-	title: 'Hintergrundkarte Luftbild',
-	onClick: function(control) {
-	  map.removeLayer(map_topoLayer);
-	  map.addLayer(map_satelliteLayer);
-	  control.state('basemap-satellite');
-	}
-  }, {
 	stateName: 'basemap-satellite',
 	icon: '<span class="custom-control">T</span>',
 	title: 'Hintergrundkarte Topo',
@@ -195,6 +186,15 @@ var toggle = L.easyButton({
 	  map.removeLayer(map_satelliteLayer);
 	  map.addLayer(map_topoLayer);
 	  control.state('basemap-topo');
+	}
+  }, {
+	stateName: 'basemap-topo',
+	icon: '<span class="custom-control">S</span>',
+	title: 'Hintergrundkarte Luftbild',
+	onClick: function(control) {
+	  map.removeLayer(map_topoLayer);
+	  map.addLayer(map_satelliteLayer);
+	  control.state('basemap-satellite');
 	}
   }]
 });
@@ -244,24 +244,156 @@ var el = L.control.elevation({
 // Legend label now uses onclick attribute - no additional JS needed
 
 // Add function to update trails in view
+var legacyTrailFilterState = (window.LegacyTrailFilters && LegacyTrailFilters.createState)
+	? LegacyTrailFilters.createState()
+	: { flow: 0, killer: 0, tech: 0, features: 0, exposure: 0, status: 0 };
+var trails_click_layer = null;
+var _legacyFilterRadioLast = Object.create(null);
+
+function legacyReadFilterStateFromLegend() {
+	var state = LegacyTrailFilters.createState();
+	var keys = Object.keys(LegacyTrailFilters.FILTER_KEYS);
+	for (var i = 0; i < keys.length; i++) {
+		var key = keys[i];
+		var checked = document.querySelector('input[type="radio"][data-filter-key="' + key + '"]:checked');
+		state[key] = checked ? (parseInt(checked.getAttribute('data-filter-level'), 10) || 0) : 0;
+	}
+	return state;
+}
+
+function legacyUpdateFilterCount(inViewMatched, inViewTotal) {
+	var el = document.getElementById('legacy-filter-count');
+	if (!el || !window.LegacyTrailFilters) return;
+	if (!LegacyTrailFilters.isActive(legacyTrailFilterState)) {
+		el.hidden = true;
+		el.textContent = '';
+		return;
+	}
+	var filteredTotal = LegacyTrailFilters.countMatching(legacyTrailFilterState);
+	el.hidden = false;
+	el.textContent = inViewMatched + ' im Ausschnitt · ' + filteredTotal + ' gefiltert';
+}
+
+function legacyApplyTrailFilters() {
+	if (!window.LegacyTrailFilters || !trails_json) return;
+	legacyTrailFilterState = legacyReadFilterStateFromLegend();
+	LegacyTrailFilters.applyToLayerGroup(trails_json, legacyTrailFilterState, {
+		visibleStyle: styleLines,
+		hiddenStyle: { opacity: 0, fillOpacity: 0 }
+	});
+	if (trails_click_layer) {
+		LegacyTrailFilters.applyToLayerGroup(trails_click_layer, legacyTrailFilterState, {
+			visibleStyle: styleClickLayer,
+			hiddenStyle: { opacity: 0, fillOpacity: 0 }
+		});
+	}
+	trails_json.eachLayer(function (layer) {
+		legacySetEndpointMarkersVisible(layer, layer._legacyFilterVisible !== false);
+	});
+	if (selected && selected._legacyFilterVisible === false) {
+		selected.setText(null);
+		selected = null;
+		map.closePopup();
+		if (typeof el !== 'undefined') {
+			el.clear();
+			map.removeControl(el);
+		}
+	}
+	updateTrailsInView();
+}
+
+function legacySetEndpointMarkersVisible(trailLayer, visible) {
+	var markers = [trailLayer._startMarker, trailLayer._endMarker];
+	for (var i = 0; i < markers.length; i++) {
+		var marker = markers[i];
+		if (!marker) continue;
+		marker._legacyFilterVisible = visible;
+		if (visible) {
+			marker.setStyle({
+				opacity: 1,
+				fillOpacity: 1
+			});
+			if (marker._path) {
+				marker._path.style.pointerEvents = '';
+			}
+		} else {
+			marker.setStyle({
+				opacity: 0,
+				fillOpacity: 0
+			});
+			if (marker._path) {
+				marker._path.style.pointerEvents = 'none';
+			}
+			if (marker.closeTooltip) {
+				marker.closeTooltip();
+			}
+		}
+	}
+}
+
+function legacyBindLegendFilters() {
+	if (document._legacyLegendFiltersBound || !window.LegacyTrailFilters) return;
+	document._legacyLegendFiltersBound = true;
+	var legend = document.querySelector('.legend-content');
+	if (!legend) return;
+
+	legend.addEventListener('mousedown', function (e) {
+		var input = e.target.closest && e.target.closest('input[type="radio"][data-filter-key]');
+		if (!input) return;
+		input._legacyWasChecked = input.checked;
+	});
+
+	legend.addEventListener('click', function (e) {
+		var input = e.target.closest && e.target.closest('input[type="radio"][data-filter-key]');
+		if (!input) return;
+		if (input._legacyWasChecked) {
+			input.checked = false;
+			_legacyFilterRadioLast[input.name] = null;
+			legacyApplyTrailFilters();
+			return;
+		}
+		_legacyFilterRadioLast[input.name] = input.value;
+		legacyApplyTrailFilters();
+	});
+
+	var resetBtn = document.getElementById('legacy-filter-reset');
+	if (resetBtn) {
+		resetBtn.addEventListener('click', function () {
+			var radios = legend.querySelectorAll('input[type="radio"][data-filter-key]');
+			for (var i = 0; i < radios.length; i++) {
+				radios[i].checked = false;
+			}
+			_legacyFilterRadioLast = Object.create(null);
+			legacyApplyTrailFilters();
+		});
+	}
+}
+
 function updateTrailsInView() {
-    if (!trails_json) return;
+    if (!trails_json || !map || !map._loaded) return;
     
     var bounds = map.getBounds();
     var trailsInView = [];
+    var inViewTotal = 0;
     var content = '';
     
     trails_json.eachLayer(function(layer) {
-        if (bounds.intersects(layer.getBounds())) {
-            trailsInView.push({
-                feature: layer.feature,
-                layer: layer
-            });
-        }
+        if (!bounds.intersects(layer.getBounds())) return;
+        inViewTotal++;
+        if (layer._legacyFilterVisible === false) return;
+        if (window.LegacyTrailFilters && !LegacyTrailFilters.matchesFeature(layer.feature, legacyTrailFilterState)) return;
+        trailsInView.push({
+            feature: layer.feature,
+            layer: layer
+        });
     });
     
     if (trailsInView.length === 0) {
-        content += '<div class="trail-item no-trails">..keine Trails in diesem Kartenauschnitt!</div>';
+        content += '<div class="trail-item no-trails">' +
+			(inViewTotal === 0
+				? '..keine Trails in diesem Kartenauschnitt!'
+				: '..keine Trails passen zum Filter in diesem Ausschnitt!') +
+			'</div>';
     } else {
         trailsInView.forEach(function(trail) {
             content += `
@@ -293,6 +425,8 @@ function updateTrailsInView() {
             });
         }
     });
+
+	legacyUpdateFilterCount(trailsInView.length, inViewTotal);
 }
 
 
@@ -313,6 +447,7 @@ map.on('popupopen', function (e) {
 
 legacyBindHeaderHideOnMapUse();
 legacyBindPanelClickIsolation();
+legacyBindLegendFilters();
 
 // Initial update
 updateTrailsInView();
@@ -331,7 +466,7 @@ function findMatchingLayer(clickLayer, trailsLayer) {
 
 function highlight (layer) {	// will be used on hover
     var mainLayer = findMatchingLayer(layer, trails_json);
-    if (mainLayer) {
+    if (mainLayer && mainLayer._legacyFilterVisible !== false) {
         mainLayer.setStyle({
             weight: 4,       // wider line
             dashArray: '',
@@ -373,7 +508,12 @@ function dehighlight (layer) { 	// will be used inside select function
     if (selected === null || (selected && selected.feature.properties.name !== layer.feature.properties.name)) {
         var mainLayer = findMatchingLayer(layer, trails_json);
         if (mainLayer) {
-            trails_json.resetStyle(mainLayer);
+            if (mainLayer._legacyFilterVisible === false) {
+                mainLayer.setStyle({ opacity: 0, fillOpacity: 0 });
+                if (mainLayer._path) mainLayer._path.style.pointerEvents = 'none';
+            } else {
+                trails_json.resetStyle(mainLayer);
+            }
             mainLayer.setText(null);
         }
     }
@@ -461,6 +601,11 @@ function doClickStuff(e) {
         
         /*** make all non-selected trails opaque, after resetting styles (ftr selected before)***/ 
         trails_json.eachLayer(function(layer){ 
+            if (layer._legacyFilterVisible === false) {
+                layer.setStyle({ opacity: 0, fillOpacity: 0 });
+                if (layer._path) layer._path.style.pointerEvents = 'none';
+                return;
+            }
             if(selected && selected.feature.properties.name !== layer.feature.properties.name) {
                 dehighlight(layer);
                 layer.setStyle({opacity: 0.4})
@@ -702,9 +847,13 @@ function legacyInitWelcomePanel(visibleFeatures) {
 $.getJSON('data/my_trails_z.geojson', function(json) {
 	// Filter out trails where HIDE = 1
 	json.features = json.features.filter(feature => feature.properties.HIDE !== 1);
+
+	if (window.LegacyTrailFilters) {
+		LegacyTrailFilters.indexFeatures(json.features);
+	}
 	
 	// Create click layer first (will be underneath)
-	var click_layer = L.geoJson(json, {
+	trails_click_layer = L.geoJson(json, {
 		style: styleClickLayer,
 		interactive: true,
 	}).addTo(map);
@@ -716,23 +865,28 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 	}).addTo(map);
 	
 	// Add event handlers to click layer
-	click_layer.eachLayer(function(layer) {
+	trails_click_layer.eachLayer(function(layer) {
 		layer.on({
 			'mouseover': function (e) {
+				if (e.target._legacyFilterVisible === false) return;
 				if (selected === null || (selected && selected.feature.properties.name !== e.target.feature.properties.name)) {
 					highlight(e.target);
 				}
 			},
 			'mouseout': function (e) {
+				if (e.target._legacyFilterVisible === false) return;
 				if (selected === null || (selected && selected.feature.properties.name !== e.target.feature.properties.name)) {
 					dehighlight(e.target);
 				}
 			},
-			'click': doClickStuff
+			'click': function (e) {
+				if (e.target._legacyFilterVisible === false) return;
+				doClickStuff(e);
+			}
 		});
 	});
 
-	legacyLinkTrailLayers(click_layer, trails_json);
+	legacyLinkTrailLayers(trails_click_layer, trails_json);
 	
 	// Add start/end markers and popups to main layer
 	trails_json.eachLayer(function(layer) {
@@ -745,7 +899,7 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 						feature.geometry.coordinates[feature.geometry.coordinates.length - 1][0]];
 			
 			// Add Start and End Markers
-			new L.circleMarker(stPt, {
+			layer._startMarker = new L.circleMarker(stPt, {
 				color: 'darkslategrey',
 				fillColor: 'lightgreen',	
 				fillOpacity: 1,				
@@ -760,7 +914,7 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 			})
 			.addTo(map);
 			
-			new L.circleMarker(endPt, {
+			layer._endMarker = new L.circleMarker(endPt, {
 				color: 'darkslategrey',
 				fillColor: 'pink',
 				fillOpacity: 1,
@@ -805,6 +959,7 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 	/* Valid ?lat=&lng=&z= (or zoom/lon) wins; anything else uses LEGACY_DEFAULT_START_VIEW */
 	var startView = urlView || LEGACY_DEFAULT_START_VIEW;
 	legacyApplyParsedView(startView, { animate: false });
+	updateTrailsInView();
 	if (urlView) {
 		window.dispatchEvent(new CustomEvent('legacytrails:urlview', { detail: urlView }));
 	}

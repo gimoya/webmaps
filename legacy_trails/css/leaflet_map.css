@@ -507,7 +507,7 @@ header {
     right: 0px;
     bottom: auto;
     z-index: 1001;
-    background: rgba(197, 195, 195, 0.33);
+    background: rgba(197, 195, 195, 0.75);
     padding-left: 10px;
     padding-bottom: 5px;
     text-align: left;
@@ -607,6 +607,11 @@ main {
     word-wrap: break-word;
     overflow-wrap: break-word;
     pointer-events: auto;
+}
+
+/* Scrollport + absolute inset ::before = floating inner radius cutting mid-content */
+#info-div.legacy-panel-inner::before {
+    content: none;
 }
 
 /* Show info-wrapper when checkbox is checked */
@@ -980,6 +985,56 @@ main {
 
 .trails-list {
     margin-top: 10px;
+}
+
+.legend-filter-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin: 0 0 8px;
+    font-size: 13px;
+}
+
+.legend-filter-reset {
+    font-family: var(--legacy-panel-font);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--legacy-panel-title);
+    background: transparent;
+    border: 1px solid rgba(45, 106, 79, 0.28);
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+
+.legend-filter-reset:hover,
+.legend-filter-reset:focus-visible {
+    border-color: rgba(0, 185, 254, 0.55);
+    background: rgba(0, 185, 254, 0.08);
+    outline: none;
+}
+
+.legend-filter-count {
+    color: #3d5c50;
+    font-weight: 600;
+}
+
+.legend-filter-table .legend-filter-cell {
+    width: 1.5em;
+    padding-right: 4px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+.legend-filter-table input[type="radio"] {
+    margin: 0;
+    cursor: pointer;
+    accent-color: #2d6a4f;
+}
+
+.legend-filter-table tr:has(input[type="radio"]:checked) {
+    background: rgba(45, 106, 79, 0.08);
 }
 
 .trail-item {

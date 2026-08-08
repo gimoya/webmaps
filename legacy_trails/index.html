@@ -93,25 +93,33 @@
 				<div class="legacy-panel-frame info-panel-frame">
 				<div id="info-div" class="legacy-panel-inner">
 					<div class="legend-content">			
-					<h2>Legende & Trails &#8595</h2>
+					<h2>Legende & Trails</h2>
+					<p class="legend-filter-toolbar">
+						<button type="button" class="legend-filter-reset" id="legacy-filter-reset">Filter zurücksetzen</button>
+						<span class="legend-filter-count" id="legacy-filter-count" hidden></span>
+					</p>
 					<hr>
 					<h3>Flow</h3>
 					<figure class="table">
-						<table class="ck-table-resized">
+						<table class="ck-table-resized legend-filter-table">
 							<colgroup>
-								<col style="width:10%;">
-								<col style="width:90%;">
+								<col style="width:8%;">
+								<col style="width:12%;">
+								<col style="width:80%;">
 							</colgroup>
 							<tbody>
 								<tr>
+									<td class="legend-filter-cell"><input type="radio" name="legacy-filter-flow" value="1" data-filter-key="flow" data-filter-level="1" aria-label="Filter Flow genau 1"></td>
 									<td nowrap>👍</td>
 									<td>guter Flow auf wenigen Teilen ..</td>
 								</tr>
 								<tr>
+									<td class="legend-filter-cell"><input type="radio" name="legacy-filter-flow" value="2" data-filter-key="flow" data-filter-level="2" aria-label="Filter Flow genau 2"></td>
 									<td nowrap>👍👍</td>
 									<td>guter Flow auf einige Teilen ..</td>
 								</tr>
 								<tr>
+									<td class="legend-filter-cell"><input type="radio" name="legacy-filter-flow" value="3" data-filter-key="flow" data-filter-level="3" aria-label="Filter Flow genau 3"></td>
 									<td nowrap>👍👍👍</td>
 									<td>guter Flow auf vielen Teilen des Trails</td>
 								</tr>
@@ -119,21 +127,25 @@
 						</table>
 					</figure>
 					<figure class="table">
-						<table class="ck-table-resized">
+						<table class="ck-table-resized legend-filter-table">
 							<colgroup>
-								<col style="width:10%;">
-								<col style="width:90%;">
+								<col style="width:8%;">
+								<col style="width:12%;">
+								<col style="width:80%;">
 							</colgroup>
 							<tbody>
 								<tr>
+									<td class="legend-filter-cell"><input type="radio" name="legacy-filter-killer" value="1" data-filter-key="killer" data-filter-level="1" aria-label="Filter Flow-Killer genau 1"></td>
 									<td>👎</td>
 									<td>Flow-Killer* auf wenigen Teilen ..</td>
 								</tr>
 								<tr>
+									<td class="legend-filter-cell"><input type="radio" name="legacy-filter-killer" value="2" data-filter-key="killer" data-filter-level="2" aria-label="Filter Flow-Killer genau 2"></td>
 									<td nowrap>👎👎</td>
 									<td nowrap>Flow-Killer auf einige Teilen ..</td>
 								</tr>
 								<tr>
+									<td class="legend-filter-cell"><input type="radio" name="legacy-filter-killer" value="3" data-filter-key="killer" data-filter-level="3" aria-label="Filter Flow-Killer genau 3"></td>
 									<td nowrap>👎👎👎</td>
 									<td>Flow-Killer auf vielen Teilen des Trails</td>
 								</tr>
@@ -143,21 +155,25 @@
 					<p><span style="font-size:14px;"><i>*Flow-Killer: Unüberwindbare Hindernisse bzw. Schiebestrecken (stark verblockte Abschnitte, Abschnitte mit schmalen Brücken oder Treppen, Viehgattern, etc)</i></span></p>
 					<h3>Technical Challenge</h3>
 					<figure class="table">
-						<table class="ck-table-resized">
+						<table class="ck-table-resized legend-filter-table">
 							<colgroup>
-								<col style="width:10%;">
-								<col style="width:90%;">
+								<col style="width:8%;">
+								<col style="width:12%;">
+								<col style="width:80%;">
 							</colgroup>
 							<tbody>
 								<tr>
+									<td class="legend-filter-cell"><input type="radio" name="legacy-filter-tech" value="1" data-filter-key="tech" data-filter-level="1" aria-label="Filter Tech genau 1"></td>
 									<td nowrap>🔸</td>
 									<td>Einzelne technisch sehr anspruchsvolle Stellen</td>
 								</tr>
 								<tr>
+									<td class="legend-filter-cell"><input type="radio" name="legacy-filter-tech" value="2" data-filter-key="tech" data-filter-level="2" aria-label="Filter Tech genau 2"></td>
 									<td nowrap>🔸🔸</td>
 									<td>Mehrere technisch sehr anspruchsvolle Stellen</td>
 								</tr>
 								<tr>
+									<td class="legend-filter-cell"><input type="radio" name="legacy-filter-tech" value="3" data-filter-key="tech" data-filter-level="3" aria-label="Filter Tech genau 3"></td>
 									<td nowrap>🔸🔸🔸</td>
 									<td>Viele technisch sehr anspruchsvolle Stellen</td>
 								</tr>
@@ -166,21 +182,25 @@
 					</figure>
 					<h3>Trail Features (TFs)*</h3>
 					<figure class="table">
-						<table cxlass="ck-table-resized">
+						<table class="ck-table-resized legend-filter-table">
 							<colgroup>
-								<col style="width:10%;">
-								<col style="width:90%;">
+								<col style="width:8%;">
+								<col style="width:12%;">
+								<col style="width:80%;">
 							</colgroup>
 							<tbody>
 								<tr>
+									<td class="legend-filter-cell"><input type="radio" name="legacy-filter-features" value="1" data-filter-key="features" data-filter-level="1" aria-label="Filter Features genau 1"></td>
 									<td nowrap>🔥</td>
 									<td>Einzelne TFs* am Trail vorhanden</td>
 								</tr>
 								<tr>
+									<td class="legend-filter-cell"><input type="radio" name="legacy-filter-features" value="2" data-filter-key="features" data-filter-level="2" aria-label="Filter Features genau 2"></td>
 									<td nowrap>🔥🔥</td>
 									<td>Mehrere TFs am Trail vorhanden</td>
 								</tr>
 								<tr>
+									<td class="legend-filter-cell"><input type="radio" name="legacy-filter-features" value="3" data-filter-key="features" data-filter-level="3" aria-label="Filter Features genau 3"></td>
 									<td nowrap>🔥🔥🔥</td>
 									<td>Viele TFs am Trails vorhanden</td>
 								</tr>
@@ -190,21 +210,25 @@
 					<p><span style="font-size:14px;"><i>*Technical Trail Features: Natürliche oder künstliche Features wie Rock-Rolls, Drops, Wellen, Sprünge, Anlegerkurven, Skinnies, Wallrides, etc. &nbsp;&nbsp;</i></span></p>
 					<h3>Exposure/Risk</h3>
 					<figure class="table">
-						<table class="ck-table-resized">
+						<table class="ck-table-resized legend-filter-table">
 							<colgroup>
-								<col style="width:10%;">
-								<col style="width:90%;">
+								<col style="width:8%;">
+								<col style="width:12%;">
+								<col style="width:80%;">
 							</colgroup>
 							<tbody>
 								<tr>
+									<td class="legend-filter-cell"><input type="radio" name="legacy-filter-exposure" value="1" data-filter-key="exposure" data-filter-level="1" aria-label="Filter Exposure genau 1"></td>
 									<td nowrap>💀</td>
 									<td>Ausgesetzte / gefährliche Stellen auf wenigen Teilen ..</td>
 								</tr>
 								<tr>
+									<td class="legend-filter-cell"><input type="radio" name="legacy-filter-exposure" value="2" data-filter-key="exposure" data-filter-level="2" aria-label="Filter Exposure genau 2"></td>
 									<td nowrap>💀💀</td>
 									<td>Ausgesetzte / gefährliche Stellen auf einigen ..</td>
 								</tr>
 								<tr>
+									<td class="legend-filter-cell"><input type="radio" name="legacy-filter-exposure" value="3" data-filter-key="exposure" data-filter-level="3" aria-label="Filter Exposure genau 3"></td>
 									<td nowrap>💀💀💀</td>
 									<td>Ausgesetzte / gefährliche Stellen auf vielen Teilen des Trails</td>
 								</tr>
@@ -213,21 +237,25 @@
 					</figure>
 					<h3>Status</h3>
 					<figure class="table">
-						<table class="ck-table-resized">
+						<table class="ck-table-resized legend-filter-table">
 							<colgroup>
-								<col style="width:10%;">
-								<col style="width:90%;">
+								<col style="width:8%;">
+								<col style="width:12%;">
+								<col style="width:80%;">
 							</colgroup>
 							<tbody>
 								<tr>
+									<td class="legend-filter-cell"><input type="radio" name="legacy-filter-status" value="1" data-filter-key="status" data-filter-level="1" aria-label="Filter Status genau 1"></td>
 									<td nowrap>❌</td>
 									<td>Gesperrte oder blockierte Stellen* auf wenigen Teilen ..</td>
 								</tr>
 								<tr>
+									<td class="legend-filter-cell"><input type="radio" name="legacy-filter-status" value="2" data-filter-key="status" data-filter-level="2" aria-label="Filter Status genau 2"></td>
 									<td nowrap>❌❌</td>
 									<td>Gesperrte oder blockierte Stellen auf einigen ..</td>
 								</tr>
 								<tr>
+									<td class="legend-filter-cell"><input type="radio" name="legacy-filter-status" value="3" data-filter-key="status" data-filter-level="3" aria-label="Filter Status genau 3"></td>
 									<td nowrap>❌❌❌</td>
 									<td>Gesperrte oder blockierte Stellen auf vielen Teilen des Trails</td>
 								</tr>
@@ -248,6 +276,7 @@
 			<section id="map"></section>
 		</main>
 		
+		<script type="text/javascript" src="javascript/legacy_trail_filters.js"></script>
 		<script type="text/javascript" src="javascript/trail_map.js"></script>
 		<script type="text/javascript" src="javascript/legacy_trail_photos.js"></script>
 		
