@@ -443,5 +443,7 @@ window.addEventListener('legacytrails:mapready', function () {
 	if (typeof map === 'undefined') {
 		return;
 	}
+	/* TEMP: photo markers disabled while Mapillary thumb proxy is set up
 	LegacyTrailPhotos.init({ map: map });
+	*/
 });

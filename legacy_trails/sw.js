@@ -1,5 +1,5 @@
 // Service Worker for Legacy Trails Tirol PWA - Performance Caching with Tile Cache Limit
-const CACHE_NAME = 'legacy-trails-v57';
+const CACHE_NAME = 'legacy-trails-v58';
 const TILE_CACHE_NAME = 'legacy-trails-tiles';
 const MAX_CACHE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
 const TILE_EVICTION_DELAY_MS = 3000;
@@ -24,8 +24,7 @@ const urlsToCache = [
   './data/my_trails_z.geojson',
   './data/Loading Circle With Dots.json',
   './data/manifest.json',
-  './favicon/android-chrome-192x192.png',
-  './favicon/android-chrome-512x512.png'
+  './favicon/android-chrome-192x192.png'
 ];
 
 let tileEvictionTimer = null;
@@ -198,7 +197,6 @@ self.addEventListener('fetch', function(event) {
   if (url.includes('unpkg.com') ||
     url.includes('cdnjs.cloudflare.com') ||
     url.includes('ajax.googleapis.com') ||
-    url.includes('maxcdn.bootstrapcdn.com') ||
     url.includes('kit.fontawesome.com')) {
     return;
   }

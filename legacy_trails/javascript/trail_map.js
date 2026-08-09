@@ -150,6 +150,7 @@ map_satelliteLayer.addTo(map);
 /* Source Map Attribution — Tirol Trailhead once, layer credits swap on basemap toggle */
 var attribution = L.control.attribution({ position: 'bottomright', prefix: false });
 attribution.addTo(map);
+map.attributionControl = attribution;
 attribution.addAttribution(
 	'<a href="https://tiroltrailhead.com/guiding">Tirol Trailhead</a>'
 	+ ' · <span class="legacy-attribution-version">v' + LEGACY_TRAILS_VERSION + '</span>'
@@ -168,6 +169,7 @@ var centerView = L.easyButton({
 	title: 'Center View',		
 	onClick: function(control) {
 		legacyCloseAllPanelsAndShowHeader();
+		if (!trails_json) return;
 		map.fitBounds(trails_json.getBounds(), {maxZoom: 12});
 	}
   }]
@@ -413,16 +415,8 @@ function updateTrailsInView() {
     // Add click handlers to trail items
     $('.trail-item').on('click', function() {
         var trailName = $(this).data('trail-name');
-        if (trailName) {  // Only process clicks on actual trails, not the "no trails" message
-            trails_json.eachLayer(function(layer) {
-                if (layer.feature.properties.name === trailName) {
-                    map.fitBounds(layer.getBounds());
-                    // Trigger click on the trail to select it
-                    if (layer._clickLayer) {
-                        layer._clickLayer.fire('click');
-                    }
-                }
-            });
+        if (trailName) {
+            legacyFocusTrailByName(trailName);
         }
     });
 
@@ -430,19 +424,19 @@ function updateTrailsInView() {
 }
 
 
-// Add event listeners for map movement
+// Add event listeners for map movement (moveend covers pan + zoom)
 map.on('moveend', function () {
-	updateTrailsInView();
-	legacyScheduleUrlSync();
-});
-map.on('zoomend', function () {
 	updateTrailsInView();
 	legacyScheduleUrlSync();
 });
 
 map.on('popupopen', function (e) {
 	legacyMountPopupCloseInFrame(e.popup);
+	legacyEnsureGpxDownloadUrl(e.popup);
 	legacyBindGpxKofiReminder(e.popup);
+});
+map.on('popupclose', function (e) {
+	legacyRevokeGpxDownloadUrl(e.popup);
 });
 
 legacyBindHeaderHideOnMapUse();
@@ -750,12 +744,44 @@ function legacyMountPopupCloseInFrame(popup) {
 	}
 }
 
+function legacyEnsureGpxDownloadUrl(popup) {
+	var el = popup && popup.getElement();
+	if (!el || !el.classList.contains('trailPopupClass')) {
+		return;
+	}
+	var gpxLink = el.querySelector('.gpx-download-link');
+	var feature = popup._source && popup._source.feature;
+	if (!gpxLink || !feature) {
+		return;
+	}
+	if (gpxLink._legacyGpxObjectUrl) {
+		URL.revokeObjectURL(gpxLink._legacyGpxObjectUrl);
+	}
+	var bb = new Blob([togpx(feature)], { type: 'application/gpx+xml' });
+	gpxLink._legacyGpxObjectUrl = URL.createObjectURL(bb);
+	gpxLink.href = gpxLink._legacyGpxObjectUrl;
+}
+
+function legacyRevokeGpxDownloadUrl(popup) {
+	var el = popup && popup.getElement();
+	if (!el) {
+		return;
+	}
+	var gpxLink = el.querySelector('.gpx-download-link');
+	if (!gpxLink || !gpxLink._legacyGpxObjectUrl) {
+		return;
+	}
+	URL.revokeObjectURL(gpxLink._legacyGpxObjectUrl);
+	gpxLink._legacyGpxObjectUrl = null;
+	gpxLink.removeAttribute('href');
+}
+
 function legacyBindGpxKofiReminder(popup) {
 	var el = popup && popup.getElement();
 	if (!el || !el.classList.contains('trailPopupClass')) {
 		return;
 	}
-	var gpxLink = el.querySelector('#gpxLink_ID');
+	var gpxLink = el.querySelector('.gpx-download-link');
 	var kofiReminder = el.querySelector('.kofi_reminder');
 	if (!gpxLink || !kofiReminder || gpxLink._legacyKofiReminderBound) {
 		return;
@@ -930,14 +956,11 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 			.addTo(map);
 		}
 		
-		// Add popup to main layer
-		var bb = new Blob([togpx(feature)], {type: 'application/gpx+xml'});	
+		// GPX blob URL is created lazily on popupopen (see legacyEnsureGpxDownloadUrl)
 		var gpxLink = document.createElement("a");
-		gpxLink.className = "legacy-action-btn";
+		gpxLink.className = "legacy-action-btn gpx-download-link";
 		gpxLink.download = feature.properties.name + ".gpx";
 		gpxLink.textContent = "GPX-Download";
-		gpxLink.id = "gpxLink_ID";
-		gpxLink.href = window.URL.createObjectURL(bb);
 		
 		var popupContent = 
 			'<p><div class="pop_cont_name">' + feature.properties.name + '</div></p>' +
@@ -1008,15 +1031,16 @@ for (i = 0; i < POIs.features.length; i++) {
 map.on("click", function(e){
 	/*** Remove Elevation Profile when map is clicked ***/
 	if (typeof el !== 'undefined') {
-		// the variable is defined
 		el.clear();
 		map.removeControl(el);
-	};	
-	/*** reset opaque trails, reset direction arrows ***/
-	trails_json.eachLayer(function(layer) {
-		layer.setStyle({opacity: 0.75})
-	});
-	if (selected!== null) selected.setText(null);
+	}
+	if (!trails_json) return;
+	/*** reset selection + restore filter-aware trail styles ***/
+	if (selected !== null) {
+		selected.setText(null);
+		selected = null;
+	}
+	legacyApplyTrailFilters();
 	/*** make info panel disappear ***/
 	document.getElementById('info-toggle').checked = false;
 	map.invalidateSize();

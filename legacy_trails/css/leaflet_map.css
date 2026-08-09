@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Trade+Winds&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Trade+Winds&display=swap');
 
 /*** Initial load screen (hidden after window load + map/trails ready) ***/
 #page-loader {
@@ -619,7 +619,7 @@ main {
     transform: translateX(0);
 }
 
-#info-div > th, td {
+#info-div th, #info-div td {
 	padding-right: 10px;
 }
 
@@ -762,11 +762,6 @@ main {
     -webkit-box-sizing: border-box;
     -moz-box-sizing: border-box;
     box-sizing: border-box;
-}
-
-@font-face {
-  font-family:"Rye";
-  src: url("../fonts/Rye-Regular.ttf") format("truetype");
 }
 
 .pop_cont_name {
