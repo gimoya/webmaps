@@ -42,7 +42,6 @@ var _legacyUrlSyncSuppressed = false;
 /** Default map center/zoom when URL has no lat/lng/z (new loads / shared bookmark). */
 var LEGACY_DEFAULT_START_VIEW = { lat: 47.24358, lng: 11.45393, zoom: 11 };
 var LEGACY_TRAILS_VERSION = '2.1.0';
-var LEGACY_TRAIL_BBOX_PAD_M = 100;
 
 function legacyParseUrlMapView() {
 	var params = new URLSearchParams(window.location.search);
@@ -557,22 +556,6 @@ function legacyFocusTrailByName(trailName) {
 	});
 }
 
-function legacyPadLatLngBounds(bounds, padM) {
-	if (!bounds || !padM) {
-		return bounds;
-	}
-	var sw = bounds.getSouthWest();
-	var ne = bounds.getNorthEast();
-	var midLat = (sw.lat + ne.lat) / 2;
-	var cos = Math.cos(midLat * Math.PI / 180);
-	var dLat = padM / 110540;
-	var dLng = padM / (111320 * cos);
-	return L.latLngBounds(
-		[sw.lat - dLat, sw.lng - dLng],
-		[ne.lat + dLat, ne.lng + dLng]
-	);
-}
-
 function doClickStuff(e) {
     lyr = e.target;
     ftr = e.target.feature;
@@ -612,14 +595,6 @@ function doClickStuff(e) {
             popup.setLatLng(e.latlng);
             popup.openOn(map);
         }
-
-        window.dispatchEvent(new CustomEvent('legacytrails:trailclick', {
-            detail: {
-                trailId: ftr.properties.ID,
-                trailName: ftr.properties.name,
-                bounds: legacyPadLatLngBounds(mainLayer.getBounds(), LEGACY_TRAIL_BBOX_PAD_M),
-            },
-        }));
     }
 }
 

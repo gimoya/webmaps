@@ -1,5 +1,5 @@
 // Service Worker for Legacy Trails Tirol PWA - Performance Caching with Tile Cache Limit
-const CACHE_NAME = 'legacy-trails-v58';
+const CACHE_NAME = 'legacy-trails-v60';
 const TILE_CACHE_NAME = 'legacy-trails-tiles';
 const MAX_CACHE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
 const TILE_EVICTION_DELAY_MS = 3000;
@@ -12,9 +12,6 @@ const urlsToCache = [
   './css/L.Control.Locate.min.css',
   './javascript/trail_map.js',
   './javascript/legacy_trail_filters.js',
-  './javascript/legacy_trail_photos.js',
-  './css/legacy_trail_photos.css',
-  './data/trail_photos.geojson',
   './javascript/page_loader_lottie.js',
   './javascript/leaflet.elevation-0.0.4.min.js',
   './javascript/leaflet.togpx.js',

@@ -349,8 +349,7 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
 }
 
 .legacy-panel-close,
-.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close,
-.legacy-trail-photos-popup-wrap a.leaflet-popup-close-button.legacy-panel-close {
+.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close {
     position: absolute;
     top: -10px;
     right: -10px;
@@ -385,9 +384,7 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
 .legacy-panel-close:hover,
 .legacy-panel-close:focus-visible,
 .trailPopupClass a.leaflet-popup-close-button.legacy-panel-close:hover,
-.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close:focus-visible,
-.legacy-trail-photos-popup-wrap a.leaflet-popup-close-button.legacy-panel-close:hover,
-.legacy-trail-photos-popup-wrap a.leaflet-popup-close-button.legacy-panel-close:focus-visible {
+.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close:focus-visible {
     color: #1a3028;
     background-color: #dce8e2;
     border-color: #2d6a4f;
@@ -396,8 +393,7 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
 }
 
 .legacy-panel-close:active,
-.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close:active,
-.legacy-trail-photos-popup-wrap a.leaflet-popup-close-button.legacy-panel-close:active {
+.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close:active {
     background-color: #c8dbd2;
 }
 
