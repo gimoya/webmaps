@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Terrain Map</title>
+    
+    <!-- Mapbox GL JS -->
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css' rel='stylesheet' />
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Chart.js for elevation profile -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Local togpx library -->
+    <script src="togpx.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+        }
+
+        .map-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            font-family: 'Poppins', sans-serif;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .mapboxgl-ctrl-group {
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .mapboxgl-ctrl-group button {
+            width: 30px;
+            height: 30px;
+            display: block;
+            padding: 0;
+            outline: none;
+            border: 0;
+            box-sizing: border-box;
+            background-color: transparent;
+            cursor: pointer;
+        }
+
+        .mapboxgl-ctrl-group button:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        /* Popup Styles */
+        .mapboxgl-popup-content {
+            padding: 15px;
+            border-radius: 0;
+            width: 300px;
+            max-width: 90vw;
+            line-height: 1.4;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .mapboxgl-popup-tip {
+            display: none;
+        }
+
+        .mapboxgl-popup-close-button {
+            background-color: transparent;
+            border: 0;
+            cursor: pointer;
+            position: absolute;
+            right: 0;
+            top: 0;
+            padding: 10px;
+            font-size: 25px;
+        }
+
+        .pop_cont_name {
+            font-weight: bold;
+            font-size: 1.6em;
+            margin-bottom: 10px;
+            margin-right: 10px;
+        }
+
+        .pop_cont_text {
+            font-size: 0.9em;
+            margin: 10px 0;
+            line-height: 1.4;
+        }
+
+        .pop_gpx_text {
+            font-size: 1em;
+            text-align: center;
+            border-radius: 3px;
+            background-color: #cdb50a;
+            padding: 15px;
+            cursor: pointer;
+            margin: 10px 0;
+            transition: background-color 0.2s;
+        }
+
+        .pop_gpx_text:hover {
+            background-color: #b09508;
+        }
+
+        /* Ko-fi Styles */
+        .kofi_reminder_gpx {
+            padding: 20px;
+            font-size: 0.9em;
+            line-height: 1.4;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(200,200,200,0.95);
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        .kofi_reminder_gpx.show {
+            background: #dadada;
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .kofi_button_gpx {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            text-align: center;
+        }
+
+        .kofi_button_gpx button {
+            padding: 10px 20px;
+            font-size: 0.9em;
+            border: none;
+            border-radius: 4px;
+            background-color: #29abe0;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .kofi_button_gpx button:hover {
+            background-color: #228db4;
+        }
+        
+        #kofi_img_gpx {
+            width: 30px;
+            height: auto;
+            margin-bottom: 5px;
+            vertical-align: middle;
+            margin-right: 10px;
+            animation: shake 2s infinite;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        /* Responsive styles */
+        @media (min-width: 768px) {
+            .pop_cont_text {
+                font-size: 1.2em;
+            }
+            .pop_gpx_text {
+                font-size: 1.5em;
+            }
+            .kofi_reminder_gpx {
+                font-size: 1.2em;
+            }
+            .kofi_button_gpx button {
+                font-size: 1.2em;
+            }
+            #kofi_img_gpx {
+                width: 60px;
+            }
+        }
+
+        /* Elevation Profile Styles */
+        .elevation-profile {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: none;
+        }
+
+        .elevation-profile.active {
+            display: block;
+        }
+
+        .elevation-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+
+        .elevation-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .elevation-stat-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .elevation-stat-value {
+            color: #666;
+        }
+
+        .elevation-chart {
+            width: 100%;
+            height: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="map-container">
+        <div id="map"></div>
+    </div>
+    <div class="loading">Loading...</div>
+    <div class="elevation-profile">
+        <div class="elevation-stats">
+            <div class="elevation-stat">
+                <span class="elevation-stat-label">Distance</span>
+                <span class="elevation-stat-value" id="distance">0 km</span>
+            </div>
+            <div class="elevation-stat">
+                <span class="elevation-stat-label">Ascent</span>
+                <span class="elevation-stat-value" id="ascent">0 m</span>
+            </div>
+            <div class="elevation-stat">
+                <span class="elevation-stat-label">Descent</span>
+                <span class="elevation-stat-value" id="descent">0 m</span>
+            </div>
+            <div class="elevation-stat">
+                <span class="elevation-stat-label">Min Elevation</span>
+                <span class="elevation-stat-value" id="min-elevation">0 m</span>
+            </div>
+            <div class="elevation-stat">
+                <span class="elevation-stat-label">Max Elevation</span>
+                <span class="elevation-stat-value" id="max-elevation">0 m</span>
+            </div>
+        </div>
+        <canvas class="elevation-chart"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tmcw/togeojson@5.8.1/dist/togpx.js"></script>
+    <script src="script.3d.js"></script>
+</body>
+</html> 

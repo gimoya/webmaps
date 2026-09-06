@@ -37,6 +37,9 @@
 	<script type="text/javascript" src="javascript/leaflet.togpx.js"></script>
 	<script type="text/javascript" src="javascript/leaflet.textpath.js"></script>
 	
+	<link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" />
+	<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+
 	<script src="https://kit.fontawesome.com/4298fb9c85.js" crossorigin="anonymous"></script>
 	<link rel="stylesheet" href="css/L.Control.Locate.min.css" />
 	<script src="javascript/L.Control.Locate.js"></script>	
@@ -264,10 +267,11 @@
 				<button class="legend-label" onclick="document.getElementById('info-toggle').click()">Legende & Trails</button>
 			</div>
 			
-			<section id="map"></section>
+			<section id="map"><div id="map-3d" class="legacy-map-3d" aria-hidden="true"></div></section>
 		</main>
 		
 		<script type="text/javascript" src="javascript/legacy_trail_filters.js"></script>
+		<script type="text/javascript" src="javascript/terrain_map_3d.js"></script>
 		<script type="text/javascript" src="javascript/trail_map.js"></script>
 		
 		<!--Service Worker Registration-->

@@ -210,7 +210,68 @@ L.control.locate({
         title: "Zeige GPS-Standort"
     },
 	position: 'topright'
-}).addTo(map);	
+}).addTo(map);
+
+/*** 3D terrain overlay toggle ***/
+
+function legacySyncTerrain3DTrail() {
+	if (!window.LegacyTerrain3D || !window.LegacyTerrain3D.visible) return;
+	var name = selected && selected.feature && selected.feature.properties
+		? selected.feature.properties.name
+		: null;
+	if (name) window.LegacyTerrain3D.flashHighlight(name);
+}
+
+function legacySelectedTrailName() {
+	return selected && selected.feature && selected.feature.properties
+		? selected.feature.properties.name
+		: null;
+}
+
+function legacySyncTerrain3DBounds() {
+	if (!window.LegacyTerrain3D || !window.LegacyTerrain3D.visible) return;
+	window.LegacyTerrain3D.syncBounds(map);
+}
+
+var terrain3dToggle = L.easyButton({
+	position: 'topright',
+	states: [{
+		stateName: 'terrain-3d-off',
+		icon: '<i class="fas fa-cube"></i>',
+		title: '3D Ansicht',
+		onClick: function (btn) {
+			legacyDismissChromeOnUserAction();
+			if (!window.LegacyTerrain3D) return;
+			window.LegacyTerrain3D.show(map, legacySelectedTrailName()).then(function () {
+				btn.state('terrain-3d-on');
+				if (btn.button) btn.button.classList.add('legacy-ctrl-selected');
+			}).catch(function (err) {
+				console.error(err);
+			});
+		}
+	}, {
+		stateName: 'terrain-3d-on',
+		icon: '<i class="fas fa-map"></i>',
+		title: '2D Ansicht',
+		onClick: function (btn) {
+			if (window.LegacyTerrain3D) window.LegacyTerrain3D.hide();
+			btn.state('terrain-3d-off');
+			if (btn.button) btn.button.classList.remove('legacy-ctrl-selected');
+		}
+	}]
+});
+
+terrain3dToggle.addTo(map);
+
+window.legacyExitTerrain3D = function () {
+	if (window.LegacyTerrain3D) window.LegacyTerrain3D.hide();
+	if (terrain3dToggle) {
+		terrain3dToggle.state('terrain-3d-off');
+		if (terrain3dToggle.button) {
+			terrain3dToggle.button.classList.remove('legacy-ctrl-selected');
+		}
+	}
+};
 
 /*** Set Up Elevation Control ***/
 
@@ -299,6 +360,7 @@ function legacyApplyTrailFilters() {
 			el.clear();
 			map.removeControl(el);
 		}
+		legacySyncTerrain3DTrail();
 	}
 	updateTrailsInView();
 }
@@ -523,6 +585,8 @@ function select (layer) {  // ..use inside onClick Function doClickStuff() to se
         if (previous) {
             dehighlight(previous);
         }
+        legacySyncTerrain3DTrail();
+        // do not syncBounds here — avoids yanking the 3D camera while exploring
     }
 }
 
@@ -559,6 +623,8 @@ function legacyFocusTrailByName(trailName) {
 function doClickStuff(e) {
     lyr = e.target;
     ftr = e.target.feature;
+
+    legacyDismissChromeOnUserAction();
     
     var mainLayer = findMatchingLayer(lyr, trails_json);
     if (mainLayer) {
@@ -686,20 +752,32 @@ function legacyCloseAllPanelsAndShowHeader() {
 	map.invalidateSize();
 }
 
+function legacyDismissChromeOnUserAction() {
+	legacySetHeaderVisible(false);
+	var welcomeOverlay = document.getElementById('trails-welcome-overlay');
+	if (welcomeOverlay && !welcomeOverlay.classList.contains('is-hidden')) {
+		legacyDismissWelcomePanel(welcomeOverlay);
+	}
+}
+
 function legacyBindHeaderHideOnMapUse() {
 	if (map._legacyHeaderHideBound) {
 		return;
 	}
 	map._legacyHeaderHideBound = true;
-	function hideHeader() {
-		legacySetHeaderVisible(false);
-	}
-	map.on('dragstart', hideHeader);
+	map.on('dragstart', legacyDismissChromeOnUserAction);
 	map.on('zoomstart', function (e) {
 		if (e.originalEvent) {
-			hideHeader();
+			legacyDismissChromeOnUserAction();
 		}
 	});
+	map.on('click', legacyDismissChromeOnUserAction);
+
+	var infoToggle = document.getElementById('info-toggle');
+	if (infoToggle && !infoToggle._legacyDismissChromeBound) {
+		infoToggle._legacyDismissChromeBound = true;
+		infoToggle.addEventListener('change', legacyDismissChromeOnUserAction);
+	}
 }
 
 function legacyMountPopupCloseInFrame(popup) {
@@ -962,6 +1040,18 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 		window.dispatchEvent(new CustomEvent('legacytrails:urlview', { detail: urlView }));
 	}
 	window.dispatchEvent(new Event('legacytrails:mapready'));
+
+	if (window.LegacyTerrain3D) {
+		window.LegacyTerrain3D.prefetchTrails();
+		var warm3d = function () {
+			window.LegacyTerrain3D.preload();
+		};
+		if (window.requestIdleCallback) {
+			requestIdleCallback(warm3d, { timeout: 2500 });
+		} else {
+			setTimeout(warm3d, 1200);
+		}
+	}
 }).fail(function () {
 	window.dispatchEvent(new Event('legacytrails:mapready'));
 });
@@ -1015,6 +1105,7 @@ map.on("click", function(e){
 		selected.setText(null);
 		selected = null;
 	}
+	legacySyncTerrain3DTrail();
 	legacyApplyTrailFilters();
 	/*** make info panel disappear ***/
 	document.getElementById('info-toggle').checked = false;

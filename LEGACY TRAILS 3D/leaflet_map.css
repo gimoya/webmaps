@@ -1,0 +1,287 @@
+/*** General ***/
+
+html, body, #map {
+    height: 100%;
+    width: 100%;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+body{
+    padding-top: 50px;
+    min-width: 340px; 
+}
+
+#Legend-Div {
+	display: none;
+	z-index: 99999;
+    position: absolute;
+    height: 40%;
+	width: 80%;
+	padding: 20px;
+    overflow-y: scroll;
+	background-color: white;
+}
+
+#Legend-Div > th, td {
+	padding-right: 10px;
+}
+
+.leaflet-control-attribution {
+   font-size: 1.4em;
+}
+
+.leaflet-control-locate, .leaflet-bar button {
+   font-size: 12px;
+   font-family: unset;
+}
+
+.leaflet-popup-tip {
+    display:none;
+}
+
+.leaflet-popup-content {
+    line-height:1;
+}
+
+.leaflet-popup-content p {
+    margin: 1em 0;
+}
+
+.leaflet-touch .leaflet-bar button {
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+}
+
+.easy-button-button .button-state {
+    display: block;
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+* {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+@font-face {
+  font-family:"Rye";
+  src: url("../fonts/Rye-Regular.ttf") format("truetype");
+}
+
+.pop_cont_name {
+    font-weight: bold;
+	font-size:2em;
+}
+
+.pop_gpx_text {
+	font-size: 2em; ;
+	text-align: center;
+	border-radius:3px;
+	background-color:#cdb50a;
+	padding: 10px;
+}
+
+/* font awesome hack */
+.fa {
+    line-height: 30px!important;
+}
+
+.noselect {
+  -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Old versions of Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome, Opera and Firefox */
+}
+
+/*** Navigation ***/
+
+.navbar {
+    background: #02b6f7b8;
+    border-width: 0px;
+}
+
+.navbar-default .navbar-brand,
+.navbar-default .navbar-brand:hover {
+  color: #fff;
+}
+
+.navbar-default .navbar-brand {
+  padding-left: 15px;
+}
+
+.navbar-default .navbar-brand:hover {
+  cursor: default;
+}
+
+.navbar-brand {
+	font-family: 'Rye', cursive; 
+	font-size:calc(20px + .5vw);
+	letter-spacing: 0.2em;
+	white-space: nowrap; 
+}
+
+.navbar-toggle {
+    background-color: #fff!important;
+    position: relative;
+    float: right;
+    padding: 9px 10px;
+    margin-top: 8px;
+    margin-right: 7px;
+    margin-bottom: 6px;
+    background-color: transparent;
+    background-image: none;
+    border: 2px solid;
+    border-radius: 4px;
+    border-color: #00000060!important;
+}
+
+ul.nav.navbar-nav.navbar-right a {
+  color: #fff;
+  transition: color 0.4s;
+  font-family: inherit; 
+  font-size:calc(12px + .3vw);
+  margin-right: 10px;
+}
+
+.navbar-default .navbar-collapse, .navbar-default .navbar-form {
+    background-color: yellowgreen;
+    border: none;
+}
+
+ul.nav.navbar-nav.navbar-right li a:hover {
+  color: #000;
+}
+
+/*** Control font size of title on small screens ***/
+@media screen and (max-width: 480px) {
+  .navbar-default .navbar-brand {
+    font-size: 1.1em;
+	padding-top: 19px;
+  }
+}
+
+@media screen and (max-width: 400px) {
+  .navbar-default .navbar-brand {
+    font-size: 1em;
+	padding-top: 19px;
+  }
+}
+
+/*** popup contents ***/
+
+.elevation.lime-theme.leaflet-control {
+    font-size: 1.5em;
+}
+
+.trailPopupClass .leaflet-popup-content-wrapper {
+    padding: 5px;
+    text-align: left;
+    border-radius: 0px!important;
+    width: 300px;
+}	
+
+/*** KO-FI Styles ***/
+.kofi_reminder {
+	padding: 10px;
+	font-family: Helvetica, Arial, sans-serif;
+	font-size:2em;
+	transition:1s;
+	opacity:0;
+	visibility:hidden;
+	position:absolute;
+	top:0px;
+	left:0px;
+	width:100%;
+	height:100%;
+	background-color:rgb(200,200,200);
+}
+
+.kofi_img {
+  animation: shake 2s;
+  animation-iteration-count: infinite;
+}
+
+.kofi_button {
+	position:absolute;
+	bottom: 3%;
+	width:94%;
+    font-size: 2em;
+    text-align: center;
+    padding: 5px;
+	background-color:none;
+}
+
+.kofi_button button {
+	border-radius:5px ;
+	border-color:white;
+	padding: 5px;  
+    transition: 0.3s;
+}
+
+.kofi_button button:hover {
+   background-color: #cdb90a80;
+}
+
+#kofi_img_div {
+  height: 36px;
+  margin: 0px 15px 5px 0px;
+}
+
+#kofi_img_float {
+  position:absolute; 
+  bottom:20px; 
+  left:20px; 
+  border:0px; 
+  height:36px;
+  z-index:99999;
+}
+
+@keyframes shake {
+  0% { transform: translate(1px, 1px) rotate(0deg); }
+  10% { transform: translate(-1px, -2px) rotate(-1deg); }
+  20% { transform: translate(-3px, 0px) rotate(1deg); }
+  30% { transform: translate(3px, 2px) rotate(0deg); }
+  40% { transform: translate(1px, -1px) rotate(1deg); }
+  50% { transform: translate(-1px, 2px) rotate(-1deg); }
+  60% { transform: translate(-3px, 1px) rotate(0deg); }
+  70% { transform: translate(3px, 1px) rotate(-1deg); }
+  80% { transform: translate(-1px, -1px) rotate(1deg); }
+  90% { transform: translate(1px, 2px) rotate(0deg); }
+  100% { transform: translate(1px, -2px) rotate(-1deg); }
+}
+
+
+.pt_labels {
+	font-size: 1.5em;
+	padding-top:0;
+	padding-bottom:0;
+}
+
+#gallery {
+
+}
+
+.close-btn {
+		color: black;
+		padding: 5px 10px;
+		background: #ccc;
+		cursor: hand;
+		position: relative;
+		right: 10px;
+		top: 0;
+	}
+.close-btn:hover {
+		background: #aaa;
+}
+
+
