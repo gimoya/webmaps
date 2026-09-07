@@ -19,11 +19,11 @@ html.dom-ready #page-loader {
 /*** Session welcome overlay (first visit per tab session) ***/
 
 :root {
-    --legacy-panel-inner-bg: #1e1e22;
+    --legacy-panel-inner-bg: #323238;
     --legacy-panel-inner-bg-image: linear-gradient(
         180deg,
-        rgba(255, 255, 255, 0.04) 0%,
-        rgba(255, 255, 255, 0.01) 100%
+        rgba(255, 255, 255, 0.07) 0%,
+        rgba(255, 255, 255, 0.02) 100%
     );
     --legacy-panel-font: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
     --legacy-panel-text: #f0f0f0;
@@ -51,10 +51,11 @@ html.dom-ready #page-loader {
     50% { background-position: 100% 50%; }
 }
 
-/* Shared gradient frame (welcome, legend, popup wrapper) */
+/* Shared gradient frame (welcome, legend, popup wrapper, start/end tips) */
 .legacy-panel-frame,
 .trails-welcome-frame,
-.trailPopupClass .leaflet-popup-content-wrapper {
+.trailPopupClass .leaflet-popup-content-wrapper,
+.leaflet-tooltip.pt_labels {
     position: relative;
     padding: 3px;
     border-radius: var(--legacy-panel-radius-outer);
@@ -93,7 +94,8 @@ html.dom-ready #page-loader {
 }
 
 .legacy-panel-inner,
-.trails-welcome-box {
+.trails-welcome-box,
+.pt_labels .legacy-panel-inner {
     position: relative;
     width: 100%;
     border-radius: var(--legacy-panel-radius-inner);
@@ -107,7 +109,8 @@ html.dom-ready #page-loader {
 }
 
 .legacy-panel-inner::before,
-.trails-welcome-box::before {
+.trails-welcome-box::before,
+.pt_labels .legacy-panel-inner::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -352,27 +355,33 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
     height: 34px;
     border: 2px solid rgba(255, 255, 255, 0.35);
     background-color: #2a2a30;
-    font-size: 22px;
+    font-size: 20px;
     line-height: 1;
     color: #f0f0f0;
     cursor: pointer;
     border-radius: 50%;
-    padding: 0;
+    padding: 0 !important;
+    margin: 0 !important;
     box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
     transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
     opacity: 1;
     box-sizing: border-box;
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: center;
+    text-align: center;
     text-decoration: none;
-    font-family: var(--legacy-panel-font);
+    font-family: Arial, Helvetica, sans-serif;
     font-weight: normal;
 }
 
-.legacy-panel-close span {
+.legacy-panel-close span,
+.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close span {
+    display: block;
     line-height: 1;
     font-size: 1em;
+    /* nudge × down into visual center of the circle */
+    transform: translateY(0.12em);
 }
 
 .legacy-panel-close:hover,
@@ -497,7 +506,7 @@ header {
     right: 0px;
     bottom: auto;
     z-index: 1001;
-    background: rgba(30, 30, 34, 0.88);
+    background: rgba(50, 50, 56, 0.9);
     padding-left: 10px;
     padding-bottom: 5px;
     text-align: left;
@@ -593,8 +602,13 @@ main {
 }
 
 #map-3d.legacy-map-3d .mapboxgl-ctrl-bottom-right {
-    margin-bottom: 8px;
-    margin-right: 8px;
+    margin: 0;
+    right: 0;
+    bottom: 0;
+}
+
+#map-3d.legacy-map-3d .mapboxgl-ctrl-bottom-right > .mapboxgl-ctrl-group {
+    margin: 0 8px 8px 0;
 }
 
 #map-3d.legacy-map-3d .mapboxgl-ctrl-group {
@@ -615,32 +629,51 @@ main {
     filter: invert(1);
 }
 
+#map-3d.legacy-map-3d .mapboxgl-ctrl-bottom-right > .mapboxgl-ctrl-attrib,
 #map-3d.legacy-map-3d .mapboxgl-ctrl-attrib {
+    margin: 0 !important;
+    position: relative;
     background: rgba(30, 30, 34, 0.82);
     color: rgba(240, 240, 240, 0.85);
+    font-size: clamp(9px, 2.5vw, 11px);
+    line-height: 1.35;
 }
 
 #map-3d.legacy-map-3d .mapboxgl-ctrl-attrib a {
     color: #7dd3fc;
 }
 
+#map-3d.legacy-map-3d .mapboxgl-ctrl-attrib.mapboxgl-compact {
+    min-height: 0;
+}
+
 .legacy-3d-trail-tip .mapboxgl-popup-content {
-    padding: 0;
+    padding: 3px;
     border-radius: var(--legacy-panel-radius-outer);
-    overflow: hidden;
+    overflow: visible;
     box-shadow: var(--legacy-panel-frame-shadow);
-    background: var(--legacy-panel-inner-bg);
-    background-image: var(--legacy-panel-inner-bg-image);
+    background: var(--legacy-panel-border-gradient);
+    background-size: 200% 200%;
+    animation: trailsWelcomeBorder 8s ease infinite;
     color: var(--legacy-panel-text);
     font-family: var(--legacy-panel-font);
 }
 
 .legacy-3d-trail-tip .mapboxgl-popup-close-button {
-    color: #ddd;
+    color: #f0f0f0;
     font-size: 18px;
-    padding: 6px 10px;
+    width: 28px;
+    height: 28px;
+    padding: 0 !important;
+    margin: 0;
     right: 2px;
     top: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    text-align: center;
+    z-index: 2;
 }
 
 .legacy-3d-trail-tip .mapboxgl-popup-close-button:hover {
@@ -649,12 +682,17 @@ main {
 }
 
 .legacy-3d-trail-tip .mapboxgl-popup-tip {
-    border-top-color: var(--legacy-panel-inner-bg);
+    display: none !important;
 }
 
 .legacy-3d-trail-tip-body {
+    position: relative;
     padding: var(--legacy-panel-popup-padding);
     max-width: 260px;
+    border-radius: var(--legacy-panel-radius-inner);
+    background-color: var(--legacy-panel-inner-bg);
+    background-image: var(--legacy-panel-inner-bg-image);
+    color: var(--legacy-panel-text);
 }
 
 .legacy-3d-trail-tip-text {
@@ -705,12 +743,55 @@ html.legacy-3d-loading #map::after {
     top: 50%;
     transform: translate(-50%, -50%);
     z-index: 460;
-    background: rgba(255, 255, 255, 0.92);
-    padding: 10px 18px;
-    border-radius: 4px;
-    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.18);
+    padding: 12px 18px;
+    border-radius: var(--legacy-panel-radius-outer);
+    border: 2px solid transparent;
+    background:
+        linear-gradient(var(--legacy-panel-inner-bg), var(--legacy-panel-inner-bg)) padding-box,
+        var(--legacy-panel-border-gradient) border-box;
+    background-size: auto, 200% 200%;
+    animation: trailsWelcomeBorder 8s ease infinite;
+    box-shadow: var(--legacy-panel-frame-shadow);
+    color: var(--legacy-panel-text);
+    font-family: var(--legacy-panel-font);
     font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
     pointer-events: none;
+}
+
+.legacy-map-toast {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(0.96);
+    z-index: 470;
+    padding: 12px 18px;
+    border-radius: var(--legacy-panel-radius-outer);
+    border: 2px solid transparent;
+    background:
+        linear-gradient(var(--legacy-panel-inner-bg), var(--legacy-panel-inner-bg)) padding-box,
+        var(--legacy-panel-border-gradient) border-box;
+    background-size: auto, 200% 200%;
+    animation: trailsWelcomeBorder 8s ease infinite;
+    box-shadow: var(--legacy-panel-frame-shadow);
+    color: var(--legacy-panel-text);
+    font-family: var(--legacy-panel-font);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+    text-align: center;
+    max-width: min(90vw, 320px);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+}
+
+.legacy-map-toast.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
 }
 
 /* Hide Leaflet 2D attribution while 3D overlay is active */
@@ -780,10 +861,11 @@ html.legacy-3d-active .leaflet-control-attribution {
 
 .legend-label {
     position: absolute;
-    right: -90px;
+    left: calc(100% + 4px);
+    right: auto;
     bottom: 100px;
-    transform: rotate(90deg);
-    padding: 6px 14px;
+    margin: 0;
+    padding: 8px 4px;
     border: 2px solid transparent;
     border-radius: 999px;
     font-family: 'Trade Winds', cursive;
@@ -791,6 +873,9 @@ html.legacy-3d-active .leaflet-control-attribution {
     font-weight: bold;
     color: var(--legacy-panel-title);
     white-space: nowrap;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
     z-index: 1001;
     cursor: pointer;
     outline: none;
@@ -806,22 +891,18 @@ html.legacy-3d-active .leaflet-control-attribution {
 }
 
 .legend-label:hover {
-    filter: brightness(0.97);
+    filter: brightness(1.05);
     box-shadow:
         0 0 0 1px rgba(255, 255, 255, 0.2) inset,
         0 6px 18px rgba(0, 0, 0, 0.24);
 }
 
-/* Landscape: tab sits tight on panel edge at fixed -90px; nudge outward without affecting portrait */
-@media (orientation: landscape) {
-    .legend-label {
-        right: min(-6.5vw, -95px);
-    }
-}
-
-
 .leaflet-control-zoom {
     margin-top: 18vh !important;
+}
+
+.leaflet-bottom.leaflet-right .leaflet-control-attribution {
+    margin: 0 !important;
 }
 
 .leaflet-control-attribution {
@@ -829,6 +910,7 @@ html.legacy-3d-active .leaflet-control-attribution {
     line-height: 1.35;
     background: rgba(30, 30, 34, 0.82) !important;
     color: rgba(240, 240, 240, 0.85);
+    margin: 0 !important;
 }
 
 .leaflet-control-attribution a {
@@ -1142,7 +1224,7 @@ html.legacy-3d-active .leaflet-control-attribution {
     inset: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(30, 30, 34, 0.97);
+    background-color: rgba(50, 50, 56, 0.97);
     color: var(--legacy-panel-text);
     box-sizing: border-box;
 }
@@ -1197,10 +1279,30 @@ html.legacy-3d-active .leaflet-control-attribution {
 }
 
 
-.pt_labels {
-	font-size: 1.5em;
-	padding-top:0;
-	padding-bottom:0;
+.leaflet-tooltip.pt_labels {
+    border: none;
+    color: var(--legacy-panel-text);
+    font-family: var(--legacy-panel-font);
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.leaflet-tooltip.pt_labels::before {
+    display: none !important;
+    border: none !important;
+}
+
+.pt_labels .legacy-panel-inner {
+    padding: 6px 10px;
+    font-size: 11px;
+    line-height: 1.35;
+    white-space: nowrap;
+}
+
+.pt_labels .legacy-panel-inner strong {
+    color: var(--legacy-panel-title);
+    font-weight: 700;
 }
 
 #gallery {
@@ -1249,6 +1351,21 @@ html.legacy-3d-active .leaflet-control-attribution {
     font-weight: 600;
 }
 
+.legend-filter-table {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#info-div figure.table {
+    margin: 12px 0;
+}
+
+.legend-filter-table td,
+.legend-filter-table th {
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+}
+
 .legend-filter-table .legend-filter-cell {
     width: 1.5em;
     padding-right: 4px;
@@ -1262,8 +1379,9 @@ html.legacy-3d-active .leaflet-control-attribution {
     accent-color: #00b9fe;
 }
 
-.legend-filter-table tr:has(input[type="radio"]:checked) {
-    background: rgba(0, 185, 254, 0.12);
+.legend-filter-table input[type="radio"]:focus-visible {
+    outline: 2px solid rgba(0, 185, 254, 0.65);
+    outline-offset: 2px;
 }
 
 .trail-item {

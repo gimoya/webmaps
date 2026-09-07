@@ -9,7 +9,29 @@
 	var EMPTY_FC = { type: 'FeatureCollection', features: [] };
 	var TRAILS_URL = 'data/my_trails_z.geojson';
 	var MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2ltb3lhIiwiYSI6IkZrTld6NmcifQ.eY6Ymt2kVLvPQ6A2Dt9zAQ';
-	var CLICK_TIP = 'Für interaktive Trail Infos in die 2D-Ansicht wechseln.';
+	var CLICK_TIP = 'Für Trail-Infos in die 2D-Ansicht wechseln.';
+	/** Inn valley bird's-eye (gpx.studio #zoom/lat/lon/bearing/pitch). */
+	var OVERVIEW_CAMERA = {
+		center: [11.4098, 47.2168],
+		zoom: 11,
+		bearing: 9,
+		pitch: 76
+	};
+
+	/** Strip trailing "(123)" IDs from trail names for all UI display. */
+	function cleanTrailName(name) {
+		if (typeof name !== 'string') return name;
+		return name.replace(/\s*\(\d+\)\s*$/, '').trim();
+	}
+
+	function cleanTrailFeatureNames(features) {
+		for (var i = 0; i < features.length; i++) {
+			var p = features[i].properties;
+			if (p && typeof p.name === 'string') {
+				p.name = cleanTrailName(p.name);
+			}
+		}
+	}
 
 	function TerrainMap3D(containerId) {
 		this.containerId = containerId;
@@ -21,7 +43,7 @@
 		this._trailsData = null;
 		this._flashTimer = null;
 		this._popup = null;
-		this.heightScale = 1.5;
+		this.heightScale = 1.25;
 		this.pitch = 60;
 		this.bearing = 30;
 	}
@@ -133,6 +155,7 @@
 				trailData.features = (trailData.features || []).filter(function (f) {
 					return f.properties && f.properties.HIDE !== 1;
 				});
+				cleanTrailFeatureNames(trailData.features);
 				self._trailsData = trailData;
 				return trailData;
 			})
@@ -168,13 +191,17 @@
 				self.map = new mapboxgl.Map({
 					container: el,
 					style: 'mapbox://styles/mapbox/satellite-streets-v12',
-					center: [11.45393, 47.24358],
-					zoom: 11,
-					pitch: self.pitch,
-					bearing: self.bearing,
+					center: OVERVIEW_CAMERA.center,
+					zoom: OVERVIEW_CAMERA.zoom,
+					pitch: OVERVIEW_CAMERA.pitch,
+					bearing: OVERVIEW_CAMERA.bearing,
 					antialias: true,
-					attributionControl: true
+					attributionControl: false
 				});
+
+				self.map.addControl(new mapboxgl.AttributionControl({
+					compact: false
+				}), 'bottom-right');
 
 				self.map.addControl(new mapboxgl.NavigationControl({
 					showCompass: true,
@@ -336,6 +363,19 @@
 				bearing: this.bearing
 			}
 		);
+	};
+
+	/** Overview: Inn valley bird's-eye from south (same as 3D center-view). */
+	TerrainMap3D.prototype.flyToOverview = function (options) {
+		if (!this.ready || !this.map) return;
+		options = options || {};
+		this.map.easeTo({
+			center: OVERVIEW_CAMERA.center,
+			zoom: OVERVIEW_CAMERA.zoom,
+			bearing: OVERVIEW_CAMERA.bearing,
+			pitch: OVERVIEW_CAMERA.pitch,
+			duration: options.duration != null ? options.duration : 1200
+		});
 	};
 
 	TerrainMap3D.prototype.show = function (leafletMap, selectedTrailName) {

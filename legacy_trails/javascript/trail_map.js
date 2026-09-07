@@ -29,6 +29,21 @@ if (trim(pw_prompt) == pw ) {
 */
 
 
+/** Strip trailing "(123)" IDs from trail names for all UI display. */
+function legacyCleanTrailName(name) {
+	if (typeof name !== 'string') return name;
+	return name.replace(/\s*\(\d+\)\s*$/, '').trim();
+}
+
+function legacyCleanTrailFeatureNames(features) {
+	for (var i = 0; i < features.length; i++) {
+		var p = features[i].properties;
+		if (p && typeof p.name === 'string') {
+			p.name = legacyCleanTrailName(p.name);
+		}
+	}
+}
+
 /*** Set Up Map ***/
 var map = L.map('map', {
   zoom: 15,
@@ -39,9 +54,15 @@ var map = L.map('map', {
 /*** URL query: ?z= or ?zoom=, ?lat=, ?lng= or ?lon= — shareable view; synced on pan/zoom ***/
 var _legacyUrlSyncTimer = null;
 var _legacyUrlSyncSuppressed = false;
-/** Default map center/zoom when URL has no lat/lng/z (new loads / shared bookmark). */
-var LEGACY_DEFAULT_START_VIEW = { lat: 47.24358, lng: 11.45393, zoom: 11 };
+/** Default zoom when URL has no lat/lng/z; center comes from trails bounds. */
+var LEGACY_DEFAULT_START_ZOOM = 11;
 var LEGACY_TRAILS_VERSION = '2.1.0';
+
+function legacyDefaultStartViewFromTrails() {
+	if (!trails_json) return null;
+	var c = trails_json.getBounds().getCenter();
+	return { lat: c.lat, lng: c.lng, zoom: LEGACY_DEFAULT_START_ZOOM };
+}
 
 function legacyParseUrlMapView() {
 	var params = new URLSearchParams(window.location.search);
@@ -111,7 +132,8 @@ window.legacyTrailsMapHooks = {
 	getMap: function () {
 		return map;
 	},
-	defaultStartView: LEGACY_DEFAULT_START_VIEW
+	defaultStartView: legacyDefaultStartViewFromTrails,
+	defaultStartZoom: LEGACY_DEFAULT_START_ZOOM
 };
 
 /*** Set Up Base Map Layers ***/
@@ -167,9 +189,15 @@ var centerView = L.easyButton({
 	icon: '<i class="fas fa-compress"></i>',
 	title: 'Center View',		
 	onClick: function(control) {
-		legacyCloseAllPanelsAndShowHeader();
-		if (!trails_json) return;
-		map.fitBounds(trails_json.getBounds(), {maxZoom: 12});
+		if (window.LegacyTerrain3D && window.LegacyTerrain3D.visible) {
+			window.LegacyTerrain3D.flyToOverview();
+			legacyShowWelcomeAndHeader();
+			return;
+		}
+		legacyShowWelcomeAndHeader();
+		var startView = legacyDefaultStartViewFromTrails();
+		if (!startView) return;
+		map.setView([startView.lat, startView.lng], startView.zoom);
 	}
   }]
 });	
@@ -272,6 +300,32 @@ window.legacyExitTerrain3D = function () {
 		}
 	}
 };
+
+function legacyShowMapToast(text) {
+	var mapEl = document.getElementById('map');
+	if (!mapEl) return;
+	var el = document.getElementById('legacy-map-toast');
+	if (!el) {
+		el = document.createElement('div');
+		el.id = 'legacy-map-toast';
+		el.className = 'legacy-map-toast';
+		el.setAttribute('role', 'status');
+		mapEl.appendChild(el);
+	}
+	el.textContent = text;
+	el.classList.add('is-visible');
+	clearTimeout(el._hideTimer);
+	el._hideTimer = setTimeout(function () {
+		el.classList.remove('is-visible');
+	}, 2800);
+}
+
+/** Filters only apply in 2D — leave 3D and tell the user. */
+function legacyExit3DForFilterIfNeeded() {
+	if (!window.LegacyTerrain3D || !window.LegacyTerrain3D.visible) return;
+	window.legacyExitTerrain3D();
+	legacyShowMapToast('Wechsle in 2D Ansicht für Filter');
+}
 
 /*** Set Up Elevation Control ***/
 
@@ -409,6 +463,7 @@ function legacyBindLegendFilters() {
 	legend.addEventListener('click', function (e) {
 		var input = e.target.closest && e.target.closest('input[type="radio"][data-filter-key]');
 		if (!input) return;
+		legacyExit3DForFilterIfNeeded();
 		if (input._legacyWasChecked) {
 			input.checked = false;
 			_legacyFilterRadioLast[input.name] = null;
@@ -422,6 +477,7 @@ function legacyBindLegendFilters() {
 	var resetBtn = document.getElementById('legacy-filter-reset');
 	if (resetBtn) {
 		resetBtn.addEventListener('click', function () {
+			legacyExit3DForFilterIfNeeded();
 			var radios = legend.querySelectorAll('input[type="radio"][data-filter-key]');
 			for (var i = 0; i < radios.length; i++) {
 				radios[i].checked = false;
@@ -752,6 +808,37 @@ function legacyCloseAllPanelsAndShowHeader() {
 	map.invalidateSize();
 }
 
+function legacyShowWelcomePanel() {
+	var overlay = document.getElementById('trails-welcome-overlay');
+	if (!overlay) return;
+	_legacyWelcomeDismissed = false;
+	overlay.removeAttribute('hidden');
+	overlay.setAttribute('aria-hidden', 'false');
+	overlay.classList.remove('is-hidden');
+	legacySetKofiFloatingVisible(false);
+	legacySetHeaderVisible(true);
+}
+
+function legacyShowWelcomeAndHeader() {
+	map.closePopup();
+	var infoToggle = document.getElementById('info-toggle');
+	if (infoToggle) {
+		infoToggle.checked = false;
+	}
+	if (typeof el !== 'undefined') {
+		el.clear();
+		map.removeControl(el);
+	}
+	if (window.LegacyTerrain3D) {
+		if (window.LegacyTerrain3D._popup) {
+			window.LegacyTerrain3D._popup.remove();
+			window.LegacyTerrain3D._popup = null;
+		}
+		window.LegacyTerrain3D._clearFlash && window.LegacyTerrain3D._clearFlash();
+	}
+	legacyShowWelcomePanel();
+}
+
 function legacyDismissChromeOnUserAction() {
 	legacySetHeaderVisible(false);
 	var welcomeOverlay = document.getElementById('trails-welcome-overlay');
@@ -792,6 +879,12 @@ function legacyMountPopupCloseInFrame(popup) {
 		return;
 	}
 	closeBtn.classList.add('legacy-panel-close');
+	if (!closeBtn.querySelector('span')) {
+		var mark = document.createElement('span');
+		mark.textContent = (closeBtn.textContent || '').trim() || '\u00d7';
+		closeBtn.textContent = '';
+		closeBtn.appendChild(mark);
+	}
 	if (closeBtn.parentElement !== wrapper) {
 		wrapper.insertBefore(closeBtn, wrapper.firstChild);
 	}
@@ -926,6 +1019,7 @@ function legacyInitWelcomePanel(visibleFeatures) {
 $.getJSON('data/my_trails_z.geojson', function(json) {
 	// Filter out trails where HIDE = 1
 	json.features = json.features.filter(feature => feature.properties.HIDE !== 1);
+	legacyCleanTrailFeatureNames(json.features);
 
 	if (window.LegacyTrailFilters) {
 		LegacyTrailFilters.indexFeatures(json.features);
@@ -986,7 +1080,7 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 				weight:1.5,
 				pane: 'ptsPane'
 			})
-			.bindTooltip('<div id="pop_cont_name"><strong>Start:</strong> ' + feature.properties.name + '</br><strong>Seehöhe:</strong> ' + Math.round(feature.geometry.coordinates[0][2]) + ' m</div>', {
+			.bindTooltip('<div class="legacy-panel-inner"><strong>Start:</strong> ' + feature.properties.name + '<br><strong>Seehöhe:</strong> ' + Math.round(feature.geometry.coordinates[0][2]) + ' m</div>', {
 				permanent: false, 
 				direction: 'right',
 				className: "pt_labels"
@@ -1001,7 +1095,7 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 				weight:1.5,	
 				pane: 'ptsPane'
 			})	
-			.bindTooltip('<div id="pop_cont_name"><strong>Ende:</strong> ' + feature.properties.name + '</br><strong>Seehöhe:</strong> ' + Math.round(feature.geometry.coordinates[feature.geometry.coordinates.length - 1][2]) + ' m</div>', {
+			.bindTooltip('<div class="legacy-panel-inner"><strong>Ende:</strong> ' + feature.properties.name + '<br><strong>Seehöhe:</strong> ' + Math.round(feature.geometry.coordinates[feature.geometry.coordinates.length - 1][2]) + ' m</div>', {
 				permanent: false, 
 				direction: 'right',
 				className: "pt_labels"
@@ -1032,10 +1126,11 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 	legacyInitWelcomePanel(json.features);
 	
 	var urlView = legacyParseUrlMapView();
-	/* Valid ?lat=&lng=&z= (or zoom/lon) wins; anything else uses LEGACY_DEFAULT_START_VIEW */
-	var startView = urlView || LEGACY_DEFAULT_START_VIEW;
-	legacyApplyParsedView(startView, { animate: false });
-	updateTrailsInView();
+	/* Valid ?lat=&lng=&z= (or zoom/lon) wins; else trails bounds center @ LEGACY_DEFAULT_START_ZOOM */
+	var startView = urlView || legacyDefaultStartViewFromTrails();
+	if (startView) {
+		legacyApplyParsedView(startView, { animate: false });
+	}	updateTrailsInView();
 	if (urlView) {
 		window.dispatchEvent(new CustomEvent('legacytrails:urlview', { detail: urlView }));
 	}
