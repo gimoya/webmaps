@@ -243,6 +243,223 @@ L.control.locate({
 	position: 'topright'
 }).addTo(map);
 
+/*** Load / display local GPX (temporary 2D overlay) ***/
+
+var LEGACY_GPX_MAX_BYTES = 10 * 1024 * 1024;
+var LEGACY_GPX_MIN_SPACING_M = 10; /* max 10 vertices per 100 m */
+var _legacyGpxOverlay = null;
+var _legacyGpxData = null;
+var _legacyGpxFileInput = null;
+var gpxLoadBtn = null;
+
+function legacyHaversineM(lon1, lat1, lon2, lat2) {
+	var R = 6371000;
+	var toRad = Math.PI / 180;
+	var dLat = (lat2 - lat1) * toRad;
+	var dLon = (lon2 - lon1) * toRad;
+	var a =
+		Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+		Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) *
+		Math.sin(dLon / 2) * Math.sin(dLon / 2);
+	return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+function legacyThinLineCoords(coords) {
+	if (!coords || coords.length <= 2) return coords ? coords.slice() : [];
+	var out = [coords[0]];
+	var last = coords[0];
+	for (var i = 1; i < coords.length - 1; i++) {
+		var c = coords[i];
+		if (legacyHaversineM(last[0], last[1], c[0], c[1]) >= LEGACY_GPX_MIN_SPACING_M) {
+			out.push(c);
+			last = c;
+		}
+	}
+	var end = coords[coords.length - 1];
+	var prev = out[out.length - 1];
+	if (prev[0] !== end[0] || prev[1] !== end[1]) out.push(end);
+	return out;
+}
+
+function legacyGpxLocalName(node) {
+	return node && node.localName ? node.localName : '';
+}
+
+function legacyGpxChildText(parent, name) {
+	if (!parent || !parent.children) return '';
+	for (var i = 0; i < parent.children.length; i++) {
+		if (legacyGpxLocalName(parent.children[i]) === name) {
+			return (parent.children[i].textContent || '').trim();
+		}
+	}
+	return '';
+}
+
+function legacyGpxPointsFromParent(parent, ptName) {
+	var coords = [];
+	if (!parent || !parent.children) return coords;
+	for (var i = 0; i < parent.children.length; i++) {
+		var el = parent.children[i];
+		if (legacyGpxLocalName(el) !== ptName) continue;
+		var lat = parseFloat(el.getAttribute('lat'));
+		var lon = parseFloat(el.getAttribute('lon'));
+		if (!isFinite(lat) || !isFinite(lon)) continue;
+		var eleStr = legacyGpxChildText(el, 'ele');
+		var ele = eleStr ? parseFloat(eleStr) : NaN;
+		if (isFinite(ele)) coords.push([lon, lat, ele]);
+		else coords.push([lon, lat]);
+	}
+	return coords;
+}
+
+function legacyParseGpxToGeoJSON(xmlText) {
+	var doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+	if (!doc || !doc.documentElement || doc.querySelector('parsererror')) {
+		throw new Error('invalid-gpx');
+	}
+	var features = [];
+	var nodes = doc.getElementsByTagName('*');
+	for (var i = 0; i < nodes.length; i++) {
+		var n = nodes[i];
+		var ln = legacyGpxLocalName(n);
+		if (ln === 'trk') {
+			var trackName = legacyGpxChildText(n, 'name') || 'GPX Track';
+			for (var j = 0; j < n.children.length; j++) {
+				var seg = n.children[j];
+				if (legacyGpxLocalName(seg) !== 'trkseg') continue;
+				var coords = legacyThinLineCoords(legacyGpxPointsFromParent(seg, 'trkpt'));
+				if (coords.length < 2) continue;
+				features.push({
+					type: 'Feature',
+					properties: { name: trackName },
+					geometry: { type: 'LineString', coordinates: coords }
+				});
+			}
+		} else if (ln === 'rte') {
+			var routeName = legacyGpxChildText(n, 'name') || 'GPX Route';
+			var rcoords = legacyThinLineCoords(legacyGpxPointsFromParent(n, 'rtept'));
+			if (rcoords.length < 2) continue;
+			features.push({
+				type: 'Feature',
+				properties: { name: routeName },
+				geometry: { type: 'LineString', coordinates: rcoords }
+			});
+		}
+	}
+	return { type: 'FeatureCollection', features: features };
+}
+
+function legacyClearGpxOverlay() {
+	if (_legacyGpxOverlay) {
+		map.removeLayer(_legacyGpxOverlay);
+		_legacyGpxOverlay = null;
+	}
+	_legacyGpxData = null;
+	if (window.LegacyTerrain3D) window.LegacyTerrain3D.clearUserGpx();
+	if (gpxLoadBtn) {
+		gpxLoadBtn.state('gpx-load');
+		if (gpxLoadBtn.button) gpxLoadBtn.button.classList.remove('legacy-ctrl-selected');
+	}
+}
+
+function legacyShowGpxOverlay(fc) {
+	legacyClearGpxOverlay();
+	_legacyGpxData = fc;
+	var casing = L.geoJSON(fc, {
+		style: {
+			color: '#2f2f2f',
+			weight: 6,
+			opacity: 0.35,
+			lineCap: 'round',
+			lineJoin: 'round'
+		},
+		interactive: false
+	});
+	var line = L.geoJSON(fc, {
+		style: {
+			color: '#00b9fe',
+			weight: 3,
+			opacity: 0.9,
+			lineCap: 'butt',
+			lineJoin: 'round',
+			dashArray: '8 7'
+		},
+		interactive: false
+	});
+	_legacyGpxOverlay = L.layerGroup([casing, line]).addTo(map);
+	var b = casing.getBounds();
+	if (b && b.isValid()) {
+		map.fitBounds(b, { padding: [40, 40] });
+	}
+	if (window.LegacyTerrain3D) window.LegacyTerrain3D.setUserGpx(fc);
+	if (gpxLoadBtn) {
+		gpxLoadBtn.state('gpx-clear');
+		if (gpxLoadBtn.button) gpxLoadBtn.button.classList.add('legacy-ctrl-selected');
+	}
+}
+
+function legacyEnsureGpxFileInput() {
+	if (_legacyGpxFileInput) return _legacyGpxFileInput;
+	var input = document.createElement('input');
+	input.type = 'file';
+	input.accept = '.gpx,application/gpx+xml,application/xml,text/xml';
+	input.setAttribute('aria-hidden', 'true');
+	input.style.display = 'none';
+	input.addEventListener('change', function () {
+		var file = input.files && input.files[0];
+		input.value = '';
+		if (!file) return;
+		if (file.size > LEGACY_GPX_MAX_BYTES) {
+			legacyShowMapToast('GPX zu groß (max. 10 MB)');
+			return;
+		}
+		var reader = new FileReader();
+		reader.onload = function () {
+			try {
+				var fc = legacyParseGpxToGeoJSON(String(reader.result || ''));
+				if (!fc.features.length) {
+					legacyShowMapToast('Keine Track-/Routenpunkte in der GPX');
+					return;
+				}
+				legacyShowGpxOverlay(fc);
+			} catch (err) {
+				legacyShowMapToast('GPX ungültig');
+			}
+		};
+		reader.onerror = function () {
+			legacyShowMapToast('GPX konnte nicht gelesen werden');
+		};
+		reader.readAsText(file);
+	});
+	document.body.appendChild(input);
+	_legacyGpxFileInput = input;
+	return input;
+}
+
+gpxLoadBtn = L.easyButton({
+	position: 'topright',
+	states: [{
+		stateName: 'gpx-load',
+		icon: '<i class="fas fa-file-upload"></i>',
+		title: 'GPX laden',
+		onClick: function () {
+			legacyDismissChromeOnUserAction();
+			legacyEnsureGpxFileInput().click();
+		}
+	}, {
+		stateName: 'gpx-clear',
+		icon: '<i class="fas fa-trash"></i>',
+		title: 'GPX entfernen',
+		onClick: function () {
+			legacyClearGpxOverlay();
+		}
+	}]
+});
+gpxLoadBtn.addTo(map);
+if (gpxLoadBtn.getContainer) {
+	gpxLoadBtn.getContainer().classList.add('legacy-gpx-load');
+}
+
 /*** 3D terrain overlay toggle ***/
 
 function legacySyncTerrain3DTrail() {

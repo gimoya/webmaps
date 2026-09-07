@@ -64,12 +64,14 @@
 
 	function buildTrailLabelPoints(features) {
 		var out = [];
+		var boundsByName = Object.create(null);
 		for (var i = 0; i < features.length; i++) {
 			var f = features[i];
 			if (!f || !f.geometry || f.geometry.type !== 'LineString') continue;
 			var name = f.properties && f.properties.name;
 			if (!name) continue;
-			var pt = midpointLengthVertex(f.geometry.coordinates);
+			var coords = f.geometry.coordinates;
+			var pt = midpointLengthVertex(coords);
 			if (!pt) continue;
 			out.push({
 				type: 'Feature',
@@ -79,8 +81,25 @@
 					coordinates: [pt[0], pt[1], pt[2] != null ? pt[2] : 0]
 				}
 			});
+			var w = Infinity;
+			var s = Infinity;
+			var e = -Infinity;
+			var n = -Infinity;
+			for (var j = 0; j < coords.length; j++) {
+				var c = coords[j];
+				if (c[0] < w) w = c[0];
+				if (c[0] > e) e = c[0];
+				if (c[1] < s) s = c[1];
+				if (c[1] > n) n = c[1];
+			}
+			if (isFinite(w) && isFinite(s) && isFinite(e) && isFinite(n)) {
+				boundsByName[name] = [[w, s], [e, n]];
+			}
 		}
-		return { type: 'FeatureCollection', features: out };
+		return {
+			labels: { type: 'FeatureCollection', features: out },
+			boundsByName: boundsByName
+		};
 	}
 
 	function TerrainMap3D(containerId) {
@@ -93,6 +112,8 @@
 		this._trailsData = null;
 		this._labelData = null;
 		this._labelMarkers = null;
+		this._trailBoundsByName = null;
+		this._userGpxData = EMPTY_FC;
 		this._flashTimer = null;
 		this._popup = null;
 		this._viewportResizeBound = false;
@@ -139,11 +160,25 @@
 
 	TerrainMap3D.prototype._syncLabelMarkerZoom = function () {
 		if (!this.map) return;
-		var show = this.map.getZoom() >= 14;
+		var show = this.map.getZoom() >= 13;
 		var markers = this._labelMarkers || [];
 		for (var i = 0; i < markers.length; i++) {
 			markers[i].getElement().style.display = show ? '' : 'none';
 		}
+	};
+
+	TerrainMap3D.prototype.flyToTrailByName = function (trailName, options) {
+		if (!trailName || !this.map || !this.ready) return;
+		var bounds = this._trailBoundsByName && this._trailBoundsByName[trailName];
+		if (!bounds) return;
+		options = options || {};
+		var pad = options.padding != null ? options.padding : 2;
+		this.map.fitBounds(bounds, {
+			padding: pad,
+			duration: options.duration != null ? options.duration : 1100,
+			pitch: this.map.getPitch(),
+			bearing: this.map.getBearing()
+		});
 	};
 
 	TerrainMap3D.prototype._buildLabelMarkers = function () {
@@ -159,12 +194,31 @@
 
 			var el = document.createElement('div');
 			el.className = 'legacy-3d-trail-label';
+			el.setAttribute('role', 'button');
+			el.setAttribute('tabindex', '0');
+			el.setAttribute('title', name);
 			el.innerHTML =
 				'<div class="legacy-3d-trail-label-box">' +
 					'<div class="legacy-3d-trail-label-inner"></div>' +
 				'</div>' +
 				'<span class="legacy-3d-trail-label-pin" aria-hidden="true"></span>';
 			el.querySelector('.legacy-3d-trail-label-inner').textContent = name;
+
+			(function (trailName) {
+				el.addEventListener('click', function (ev) {
+					ev.preventDefault();
+					ev.stopPropagation();
+					self.flyToTrailByName(trailName);
+					self.flashHighlight(trailName);
+				});
+				el.addEventListener('keydown', function (ev) {
+					if (ev.key !== 'Enter' && ev.key !== ' ') return;
+					ev.preventDefault();
+					ev.stopPropagation();
+					self.flyToTrailByName(trailName);
+					self.flashHighlight(trailName);
+				});
+			})(name);
 
 			var marker = new mapboxgl.Marker({
 				element: el,
@@ -271,13 +325,16 @@
 				});
 				cleanTrailFeatureNames(trailData.features);
 				self._trailsData = trailData;
-				self._labelData = buildTrailLabelPoints(trailData.features);
+				var labelPack = buildTrailLabelPoints(trailData.features);
+				self._labelData = labelPack.labels;
+				self._trailBoundsByName = labelPack.boundsByName;
 				return trailData;
 			})
 			.catch(function (err) {
 				console.error(err);
 				self._trailsData = EMPTY_FC;
 				self._labelData = EMPTY_FC;
+				self._trailBoundsByName = Object.create(null);
 				return EMPTY_FC;
 			});
 
@@ -419,6 +476,40 @@
 						}
 					});
 
+					self.map.addSource('user-gpx', {
+						type: 'geojson',
+						data: self._userGpxData || EMPTY_FC
+					});
+					self.map.addLayer({
+						id: 'user-gpx-casing',
+						type: 'line',
+						source: 'user-gpx',
+						layout: {
+							'line-join': 'round',
+							'line-cap': 'round'
+						},
+						paint: {
+							'line-color': '#2f2f2f',
+							'line-width': 6,
+							'line-opacity': 0.35
+						}
+					});
+					self.map.addLayer({
+						id: 'user-gpx-line',
+						type: 'line',
+						source: 'user-gpx',
+						layout: {
+							'line-join': 'round',
+							'line-cap': 'butt'
+						},
+						paint: {
+							'line-color': '#00b9fe',
+							'line-width': 3,
+							'line-opacity': 0.9,
+							'line-dasharray': [1.2, 1.1]
+						}
+					});
+
 					self._buildLabelMarkers();
 					self._bindTrailClicks();
 					self._bindViewportResize();
@@ -440,6 +531,17 @@
 		return this.ensureInit().catch(function (err) {
 			console.error('3D preload failed', err);
 		});
+	};
+
+	/** Temporary user GPX overlay (thinned GeoJSON FeatureCollection). */
+	TerrainMap3D.prototype.setUserGpx = function (fc) {
+		this._userGpxData = fc && fc.type === 'FeatureCollection' ? fc : EMPTY_FC;
+		if (!this.map || !this.map.getSource('user-gpx')) return;
+		this.map.getSource('user-gpx').setData(this._userGpxData);
+	};
+
+	TerrainMap3D.prototype.clearUserGpx = function () {
+		this.setUserGpx(EMPTY_FC);
 	};
 
 	TerrainMap3D.prototype.flashHighlight = function (trailName) {

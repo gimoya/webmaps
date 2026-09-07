@@ -739,7 +739,8 @@ main {
     display: flex;
     flex-direction: column;
     align-items: center;
-    pointer-events: none;
+    pointer-events: auto;
+    cursor: pointer;
     line-height: 1;
 }
 
