@@ -735,6 +735,46 @@ main {
     font-size: 13px;
 }
 
+.legacy-3d-trail-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+    line-height: 1;
+}
+
+.legacy-3d-trail-label-box {
+    padding: 2px;
+    border-radius: 6px;
+    background: var(--legacy-panel-border-gradient);
+    background-size: 200% 200%;
+    animation: trailsWelcomeBorder 8s ease infinite;
+    box-shadow: var(--legacy-panel-frame-shadow);
+}
+
+.legacy-3d-trail-label-inner {
+    padding: 3px 7px;
+    border-radius: 4px;
+    background-color: var(--legacy-panel-inner-bg);
+    background-image: var(--legacy-panel-inner-bg-image);
+    color: var(--legacy-panel-text);
+    font-family: var(--legacy-panel-font);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.legacy-3d-trail-label-pin {
+    width: 7px;
+    height: 7px;
+    margin-top: 3px;
+    border-radius: 50%;
+    background: #FF5F1F;
+    border: 1.5px solid #1a1a1a;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
 /* Spinner over 2D while 3D prepares camera */
 html.legacy-3d-loading #map::after {
     content: '3D wird geladen…';
@@ -796,6 +836,13 @@ html.legacy-3d-loading #map::after {
 
 /* Hide Leaflet 2D attribution while 3D overlay is active */
 html.legacy-3d-active .leaflet-control-attribution {
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Hide 2D map chrome (zoom / GPS / basemap) in 3D; keep cube + center */
+html.legacy-3d-active .leaflet-top.leaflet-right > .leaflet-control:not(.legacy-3d-toggle):not(.legacy-center-view),
+html.legacy-3d-loading .leaflet-top.leaflet-right > .leaflet-control:not(.legacy-3d-toggle):not(.legacy-center-view) {
     visibility: hidden !important;
     pointer-events: none !important;
 }
@@ -1211,11 +1258,11 @@ html.legacy-3d-active .leaflet-control-attribution {
 }
 
 .trailPopupClass .kofi_reminder {
-    padding: var(--legacy-panel-padding);
+    padding: clamp(12px, 3.5vw, 22px) clamp(12px, 4vw, 26px);
     font-family: var(--legacy-panel-font);
-    font-size: 16px;
+    font-size: clamp(12px, 3.4vw, 16px);
     font-weight: 600;
-    line-height: 1.45;
+    line-height: 1.4;
     border-radius: var(--legacy-panel-radius-inner);
     transition: opacity 0.3s ease, visibility 0.3s ease;
     opacity: 0;
@@ -1253,10 +1300,10 @@ html.legacy-3d-active .leaflet-control-attribution {
 
 .trailPopupClass .kofi_reminder .legacy-action-btn,
 .trails-welcome-donate .legacy-action-btn {
-    font-size: 16px;
+    font-size: clamp(13px, 3.6vw, 16px);
     font-weight: 800;
-    padding: 12px 14px;
-    margin-top: 10px;
+    padding: clamp(8px, 2.4vw, 12px) clamp(10px, 2.8vw, 14px);
+    margin-top: clamp(6px, 2vw, 10px);
     letter-spacing: -0.02em;
     border-width: 2px;
     border-style: solid;
@@ -1385,10 +1432,11 @@ html.legacy-3d-active .leaflet-control-attribution {
 }
 
 .trail-item {
-    padding: 10px;
+    padding: 10px 10px 10px 20px;
     cursor: pointer;
-    transition: background-color 0.2s;
     border-radius: 5px;
+    border: 1px solid transparent;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .trail-item:last-child {
@@ -1396,11 +1444,14 @@ html.legacy-3d-active .leaflet-control-attribution {
 }
 
 .trail-item:hover {
-    background-color: rgba(0, 185, 254, 0.14);
+    border-color: rgba(0, 185, 254, 0.55);
+    background: linear-gradient(90deg, rgba(0, 185, 254, 0.16), rgba(255, 255, 255, 0.06));
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
 }
 
 .trail-item:active {
-    background-color: rgba(0, 185, 254, 0.22);
+    background: rgba(0, 185, 254, 0.22);
+    border-color: rgba(0, 185, 254, 0.7);
 }
 
 .trail-item h3 {
@@ -1421,7 +1472,9 @@ html.legacy-3d-active .leaflet-control-attribution {
     color: rgba(240, 240, 240, 0.55);
     font-style: italic;
     cursor: default;
-    background-color: transparent !important;
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
 }
 
 /* Webkit browsers (Chrome, Safari) */
@@ -1446,10 +1499,17 @@ html.legacy-3d-active .leaflet-control-attribution {
 
 #info-div .legend-content h2,
 #info-div .trails-list h2 {
-    padding-top: 5px;
-    color: var(--legacy-panel-title);
-    font-size: clamp(20px, 2.2vw, 28px) !important;
+    padding-top: 25px;
     margin-top: 0;
+    font-family: 'Trade Winds', cursive;
+    font-weight: normal;
+    font-size: clamp(18px, 2.2vw, 26px) !important;
+    letter-spacing: 0.06em;
+    line-height: 1.25;
+    color: var(--legacy-panel-title);
+    text-shadow:
+        0 1px 0 rgba(0, 0, 0, 0.55),
+        0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .legend-content h3 {

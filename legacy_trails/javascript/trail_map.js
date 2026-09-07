@@ -203,6 +203,9 @@ var centerView = L.easyButton({
 });	
 
 centerView.addTo(map);
+if (centerView.getContainer) {
+	centerView.getContainer().classList.add('legacy-center-view');
+}
 
 /* Base Map Toggle — starts on satellite (Luftbild) */
 var toggle = L.easyButton({
@@ -282,7 +285,7 @@ var terrain3dToggle = L.easyButton({
 		icon: '<i class="fas fa-map"></i>',
 		title: '2D Ansicht',
 		onClick: function (btn) {
-			if (window.LegacyTerrain3D) window.LegacyTerrain3D.hide();
+			if (window.LegacyTerrain3D) window.LegacyTerrain3D.hide(map);
 			btn.state('terrain-3d-off');
 			if (btn.button) btn.button.classList.remove('legacy-ctrl-selected');
 		}
@@ -290,9 +293,12 @@ var terrain3dToggle = L.easyButton({
 });
 
 terrain3dToggle.addTo(map);
+if (terrain3dToggle.getContainer) {
+	terrain3dToggle.getContainer().classList.add('legacy-3d-toggle');
+}
 
 window.legacyExitTerrain3D = function () {
-	if (window.LegacyTerrain3D) window.LegacyTerrain3D.hide();
+	if (window.LegacyTerrain3D) window.LegacyTerrain3D.hide(map);
 	if (terrain3dToggle) {
 		terrain3dToggle.state('terrain-3d-off');
 		if (terrain3dToggle.button) {

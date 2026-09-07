@@ -33,6 +33,56 @@
 		}
 	}
 
+	function segmentLen2d(a, b) {
+		var dx = a[0] - b[0];
+		var dy = a[1] - b[1];
+		return Math.sqrt(dx * dx + dy * dy);
+	}
+
+	/** Existing vertex nearest to halfway along 2D trail length. */
+	function midpointLengthVertex(coords) {
+		if (!coords || !coords.length) return null;
+		if (coords.length === 1) return coords[0];
+		var seglen = [];
+		var total = 0;
+		for (var i = 1; i < coords.length; i++) {
+			var d = segmentLen2d(coords[i - 1], coords[i]);
+			seglen.push(d);
+			total += d;
+		}
+		if (total === 0) return coords[Math.floor(coords.length / 2)];
+		var half = total / 2;
+		var acc = 0;
+		for (var j = 0; j < seglen.length; j++) {
+			if (acc + seglen[j] >= half) {
+				return half - acc < seglen[j] / 2 ? coords[j] : coords[j + 1];
+			}
+			acc += seglen[j];
+		}
+		return coords[coords.length - 1];
+	}
+
+	function buildTrailLabelPoints(features) {
+		var out = [];
+		for (var i = 0; i < features.length; i++) {
+			var f = features[i];
+			if (!f || !f.geometry || f.geometry.type !== 'LineString') continue;
+			var name = f.properties && f.properties.name;
+			if (!name) continue;
+			var pt = midpointLengthVertex(f.geometry.coordinates);
+			if (!pt) continue;
+			out.push({
+				type: 'Feature',
+				properties: { name: name },
+				geometry: {
+					type: 'Point',
+					coordinates: [pt[0], pt[1], pt[2] != null ? pt[2] : 0]
+				}
+			});
+		}
+		return { type: 'FeatureCollection', features: out };
+	}
+
 	function TerrainMap3D(containerId) {
 		this.containerId = containerId;
 		this.map = null;
@@ -41,8 +91,13 @@
 		this._initPromise = null;
 		this._trailsPromise = null;
 		this._trailsData = null;
+		this._labelData = null;
+		this._labelMarkers = null;
 		this._flashTimer = null;
 		this._popup = null;
+		this._viewportResizeBound = false;
+		this._onViewportResize = null;
+		this._resizeTimer = null;
 		this.heightScale = 1.25;
 		this.pitch = 60;
 		this.bearing = 30;
@@ -71,6 +126,65 @@
 		}
 		if (this.map.getLayer('trails-flash-casing')) {
 			this.map.setLayoutProperty('trails-flash-casing', 'visibility', 'none');
+		}
+	};
+
+	TerrainMap3D.prototype._clearLabelMarkers = function () {
+		var markers = this._labelMarkers || [];
+		for (var i = 0; i < markers.length; i++) {
+			markers[i].remove();
+		}
+		this._labelMarkers = [];
+	};
+
+	TerrainMap3D.prototype._syncLabelMarkerZoom = function () {
+		if (!this.map) return;
+		var show = this.map.getZoom() >= 14;
+		var markers = this._labelMarkers || [];
+		for (var i = 0; i < markers.length; i++) {
+			markers[i].getElement().style.display = show ? '' : 'none';
+		}
+	};
+
+	TerrainMap3D.prototype._buildLabelMarkers = function () {
+		var self = this;
+		this._clearLabelMarkers();
+		if (!this.map) return;
+
+		var features = (this._labelData && this._labelData.features) || [];
+		for (var i = 0; i < features.length; i++) {
+			var f = features[i];
+			var name = f.properties && f.properties.name;
+			if (!name) continue;
+
+			var el = document.createElement('div');
+			el.className = 'legacy-3d-trail-label';
+			el.innerHTML =
+				'<div class="legacy-3d-trail-label-box">' +
+					'<div class="legacy-3d-trail-label-inner"></div>' +
+				'</div>' +
+				'<span class="legacy-3d-trail-label-pin" aria-hidden="true"></span>';
+			el.querySelector('.legacy-3d-trail-label-inner').textContent = name;
+
+			var marker = new mapboxgl.Marker({
+				element: el,
+				anchor: 'bottom',
+				offset: [0, 0],
+				pitchAlignment: 'viewport',
+				rotationAlignment: 'viewport'
+			})
+				.setLngLat(f.geometry.coordinates)
+				.addTo(this.map);
+
+			this._labelMarkers.push(marker);
+		}
+
+		this._syncLabelMarkerZoom();
+		if (!this._labelZoomBound) {
+			this._labelZoomBound = true;
+			this.map.on('zoom', function () {
+				self._syncLabelMarkerZoom();
+			});
 		}
 	};
 
@@ -157,11 +271,13 @@
 				});
 				cleanTrailFeatureNames(trailData.features);
 				self._trailsData = trailData;
+				self._labelData = buildTrailLabelPoints(trailData.features);
 				return trailData;
 			})
 			.catch(function (err) {
 				console.error(err);
 				self._trailsData = EMPTY_FC;
+				self._labelData = EMPTY_FC;
 				return EMPTY_FC;
 			});
 
@@ -303,7 +419,9 @@
 						}
 					});
 
+					self._buildLabelMarkers();
 					self._bindTrailClicks();
+					self._bindViewportResize();
 					self.ready = true;
 					resolve(self);
 				});
@@ -348,8 +466,43 @@
 		}, 220);
 	};
 
+	TerrainMap3D.prototype._bindViewportResize = function () {
+		var self = this;
+		if (this._viewportResizeBound) return;
+		this._viewportResizeBound = true;
+
+		this._onViewportResize = function () {
+			if (!self.map || !self.ready) return;
+			if (self._resizeTimer) clearTimeout(self._resizeTimer);
+			self._resizeTimer = setTimeout(function () {
+				self._resizeTimer = null;
+				if (self.map) self.map.resize();
+			}, 100);
+		};
+
+		window.addEventListener('resize', this._onViewportResize);
+		window.addEventListener('orientationchange', this._onViewportResize);
+		if (window.visualViewport) {
+			window.visualViewport.addEventListener('resize', this._onViewportResize);
+			window.visualViewport.addEventListener('scroll', this._onViewportResize);
+		}
+	};
+
+	/** Push current Mapbox center + zoom onto the Leaflet 2D map. */
+	TerrainMap3D.prototype.syncToLeaflet = function (leafletMap) {
+		if (!this.ready || !this.map || !leafletMap) return;
+		// Mobile URL-bar / dvh changes leave Mapbox matrix stale until resize.
+		this.map.resize();
+		if (typeof leafletMap.invalidateSize === 'function') {
+			leafletMap.invalidateSize({ animate: false, pan: false });
+		}
+		var c = this.map.getCenter();
+		leafletMap.setView([c.lat, c.lng], this.map.getZoom(), { animate: false });
+	};
+
 	TerrainMap3D.prototype.syncBounds = function (leafletMap) {
 		if (!this.ready || !this.map || !leafletMap) return;
+		this.map.resize();
 		var b = leafletMap.getBounds();
 		this.map.fitBounds(
 			[
@@ -413,7 +566,10 @@
 			});
 	};
 
-	TerrainMap3D.prototype.hide = function () {
+	TerrainMap3D.prototype.hide = function (leafletMap) {
+		if (this.visible && this.ready && leafletMap) {
+			this.syncToLeaflet(leafletMap);
+		}
 		this._clearFlash();
 		if (this._popup) {
 			this._popup.remove();
@@ -428,6 +584,10 @@
 		}
 		this.visible = false;
 		document.documentElement.classList.remove('legacy-3d-active', 'legacy-3d-loading');
+		// Leaflet size after overlay teardown (mobile dvh may have changed).
+		if (leafletMap && typeof leafletMap.invalidateSize === 'function') {
+			leafletMap.invalidateSize({ animate: false, pan: false });
+		}
 	};
 
 	global.LegacyTerrain3D = new TerrainMap3D('map-3d');
