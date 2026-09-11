@@ -6,7 +6,7 @@ Build Legacy Trails favicons from two sources.
 - icon_source_pwa.png  → Apple / Android homescreen
 - Does not alter source artwork (no stretch/color changes).
 - Pads to square on transparent, then resizes.
-- PWA outputs get +6% padding (content = 94% of canvas).
+- PWA outputs get 10% padding on each side (content = 80% of canvas).
 """
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ OUT = Path(__file__).resolve().parent.parent
 SOURCE_USUAL = OUT / "icon_source.png"
 SOURCE_PWA = OUT / "icon_source_pwa.png"
 
-# Extra inset on PWA homescreen icons (6% total → content at 94%)
-PWA_CONTENT_FRAC = 0.94
+# Extra inset on PWA homescreen icons (10% each side → content at 80%)
+PWA_CONTENT_FRAC = 0.80
 
 USUAL_SIZES = {
 	"favicon-16x16.png": 16,
