@@ -3,10 +3,10 @@
 Build Legacy Trails favicons from two sources.
 
 - icon_source.png      → browser favicons (16/32/ico)
-- icon_source_pwa.png  → Apple / Android homescreen (already includes safe zone)
+- icon_source_pwa.png  → Apple / Android homescreen
 - Does not alter source artwork (no stretch/color changes).
 - Pads to square on transparent, then resizes.
-- Maskable outputs are plain resize (safe zone is in the PWA source).
+- PWA outputs get +6% padding (content = 94% of canvas).
 """
 from __future__ import annotations
 
@@ -17,6 +17,9 @@ from PIL import Image
 OUT = Path(__file__).resolve().parent.parent
 SOURCE_USUAL = OUT / "icon_source.png"
 SOURCE_PWA = OUT / "icon_source_pwa.png"
+
+# Extra inset on PWA homescreen icons (6% total → content at 94%)
+PWA_CONTENT_FRAC = 0.94
 
 USUAL_SIZES = {
 	"favicon-16x16.png": 16,
@@ -46,7 +49,22 @@ def resize_square(square: Image.Image, dim: int) -> Image.Image:
 	return square.resize((dim, dim), Image.Resampling.LANCZOS)
 
 
-def export_from(source: Path, sizes: dict[str, int]) -> None:
+def resize_padded(square: Image.Image, dim: int, content_frac: float) -> Image.Image:
+	"""Resize with transparent padding so content fills content_frac of the canvas."""
+	out = Image.new("RGBA", (dim, dim), (0, 0, 0, 0))
+	inner = max(1, int(round(dim * content_frac)))
+	scaled = square.resize((inner, inner), Image.Resampling.LANCZOS)
+	off = (dim - inner) // 2
+	out.paste(scaled, (off, off), scaled)
+	return out
+
+
+def export_from(
+	source: Path,
+	sizes: dict[str, int],
+	*,
+	content_frac: float | None = None,
+) -> None:
 	if not source.is_file():
 		raise SystemExit(f"Missing source: {source}")
 
@@ -55,7 +73,10 @@ def export_from(source: Path, sizes: dict[str, int]) -> None:
 	square = to_square(src)
 
 	for name, dim in sizes.items():
-		im = resize_square(square, dim)
+		if content_frac is None:
+			im = resize_square(square, dim)
+		else:
+			im = resize_padded(square, dim, content_frac)
 		path = OUT / name
 		im.save(path, format="PNG", optimize=True)
 		print("wrote", path.name, im.size)
@@ -63,7 +84,7 @@ def export_from(source: Path, sizes: dict[str, int]) -> None:
 
 def main() -> None:
 	export_from(SOURCE_USUAL, USUAL_SIZES)
-	export_from(SOURCE_PWA, PWA_SIZES)
+	export_from(SOURCE_PWA, PWA_SIZES, content_frac=PWA_CONTENT_FRAC)
 
 	Image.open(OUT / "favicon-32x32.png").convert("RGBA").save(
 		OUT / "favicon.ico",
