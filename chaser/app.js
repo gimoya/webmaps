@@ -85,8 +85,8 @@
 
         if (activeRefs.length) {
           const shouldResume = await showNotice(
-            `Resume the trace for "${name}" on this browser?`,
-            { confirmLabel: "Resume", cancelLabel: "Start new Trace" }
+            "Resume the trace for {alias} on this device/browser? Caution: 'Start new Trace' will delete the old one.",
+            { alias: name, confirmLabel: "Resume", cancelLabel: "Start new Trace" }
           );
           if (shouldResume) {
             sessionRef = activeRefs[0];
@@ -110,8 +110,15 @@
       const name = sanitizeName(
         localStorage.getItem("chaser_display_name") || displayNameEl.value
       );
-      clearWriter();
       if (!name) return;
+
+      const confirmed = await showNotice(
+        "Stop tracking {alias}? This trace will be gone for good.",
+        { alias: name, confirmLabel: "Stop tracking", cancelLabel: "Cancel" }
+      );
+      if (!confirmed) return;
+
+      clearWriter();
 
       try {
         const activeRefs = await findActiveAliasSessions(ref, name);
@@ -461,7 +468,7 @@
           ? ` data-session-id="${escapeHtml(row.track.sessionId)}"`
           : "";
         const warning = row.signalStale
-          ? `<div class="user-item-stale">Tracking was interrupted! Please resume with your  alias!</div>`
+          ? `<div class="user-item-stale">Tracking was interrupted! Resume with your alias!</div>`
           : "";
 
         return `
@@ -622,7 +629,17 @@
   function showNotice(message, options = {}) {
     if (noticeResolver) closeNotice(false);
 
-    noticeMessage.textContent = message;
+    noticeMessage.replaceChildren();
+    if (options.alias) {
+      const [before, after = ""] = message.split("{alias}");
+      const alias = document.createElement("span");
+      alias.className = "notice-alias";
+      alias.style.color = colorForAlias(options.alias);
+      alias.textContent = options.alias;
+      noticeMessage.append(before, alias, after);
+    } else {
+      noticeMessage.textContent = message;
+    }
     noticeConfirm.textContent = options.confirmLabel || "OK";
     noticeCancel.hidden = !options.cancelLabel;
     if (options.cancelLabel) noticeCancel.textContent = options.cancelLabel;

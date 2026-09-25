@@ -326,6 +326,12 @@ a.info-link:hover { color: var(--color-accent); }
   line-height: 1.45;
 }
 
+.notice-alias {
+  font-family: var(--font-family-heading);
+  font-size: 1.2em;
+  letter-spacing: 0.03em;
+}
+
 .notice-dialog-actions {
   display: flex;
   gap: 0.5rem;
