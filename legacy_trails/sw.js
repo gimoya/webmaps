@@ -1,5 +1,5 @@
 // Service Worker for Legacy Trails Tirol PWA - Performance Caching with Tile Cache Limit
-const CACHE_NAME = 'legacy-trails-v78';
+const CACHE_NAME = 'legacy-trails-v80';
 const TILE_CACHE_NAME = 'legacy-trails-tiles';
 const MAX_CACHE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
 const TILE_EVICTION_DELAY_MS = 3000;
@@ -181,7 +181,7 @@ function isMapTile(url) {
   return url.includes('tile') ||
     url.includes('google.com/vt') ||
     url.includes('opentopomap') ||
-    url.includes('openmaps.fr') ||
+    url.includes('tracestrack.com') ||
     url.includes('openstreetmap.org') ||
     url.includes('maptiler.com') ||
     /\/(\d+)\/(\d+)\/(\d+)/.test(url);

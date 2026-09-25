@@ -147,7 +147,7 @@ var LEGACY_TILE_OPTS = {
 
 var map_satelliteUrl = 'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
 
-var map_topoUrl = 'https://tile.openmaps.fr/openhikingmap/{z}/{x}/{y}.png';
+var map_topoUrl = 'https://tile.tracestrack.com/topo__/{z}/{x}/{y}.png?key={apiKey}';
 
 var map_satelliteLayer = L.tileLayer(map_satelliteUrl, Object.assign({}, LEGACY_TILE_OPTS, {
 	attribution: '&copy; <a href="https://www.google.com/maps">Google</a>',
@@ -157,10 +157,11 @@ var map_satelliteLayer = L.tileLayer(map_satelliteUrl, Object.assign({}, LEGACY_
 
 var map_topoLayer = L.tileLayer(map_topoUrl, Object.assign({}, LEGACY_TILE_OPTS, {
 	minZoom: 1,
-	maxZoom: 17,
+	maxZoom: 19,
+	apiKey: '3e42a34cc017771733149a4097431ecd',
 	attribution:
-		'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> · '
-		+ '<a href="https://wiki.openstreetmap.org/wiki/Hiking/openhikingmap">OpenHiking</a>',
+		'&copy; <a href="https://www.tracestrack.com/">Tracestrack</a>, '
+		+ '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
 }));
 
 /*** Setting Default Base Map ***/
