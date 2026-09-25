@@ -77,6 +77,61 @@ html, body {
   color: var(--color-text-muted);
 }
 
+a.info-link,
+a.info-link:link,
+a.info-link:visited {
+  font-size: 0.45em;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  vertical-align: super;
+  margin-left: 0.15em;
+}
+
+a.info-link:hover { color: var(--color-accent); }
+
+.panel-info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0 0.75rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.panel-info-header h2 {
+  margin: 0;
+  font-family: var(--font-family-heading);
+  font-size: 1.1rem;
+}
+
+.panel-info-close {
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  padding: 0.25rem;
+}
+
+.panel-info-close:hover { color: var(--color-text); }
+
+.info-faq { margin: 0; }
+
+.info-faq dt {
+  font-family: var(--font-family-heading);
+  font-size: 0.95rem;
+  color: var(--color-success);
+  margin: 1rem 0 0.35rem;
+}
+
+.info-faq dt:first-child { margin-top: 0; }
+
+.info-faq dd {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
 .panel-section {
   margin-top: 0.9rem;
   padding: 0.75rem;
@@ -136,6 +191,13 @@ html, body {
 .panel-controls button.ghost { background: #4a4a54; }
 .panel-controls button.ghost:hover { background: var(--color-danger); }
 .panel-controls button:disabled { opacity: 0.55; cursor: not-allowed; }
+.panel-controls button.is-sharing:disabled,
+.panel-controls button.is-sharing:disabled:hover {
+  background: #4a4a54;
+  opacity: 0.7;
+}
+#stop-share.is-sharing { background: #f87171; }
+#stop-share.is-sharing:hover { background: var(--color-danger); }
 
 .panel-section h3 {
   margin: 0 0 0.5rem;
@@ -160,15 +222,24 @@ html, body {
   background: #263028;
 }
 
-.user-item.stale {
-  border-left-color: #9b7f2f;
-  background: #332f22;
-  opacity: 0.8;
+.user-item[data-session-id] {
+  cursor: pointer;
+}
+
+.user-item[data-session-id]:hover {
+  border-color: var(--color-text-muted);
 }
 
 .user-item-name {
   font-size: 0.85rem;
   font-weight: 700;
+}
+
+.user-item-stale {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-danger);
 }
 
 .user-item-meta {
@@ -182,17 +253,94 @@ html, body {
   color: var(--color-text-muted);
 }
 
+.chaser-marker-icon {
+  background: transparent;
+  border: 0;
+}
+
 .chaser-user-marker {
+  display: block;
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #22c55e;
   border: 2px solid #fff;
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
 }
 
-.chaser-user-marker.stale {
-  background: #f59e0b;
+.session-center-control a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: #000;
+}
+
+.session-center-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  fill: currentColor;
+}
+
+.session-center-control a.is-active {
+  color: #2074b6;
+}
+
+.notice-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.notice-dialog[hidden] {
+  display: none;
+}
+
+.notice-dialog-card {
+  width: min(420px, 100%);
+  padding: 1rem 1.1rem;
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+.notice-dialog-card p {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.notice-dialog-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.notice-dialog-actions button {
+  flex: 1;
+  font-family: var(--font-family-heading);
+  border: 0;
+  border-radius: 5px;
+  padding: 0.55rem 0.8rem;
+  background: var(--color-accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.notice-dialog-actions button:hover { background: var(--color-accent-hover); }
+.notice-dialog-actions button.ghost { background: #4a4a54; }
+.notice-dialog-actions button.ghost:hover { background: #5c5c68; }
+
+.session-center-control a.is-disabled {
+  color: #999;
+  opacity: 0.55;
+  cursor: default;
 }
 
 @media (orientation: portrait) {

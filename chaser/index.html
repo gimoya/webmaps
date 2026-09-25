@@ -9,7 +9,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
   <link href="https://fonts.cdnfonts.com/css/raster-forge" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol@0.76.0/dist/L.Control.Locate.min.css" crossorigin="">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -18,48 +17,84 @@
 
     <aside class="unified-panel" id="unified-panel">
       <div class="unified-panel-scroll">
-        <header class="panel-header">
-          <h1>Chaser</h1>
-          <h2>Live multi-user map</h2>
-        </header>
+        <div id="panel-main">
+          <header class="panel-header">
+            <h1>Chaser<sup><a href="#infos" class="info-link" title="FAQs">ⓘ</a></sup></h1>
+            <h2>Live multi-user map</h2>
+          </header>
 
-        <section class="panel-section">
-          <div class="status-row">
-            <div class="status-label">Connection</div>
-            <div id="connection-status" class="status-pill status-offline">offline</div>
+          <section class="panel-section panel-controls">
+            <input id="display-name" type="text" maxlength="30" placeholder="...put your name/alias here!">
+            <button id="start-share" type="button">START TRACKING</button>
+            <button id="stop-share" type="button" class="ghost" hidden>Stop tracking</button>
+          </section>
+
+          <section class="panel-section">
+            <h3>Active users</h3>
+            <ul id="user-list" class="user-list"></ul>
+          </section>
+
+          <section class="panel-section">
+            <div class="status-row">
+              <div class="status-label">Connection</div>
+              <div id="connection-status" class="status-pill status-offline">offline</div>
+            </div>
+            <div class="status-row">
+              <div class="status-label">Writer interval</div>
+              <div class="status-value">10s</div>
+            </div>
+          </section>
+        </div>
+
+        <div id="panel-info" hidden>
+          <div class="panel-info-header">
+            <h2>Info &amp; FAQs</h2>
+            <a href="#" class="panel-info-close" title="Close">×</a>
           </div>
-          <div class="status-row">
-            <div class="status-label">Writer interval</div>
-            <div class="status-value">10s</div>
-          </div>
-          <div class="status-row">
-            <div class="status-label">Stale timeout</div>
-            <div class="status-value">60s</div>
-          </div>
-        </section>
+          <dl class="info-faq">
+            <dt>Alias</dt>
+            <dd>The name you enter is the only identity. One alias has one active trace. Using an alias someone else is already tracking can corrupt their signal: Resume adds your points to their line, and Stop old &amp; start new ends their trace.</dd>
 
-        <section class="panel-section panel-controls">
-          <input id="display-name" type="text" maxlength="30" placeholder="Display name">
-          <button id="start-share" type="button">Start sharing</button>
-          <button id="stop-share" type="button" class="ghost" disabled>Stop sharing</button>
-        </section>
+            <dt>No tracking on this page</dt>
+            <dd>A fresh load, a refresh, or leaving the page stops this browser from writing points. The trace stays on the map until it is stopped. Stop sharing is only shown while this page is writing.</dd>
 
-        <section class="panel-section">
-          <h3>Active users</h3>
-          <ul id="user-list" class="user-list"></ul>
-        </section>
+            <dt>Start/Resume Sharing</dt>
+            <dd>With no active trace, this starts a new one. If the used alias is already taken for an active trace, resuming continues this trace from this browser/device. Starting a new trace stops an active trace for this alias.</dd>
 
-        <section class="panel-section panel-footnote">
-          Configure Firebase in <code>app.js</code> via <code>window.CHASER_FIREBASE_CONFIG</code>.
-        </section>
+            <dt>Stop sharing</dt>
+            <dd>Ends every active trace for that alias. Completed traces stay stored and disappear from the live map.</dd>
+
+            <dt>Stale signal</dt>
+            <dd>A point is stored about every 10 seconds, even if you have not moved. If no new point is stored for more than 20 seconds, that row says Please Resume or Stop Sharing!</dd>
+          </dl>
+        </div>
       </div>
     </aside>
   </div>
 
+  <div id="notice-dialog" class="notice-dialog" hidden>
+    <div class="notice-dialog-card" role="dialog" aria-modal="true" aria-labelledby="notice-dialog-message">
+      <p id="notice-dialog-message"></p>
+      <div class="notice-dialog-actions">
+        <button id="notice-dialog-confirm" type="button">OK</button>
+        <button id="notice-dialog-cancel" type="button" class="ghost" hidden>Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="https://unpkg.com/leaflet.locatecontrol@0.76.0/dist/L.Control.Locate.min.js" crossorigin=""></script>
   <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-compat.js"></script>
+  <script>
+    window.CHASER_FIREBASE_CONFIG = {
+      apiKey: "AIzaSyDltxjsiYUSWb-ACSXbVwgle1QiTwWJDiI",
+      authDomain: "chaser-75e2e.firebaseapp.com",
+      projectId: "chaser-75e2e",
+      storageBucket: "chaser-75e2e.firebasestorage.app",
+      messagingSenderId: "764827136309",
+      appId: "1:764827136309:web:888b04389963a1fec75c7c"
+    };
+  </script>
   <script src="app.js"></script>
 </body>
 </html>
