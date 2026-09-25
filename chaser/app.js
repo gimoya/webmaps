@@ -7,7 +7,6 @@
   const statusEl = document.getElementById("connection-status");
   const displayNameEl = document.getElementById("display-name");
   const startBtn = document.getElementById("start-share");
-  const stopBtn = document.getElementById("stop-share");
   const panelMain = document.getElementById("panel-main");
   const panelInfo = document.getElementById("panel-info");
   const noticeDialog = document.getElementById("notice-dialog");
@@ -36,9 +35,11 @@
 
   const map = L.map("map", { zoomControl: true }).setView([47.2672, 11.3928], 12);
   addPanelToggleControl();
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  L.tileLayer("https://tile.tracestrack.com/topo__/{z}/{x}/{y}.png?key={apiKey}", {
+    minZoom: 1,
     maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    apiKey: "3e42a34cc017771733149a4097431ecd",
+    attribution: '&copy; <a href="https://www.tracestrack.com/">Tracestrack</a>, &copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
   }).addTo(map);
 
   const gpxLayer = L.layerGroup().addTo(map);
@@ -71,6 +72,11 @@
 
   function wireControls(ref) {
     startBtn.addEventListener("click", async () => {
+      if (activeSessionRef) {
+        await stopTracking(ref);
+        return;
+      }
+
       const name = sanitizeName(displayNameEl.value);
       if (!name) {
         await showNotice("Please enter a display name.");
@@ -81,53 +87,50 @@
 
       try {
         const activeRefs = await findActiveAliasSessions(ref, name);
-        let sessionRef = null;
-
-        if (activeRefs.length) {
-          const shouldResume = await showNotice(
-            "Resume the trace for {alias} on this device/browser? Caution: 'Start new Trace' will delete the old one.",
-            { alias: name, confirmLabel: "Resume", cancelLabel: "Start new Trace" }
-          );
-          if (shouldResume) {
-            sessionRef = activeRefs[0];
-          } else {
-            await endAliasSessions(activeRefs);
-            sessionRef = await createAliasSession(ref, name);
-          }
-        } else {
-          sessionRef = await createAliasSession(ref, name);
+        if (!activeRefs.length) {
+          beginWriting(await createAliasSession(ref, name));
+          return;
         }
 
-        beginWriting(sessionRef);
+        const shouldResume = await showNotice(
+          "Resume the trace for {alias} on this device/browser? Stop tracking removes it. It will be gone for good.",
+          { alias: name, confirmLabel: "Resume", cancelLabel: "Stop tracking" }
+        );
+        if (shouldResume) {
+          beginWriting(activeRefs[0]);
+          return;
+        }
+
+        await endAliasSessions(activeRefs);
       } catch (err) {
         clearWriter();
         console.error("Failed to start tracking session:", err);
         renderConnection(false, "offline");
       }
     });
+  }
 
-    stopBtn.addEventListener("click", async () => {
-      const name = sanitizeName(
-        localStorage.getItem("chaser_display_name") || displayNameEl.value
-      );
-      if (!name) return;
+  async function stopTracking(ref) {
+    const name = sanitizeName(
+      localStorage.getItem("chaser_display_name") || displayNameEl.value
+    );
+    if (!name) return;
 
-      const confirmed = await showNotice(
-        "Stop tracking {alias}? This trace will be gone for good.",
-        { alias: name, confirmLabel: "Stop tracking", cancelLabel: "Cancel" }
-      );
-      if (!confirmed) return;
+    const confirmed = await showNotice(
+      "Stop tracking {alias}? This trace will be gone for good.",
+      { alias: name, confirmLabel: "Stop tracking", cancelLabel: "Cancel" }
+    );
+    if (!confirmed) return;
 
-      clearWriter();
+    clearWriter();
 
-      try {
-        const activeRefs = await findActiveAliasSessions(ref, name);
-        await endAliasSessions(activeRefs);
-      } catch (err) {
-        console.error("Failed to stop tracking session:", err);
-        renderConnection(false, "offline");
-      }
-    });
+    try {
+      const activeRefs = await findActiveAliasSessions(ref, name);
+      await endAliasSessions(activeRefs);
+    } catch (err) {
+      console.error("Failed to stop tracking session:", err);
+      renderConnection(false, "offline");
+    }
   }
 
   function addPanelToggleControl() {
@@ -282,13 +285,8 @@
   }
 
   function setWriterState(active) {
-    startBtn.disabled = active;
-    stopBtn.hidden = !active;
-    stopBtn.disabled = !active;
     displayNameEl.disabled = active;
-    startBtn.classList.toggle("is-sharing", active);
-    stopBtn.classList.toggle("is-sharing", active);
-    displayNameEl.placeholder = active ? "Tracking.." : "put your name/alias here!";
+    displayNameEl.placeholder = active ? "Tracking.." : "...put your name/alias here!";
     displayNameEl.value = active
       ? ""
       : localStorage.getItem("chaser_display_name") || "";
@@ -437,8 +435,6 @@
   }
 
   function renderUserList(tracks) {
-    startBtn.textContent = tracks.length ? "START/RESUME TRACKING" : "START TRACKING";
-
     if (!tracks.length) {
       if (userListSignature !== "empty") {
         userListEl.innerHTML = "<li class='user-item'><div class='user-item-meta'>No active users</div></li>";
@@ -468,7 +464,7 @@
           ? ` data-session-id="${escapeHtml(row.track.sessionId)}"`
           : "";
         const warning = row.signalStale
-          ? `<div class="user-item-stale">Tracking was interrupted! Resume with your alias!</div>`
+          ? `<div class="user-item-stale">Tracking was interrupted! Resume or stop tracing using your alias!</div>`
           : "";
 
         return `
@@ -643,6 +639,8 @@
     noticeConfirm.textContent = options.confirmLabel || "OK";
     noticeCancel.hidden = !options.cancelLabel;
     if (options.cancelLabel) noticeCancel.textContent = options.cancelLabel;
+    noticeConfirm.classList.toggle("is-danger", noticeConfirm.textContent === "Stop tracking");
+    noticeCancel.classList.toggle("is-danger", !noticeCancel.hidden && noticeCancel.textContent === "Stop tracking");
     noticeDialog.hidden = false;
     noticeConfirm.focus();
 

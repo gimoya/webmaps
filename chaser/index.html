@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Chaser</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,8 +26,7 @@
 
           <section class="panel-section panel-controls">
             <input id="display-name" type="text" maxlength="30" placeholder="...put your name/alias here!">
-            <button id="start-share" type="button">START TRACKING</button>
-            <button id="stop-share" type="button" class="ghost" hidden>Stop tracking</button>
+            <button id="start-share" type="button">START / RESUME / STOP</button>
           </section>
 
           <section class="panel-section">
@@ -53,19 +53,16 @@
           </div>
           <dl class="info-faq">
             <dt>Alias</dt>
-            <dd>The name you enter is the only identity. One alias has one active trace. Using an alias someone else is already tracking can corrupt their signal: Resume adds your points to their line, and Stop old &amp; start new ends their trace.</dd>
+            <dd>The name you enter is the identity used. You will find the alias on your trace in the map and in the list of tracked users in the panel. Always use your own unique alias - using an alias someone else is already tracking can corrupt their trace.</dd>
 
             <dt>No tracking</dt>
-            <dd>A fresh load, a refresh, or leaving the page stops this browser from writing points. The trace stays on the map until it is stopped. Stop sharing is only shown while this page is writing.</dd>
-
-            <dt>Start/Resume Sharing</dt>
-            <dd>With no active trace, this starts a new one for the given alias. If the used alias is already taken for an active trace, resuming will continue this trace with this device's signal. Starting a new trace stops the old active trace for this alias.</dd>
-
-            <dt>Stop sharing</dt>
-            <dd>Ends every active trace for that alias. Completed traces stay stored and disappear from the live map.</dd>  
+            <dd>A fresh webpage load, a browser refresh, or closing the webpage stops this device/browser from tracing your GPS. However, the trace with the last know position stays on the map.</dd>
 
             <dt>Stale signal</dt>
-            <dd>A point is stored about every 10 seconds, even if you have not moved. If no new point is stored for more than 20 seconds, because the browser was closed or refreshed or you lost signal, then it says 'Please Resume sharing for the alias!'</dd>
+            <dd>A point is stored about every 10 seconds, even if you have not moved. If no new point is stored for more than 20 seconds, because the browser was closed or refreshed or you lost signal, then it will say 'Resume or stop tracing using your alias!' in the list of traced aliases.</dd>
+
+            <dt>Start/Resume/Stop</dt>
+            <dd>With no active trace, 'Start' will start a new one for the given alias. If that alias already has an active trace, 'Resume' continues it from the current  browser/device. Using 'Stop' for a given alias is the way to end the tracing completely and remove the alias from the list.</dd>
           </dl>
         </div>
       </div>

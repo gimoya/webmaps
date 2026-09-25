@@ -39,10 +39,6 @@ html, body {
   background: var(--color-map-bg);
 }
 
-.leaflet-tile-pane {
-  filter: brightness(0.76) saturate(0.78);
-}
-
 body.panel-hidden .unified-panel {
   opacity: 0;
   visibility: hidden;
@@ -200,13 +196,6 @@ a.info-link:hover { color: var(--color-accent); }
 .panel-controls button.ghost { background: #4a4a54; }
 .panel-controls button.ghost:hover { background: var(--color-danger); }
 .panel-controls button:disabled { opacity: 0.55; cursor: not-allowed; }
-.panel-controls button.is-sharing:disabled,
-.panel-controls button.is-sharing:disabled:hover {
-  background: #4a4a54;
-  opacity: 0.7;
-}
-#stop-share.is-sharing { background: #f87171; }
-#stop-share.is-sharing:hover { background: var(--color-danger); }
 
 .panel-section h3 {
   margin: 0 0 0.5rem;
@@ -351,6 +340,10 @@ a.info-link:hover { color: var(--color-accent); }
 .notice-dialog-actions button:hover { background: var(--color-accent-hover); }
 .notice-dialog-actions button.ghost { background: #4a4a54; }
 .notice-dialog-actions button.ghost:hover { background: #5c5c68; }
+.notice-dialog-actions button.is-danger,
+.notice-dialog-actions button.ghost.is-danger { background: var(--color-danger); }
+.notice-dialog-actions button.is-danger:hover,
+.notice-dialog-actions button.ghost.is-danger:hover { background: #b91c1c; }
 
 .session-center-control a.is-disabled {
   color: #999;
