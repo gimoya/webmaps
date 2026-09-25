@@ -43,12 +43,21 @@ html, body {
   filter: brightness(0.76) saturate(0.78);
 }
 
+body.panel-hidden .unified-panel {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 1s ease, visibility 0s 1s;
+}
+
 .unified-panel {
   position: fixed;
+  visibility: visible;
+  transition: opacity 1s ease, visibility 0s;
   top: 20px;
   right: 20px;
-  left: 50%;
-  width: calc(50% - 20px);
+  left: auto;
+  width: min(420px, calc(50% - 20px));
   max-height: calc(100vh - 40px);
   z-index: 1000;
   background: var(--color-bg-panel);

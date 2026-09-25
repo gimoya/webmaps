@@ -19,7 +19,7 @@
       <div class="unified-panel-scroll">
         <div id="panel-main">
           <header class="panel-header">
-            <h1>Chaser<sup><a href="#infos" class="info-link" title="FAQs">ⓘ</a></sup></h1>
+            <h1>GPS 📡 Chaser<sup><a href="#infos" class="info-link" title="FAQs">ⓘ</a></sup></h1>
             <h2>Live multi-user map</h2>
           </header>
 
@@ -59,13 +59,13 @@
             <dd>A fresh load, a refresh, or leaving the page stops this browser from writing points. The trace stays on the map until it is stopped. Stop sharing is only shown while this page is writing.</dd>
 
             <dt>Start/Resume Sharing</dt>
-            <dd>With no active trace, this starts a new one. If the used alias is already taken for an active trace, resuming continues this trace from this browser/device. Starting a new trace stops an active trace for this alias.</dd>
+            <dd>With no active trace, this starts a new one for the given alias. If the used alias is already taken for an active trace, resuming will continue this trace with this device's signal. Starting a new trace stops the old active trace for this alias.</dd>
 
             <dt>Stop sharing</dt>
-            <dd>Ends every active trace for that alias. Completed traces stay stored and disappear from the live map.</dd>
+            <dd>Ends every active trace for that alias. Completed traces stay stored and disappear from the live map.</dd>  
 
             <dt>Stale signal</dt>
-            <dd>A point is stored about every 10 seconds, even if you have not moved. If no new point is stored for more than 20 seconds, that row says Please Resume or Stop Sharing!</dd>
+            <dd>A point is stored about every 10 seconds, even if you have not moved. If no new point is stored for more than 20 seconds, because the browser was closed or refreshed or you lost signal, then it says 'Please Resume sharing for the alias!'</dd>
           </dl>
         </div>
       </div>

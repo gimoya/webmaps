@@ -35,12 +35,15 @@
   userListEl.addEventListener("click", centerOnListedUser);
 
   const map = L.map("map", { zoomControl: true }).setView([47.2672, 11.3928], 12);
+  addPanelToggleControl();
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   }).addTo(map);
 
+  const gpxLayer = L.layerGroup().addTo(map);
   const tracksLayer = L.layerGroup().addTo(map);
+  loadGpxOverlay();
   const tracksBySessionId = new Map();
 
   let sessionsUnsubscribe = null;
@@ -120,6 +123,35 @@
     });
   }
 
+  function addPanelToggleControl() {
+    const PanelToggleControl = L.Control.extend({
+      onAdd() {
+        const container = L.DomUtil.create("div", "leaflet-bar leaflet-control");
+        const button = L.DomUtil.create("a", "leaflet-control-button", container);
+        button.href = "#";
+        button.style.cssText = "width: 30px; height: 30px; line-height: 30px; text-align: center; font-size: 18px; display: block;";
+        L.DomEvent.disableClickPropagation(button);
+
+        const updateButton = () => {
+          const hidden = document.body.classList.contains("panel-hidden");
+          button.title = hidden ? "Show panel" : "Hide panel";
+          button.setAttribute("aria-label", button.title);
+          button.innerHTML = hidden ? "ⓘ" : "↖";
+        };
+        updateButton();
+        L.DomEvent.on(button, "click", (event) => {
+          L.DomEvent.stopPropagation(event);
+          L.DomEvent.preventDefault(event);
+          document.body.classList.toggle("panel-hidden");
+          updateButton();
+        });
+        return container;
+      }
+    });
+
+    new PanelToggleControl({ position: "topleft" }).addTo(map);
+  }
+
   function addSessionCenterControl() {
     const SessionCenterControl = L.Control.extend({
       options: { position: "topleft" },
@@ -172,8 +204,18 @@
     centerMapOnLatLng(position.coords.latitude, position.coords.longitude);
   }
 
+  function panelOffset() {
+    const panel = document.getElementById("unified-panel").getBoundingClientRect();
+    if (window.matchMedia("(orientation: portrait)").matches) {
+      return L.point(0, panel.height / 2 + 96);
+    }
+    return L.point(panel.width / 2, 0);
+  }
+
   function centerMapOnLatLng(lat, lon) {
-    map.setView([lat, lon], 17);
+    const zoom = 17;
+    const center = map.unproject(map.project([lat, lon], zoom).add(panelOffset()), zoom);
+    map.setView(center, zoom);
   }
 
   function centerOnListedUser(event) {
@@ -322,8 +364,10 @@
     const latLngs = track.points.map((point) => [point.lat, point.lon]);
     const lineStyle = {
       color: track.color,
-      weight: 4,
-      opacity: 0.95
+      weight: 2,
+      opacity: 1,
+      lineCap: "round",
+      lineJoin: "round"
     };
 
     if (!track.line) {
@@ -397,19 +441,14 @@
     }
 
     const rows = tracks.map((track) => {
-      const latestPoint = track.points[track.points.length - 1] || null;
       const updatedAtMs = latestResolvedSignalMs(track);
-      const ageSec = updatedAtMs
-        ? Math.max(0, Math.round((Date.now() - updatedAtMs) / 1000))
-        : null;
-      const accuracy = latestPoint ? Math.round(latestPoint.accuracy) : null;
       const pointLabel = track.points.length === 1 ? "point" : "points";
       const signalStale = signalStaleFor(track);
 
       return {
         track,
         signalStale,
-        meta: `age ${ageSec === null ? "n/a" : `${ageSec}s`} · acc ${accuracy === null ? "n/a" : `${accuracy}m`} · ${track.points.length} ${pointLabel}`
+        meta: `last timestamp: ${formatClock(updatedAtMs, true)} · start time: ${formatClock(track.startedAtMs, false)} · ${track.points.length} ${pointLabel}`
       };
     });
     const signature = rows
@@ -444,11 +483,62 @@
     });
   }
 
+  function formatClock(ms, withSeconds) {
+    if (!ms) return "n/a";
+    const date = new Date(ms);
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    if (!withSeconds) return `${hours}:${minutes}`;
+    const seconds = String(date.getSeconds()).padStart(2, "0");
+    return `${hours}:${minutes}:${seconds}`;
+  }
+
   function latestResolvedSignalMs(track) {
     for (let index = track.points.length - 1; index >= 0; index -= 1) {
       if (track.points[index].recordedAtMs != null) return track.points[index].recordedAtMs;
     }
     return track.startedAtMs || null;
+  }
+
+  function frameGpx(bounds) {
+    map.fitBounds(bounds, { padding: [24, 24], animate: false });
+    map.panBy(panelOffset(), { animate: false });
+    map.setZoom(map.getZoom() - 1, { animate: false });
+  }
+
+  function loadGpxOverlay() {
+    const gpxNs = "http://www.topografix.com/GPX/1/1";
+    fetch(encodeURI("gpx_tracks/El Camino de la Paz 2026.gpx"))
+      .then((response) => {
+        if (!response.ok) throw new Error(`GPX request failed: ${response.status}`);
+        return response.text();
+      })
+      .then((xmlText) => {
+        const doc = new DOMParser().parseFromString(xmlText, "application/xml");
+        if (doc.querySelector("parsererror")) throw new Error("GPX parse failed");
+
+        const latLngs = [...doc.getElementsByTagNameNS(gpxNs, "trkpt")].map((point) => [
+          Number(point.getAttribute("lat")),
+          Number(point.getAttribute("lon"))
+        ]);
+        L.polyline(latLngs, {
+          color: "#fff",
+          weight: 7.5,
+          opacity: 0.35,
+          interactive: false
+        }).addTo(gpxLayer);
+        const line = L.polyline(latLngs, {
+          color: "#960018",
+          weight: 2.5,
+          opacity: 0.9,
+          dashArray: "4, 4",
+          interactive: false
+        }).addTo(gpxLayer);
+        frameGpx(line.getBounds());
+      })
+      .catch((err) => {
+        console.error("Failed to load GPX overlay:", err);
+      });
   }
 
   function sendOwnLocation(sessionRef, centerMap = false) {
@@ -502,6 +592,21 @@
     };
   }
 
+  const TRACE_COLORS = [
+    "#ffe500",
+    "#00e5ff",
+    "#ff4dff",
+    "#7cff3f",
+    "#4c7dff",
+    "#ff7a00",
+    "#ff4d6a",
+    "#c8a2ff",
+    "#00f0a8",
+    "#e8ff4d",
+    "#ff9ec8",
+    "#9af6ff"
+  ];
+
   function colorForAlias(name) {
     let hash = 2166136261;
     const value = String(name);
@@ -511,7 +616,7 @@
       hash = Math.imul(hash, 16777619);
     }
 
-    return `hsl(${(hash >>> 0) % 360} 72% 52%)`;
+    return TRACE_COLORS[(hash >>> 0) % TRACE_COLORS.length];
   }
 
   function showNotice(message, options = {}) {
