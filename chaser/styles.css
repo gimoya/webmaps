@@ -39,17 +39,44 @@ html, body {
   background: var(--color-map-bg);
 }
 
-body.panel-hidden .unified-panel {
+body.panel-faded .unified-panel {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 1s ease, visibility 0s 1s;
+  transition: opacity 0.5s ease, visibility 0s linear 0.5s;
+}
+
+#panel-launcher {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: var(--color-bg-panel);
+  color: var(--color-text);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  font-size: 22px;
+  line-height: 52px;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+body.panel-faded #panel-launcher {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .unified-panel {
   position: fixed;
   visibility: visible;
-  transition: opacity 1s ease, visibility 0s;
+  opacity: 1;
+  transition: opacity 0.5s ease, visibility 0s;
   top: 20px;
   right: 20px;
   left: auto;
@@ -193,9 +220,6 @@ a.info-link:hover { color: var(--color-accent); }
 }
 
 .panel-controls button:hover { background: var(--color-accent-hover); }
-.panel-controls button.ghost { background: #4a4a54; }
-.panel-controls button.ghost:hover { background: var(--color-danger); }
-.panel-controls button:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .panel-section h3 {
   margin: 0 0 0.5rem;
@@ -246,23 +270,67 @@ a.info-link:hover { color: var(--color-accent); }
   color: var(--color-text-muted);
 }
 
-.panel-footnote {
-  font-size: 0.7rem;
-  color: var(--color-text-muted);
-}
-
 .chaser-marker-icon {
   background: transparent;
   border: 0;
 }
 
+.chaser-callout {
+  position: relative;
+  width: 14px;
+  height: 14px;
+}
+
+.chaser-callout-stem {
+  position: absolute;
+  left: 6px;
+  bottom: 7px;
+  width: 2px;
+  height: 56px;
+  background: #fff;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.chaser-callout-label {
+  position: absolute;
+  left: 7px;
+  bottom: 64px;
+  transform: translateX(-50%);
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.72);
+  font-family: var(--font-family-heading);
+  font-size: 16px;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+body.map-zoom-low .chaser-callout-label {
+  font-size: 10px;
+  padding: 1px 3px;
+}
+
 .chaser-user-marker {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 14px;
   height: 14px;
   border-radius: 50%;
   border: 2px solid #fff;
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+}
+
+.chaser-accuracy-ring {
+  animation: chaser-accuracy-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes chaser-accuracy-pulse {
+  0%, 100% { stroke-opacity: 0.45; }
+  50% { stroke-opacity: 1; }
 }
 
 .session-center-control a {
@@ -352,6 +420,12 @@ a.info-link:hover { color: var(--color-accent); }
 }
 
 @media (orientation: portrait) {
+  .unified-panel,
+  #panel-launcher {
+    top: auto;
+    bottom: 20px;
+  }
+
   .unified-panel {
     top: auto;
     right: 20px;

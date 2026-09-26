@@ -1,10 +1,11 @@
 (function () {
   const WRITE_INTERVAL_MS = 10 * 1000;
-  const SIGNAL_STALE_MS = 20 * 1000;
+  const SIGNAL_STALE_MS = 10 * 1000;
   const SESSIONS_COLLECTION = "trackingSessions";
 
   const userListEl = document.getElementById("user-list");
   const statusEl = document.getElementById("connection-status");
+  const gpsStatusEl = document.getElementById("gps-status");
   const displayNameEl = document.getElementById("display-name");
   const startBtn = document.getElementById("start-share");
   const panelMain = document.getElementById("panel-main");
@@ -29,12 +30,17 @@
     panelInfo.hidden = true;
   });
 
-  noticeConfirm.addEventListener("click", () => closeNotice(true));
+  noticeConfirm.addEventListener("click", () => {
+    if (noticeConfirm.textContent === "Resume") requestDeviceLocation();
+    closeNotice(true);
+  });
   noticeCancel.addEventListener("click", () => closeNotice(false));
   userListEl.addEventListener("click", centerOnListedUser);
 
   const map = L.map("map", { zoomControl: true }).setView([47.2672, 11.3928], 12);
-  addPanelToggleControl();
+  wirePanelFade();
+  map.on("zoomend", syncLabelZoom);
+  syncLabelZoom();
   L.tileLayer("https://tile.tracestrack.com/topo__/{z}/{x}/{y}.png?key={apiKey}", {
     minZoom: 1,
     maxZoom: 19,
@@ -51,9 +57,14 @@
   let writeTimer = null;
   let activeSessionRef = null;
   let latestOwnPosition = null;
+  let locationRequest = null;
+  let gpsAllowed = null;
+  let gpsRunning = false;
   let centerControlButton = null;
 
   addSessionCenterControl();
+  watchGpsPermission();
+  renderGpsStatus();
 
   const firebaseConfig = window.CHASER_FIREBASE_CONFIG || null;
   if (!firebaseConfig) {
@@ -67,7 +78,7 @@
   const sessionsRef = db.collection(SESSIONS_COLLECTION);
 
   attachSessionsSubscription(sessionsRef);
-  setInterval(renderTracksAndPanel, 5000);
+  setInterval(() => renderUserList(sortedTracks()), 5000);
   wireControls(sessionsRef);
 
   function wireControls(ref) {
@@ -84,11 +95,12 @@
       }
 
       localStorage.setItem("chaser_display_name", name);
+      requestDeviceLocation();
 
       try {
         const activeRefs = await findActiveAliasSessions(ref, name);
         if (!activeRefs.length) {
-          beginWriting(await createAliasSession(ref, name));
+          await beginWriting(await createAliasSession(ref, name));
           return;
         }
 
@@ -97,7 +109,7 @@
           { alias: name, confirmLabel: "Resume", cancelLabel: "Stop tracking" }
         );
         if (shouldResume) {
-          beginWriting(activeRefs[0]);
+          await beginWriting(activeRefs[0]);
           return;
         }
 
@@ -133,33 +145,21 @@
     }
   }
 
-  function addPanelToggleControl() {
-    const PanelToggleControl = L.Control.extend({
-      onAdd() {
-        const container = L.DomUtil.create("div", "leaflet-bar leaflet-control");
-        const button = L.DomUtil.create("a", "leaflet-control-button", container);
-        button.href = "#";
-        button.style.cssText = "width: 30px; height: 30px; line-height: 30px; text-align: center; font-size: 18px; display: block;";
-        L.DomEvent.disableClickPropagation(button);
+  function syncLabelZoom() {
+    document.body.classList.toggle("map-zoom-low", map.getZoom() < 14);
+  }
 
-        const updateButton = () => {
-          const hidden = document.body.classList.contains("panel-hidden");
-          button.title = hidden ? "Show panel" : "Hide panel";
-          button.setAttribute("aria-label", button.title);
-          button.innerHTML = hidden ? "ⓘ" : "↖";
-        };
-        updateButton();
-        L.DomEvent.on(button, "click", (event) => {
-          L.DomEvent.stopPropagation(event);
-          L.DomEvent.preventDefault(event);
-          document.body.classList.toggle("panel-hidden");
-          updateButton();
-        });
-        return container;
-      }
+  function wirePanelFade() {
+    const launcher = document.getElementById("panel-launcher");
+
+    map.getContainer().addEventListener("click", (event) => {
+      if (event.target.closest(".leaflet-control")) return;
+      document.body.classList.add("panel-faded");
+    }, true);
+
+    launcher.addEventListener("click", () => {
+      document.body.classList.remove("panel-faded");
     });
-
-    new PanelToggleControl({ position: "topleft" }).addTo(map);
   }
 
   function addSessionCenterControl() {
@@ -215,7 +215,8 @@
   }
 
   function panelOffset() {
-    const panel = document.getElementById("unified-panel").getBoundingClientRect();
+    const faded = document.body.classList.contains("panel-faded");
+    const panel = document.getElementById(faded ? "panel-launcher" : "unified-panel").getBoundingClientRect();
     if (window.matchMedia("(orientation: portrait)").matches) {
       return L.point(0, panel.height / 2 + 96);
     }
@@ -240,9 +241,11 @@
   }
 
   async function findActiveAliasSessions(ref, name) {
-    const snapshot = await ref.where("name", "==", name).get();
+    const key = aliasKey(name);
+    const snapshot = await ref.where("isActive", "==", true).get();
     return snapshot.docs
-      .filter((doc) => doc.data().isActive === true)
+      .filter((doc) => aliasKey(doc.data().name) === key)
+      .sort((a, b) => (toMillis(a.data().startedAt) || 0) - (toMillis(b.data().startedAt) || 0))
       .map((doc) => doc.ref);
   }
 
@@ -269,11 +272,19 @@
     activeSessionRef = sessionRef;
     setWriterState(true);
     renderTracksAndPanel();
-    sendOwnLocation(sessionRef, true);
+
+    const requested = locationRequest;
+    locationRequest = null;
     writeTimer = setInterval(
       () => sendOwnLocation(sessionRef),
       WRITE_INTERVAL_MS
     );
+
+    return Promise.resolve(requested).then((position) => {
+      if (sessionRef !== activeSessionRef) return;
+      if (position) return writePoint(sessionRef, position, true);
+      sendOwnLocation(sessionRef, true);
+    });
   }
 
   function clearWriter() {
@@ -285,6 +296,8 @@
   }
 
   function setWriterState(active) {
+    gpsRunning = active;
+    renderGpsStatus();
     displayNameEl.disabled = active;
     displayNameEl.placeholder = active ? "Tracking.." : "...put your name/alias here!";
     displayNameEl.value = active
@@ -335,6 +348,7 @@
       color: colorForAlias(session.name),
       points: [],
       marker: null,
+      accuracyRing: null,
       line: null,
       unsubscribePoints: null
     };
@@ -354,10 +368,12 @@
       });
   }
 
-  function renderTracksAndPanel() {
-    const tracks = [...tracksBySessionId.values()]
-      .sort((a, b) => a.name.localeCompare(b.name));
+  function sortedTracks() {
+    return [...tracksBySessionId.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }
 
+  function renderTracksAndPanel() {
+    const tracks = sortedTracks();
     tracks.forEach(renderTrack);
     renderUserList(tracks);
   }
@@ -382,13 +398,42 @@
       track.line.setStyle(lineStyle);
     }
 
+    upsertAccuracyRing(track, latestPoint);
     upsertMarker(track, latestPoint);
+  }
+
+  function upsertAccuracyRing(track, point) {
+    const style = {
+      color: track.color,
+      weight: 2,
+      opacity: 1,
+      dashArray: "6 4",
+      fill: false,
+      interactive: false,
+      className: "chaser-accuracy-ring"
+    };
+
+    if (!track.accuracyRing) {
+      track.accuracyRing = L.circle([point.lat, point.lon], {
+        radius: point.accuracy,
+        ...style
+      }).addTo(tracksLayer);
+      return;
+    }
+
+    track.accuracyRing.setLatLng([point.lat, point.lon]);
+    track.accuracyRing.setRadius(point.accuracy);
+    track.accuracyRing.setStyle(style);
   }
 
   function upsertMarker(track, point) {
     const icon = L.divIcon({
       className: "chaser-marker-icon",
-      html: `<span class="chaser-user-marker" style="background:${track.color}"></span>`,
+      html: `<span class="chaser-callout">
+        <span class="chaser-callout-label" style="color:${track.color}">${escapeHtml(track.name)}</span>
+        <span class="chaser-callout-stem"></span>
+        <span class="chaser-user-marker" style="background:${track.color}"></span>
+      </span>`,
       iconSize: [14, 14],
       iconAnchor: [7, 7]
     });
@@ -419,6 +464,7 @@
 
     if (track.unsubscribePoints) track.unsubscribePoints();
     if (track.marker) tracksLayer.removeLayer(track.marker);
+    if (track.accuracyRing) tracksLayer.removeLayer(track.accuracyRing);
     if (track.line) tracksLayer.removeLayer(track.line);
     tracksBySessionId.delete(sessionId);
   }
@@ -544,6 +590,31 @@
       });
   }
 
+  function requestDeviceLocation() {
+    if (!navigator.geolocation) return null;
+
+    const request = new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          noteGpsAllowed();
+          resolve(position);
+        },
+        (err) => {
+          console.warn("Geolocation error:", err);
+          noteGpsError(err);
+          resolve(null);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 20000,
+          maximumAge: 0
+        }
+      );
+    });
+    locationRequest = request;
+    return request;
+  }
+
   function sendOwnLocation(sessionRef, centerMap = false) {
     if (!navigator.geolocation) {
       console.warn("Geolocation unsupported.");
@@ -552,28 +623,37 @@
 
     navigator.geolocation.getCurrentPosition(async (position) => {
       if (sessionRef !== activeSessionRef) return;
-
-      latestOwnPosition = position;
-      if (centerMap) centerMapOnPosition(position);
-
-      try {
-        await sessionRef.collection("points").add({
-          lat: position.coords.latitude,
-          lon: position.coords.longitude,
-          accuracy: position.coords.accuracy || 0,
-          recordedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      } catch (err) {
-        console.error("Failed to write tracking point:", err);
-        renderConnection(false, "offline");
-      }
+      noteGpsAllowed();
+      await writePoint(sessionRef, position, centerMap);
     }, (err) => {
       console.warn("Geolocation error:", err);
+      noteGpsError(err);
     }, {
       enableHighAccuracy: true,
       timeout: 10000,
       maximumAge: 4000
     });
+  }
+
+  async function writePoint(sessionRef, position, centerMap) {
+    if (sessionRef !== activeSessionRef) return;
+
+    noteGpsAllowed();
+
+    latestOwnPosition = position;
+    if (centerMap) centerMapOnPosition(position);
+
+    try {
+      await sessionRef.collection("points").add({
+        lat: position.coords.latitude,
+        lon: position.coords.longitude,
+        accuracy: position.coords.accuracy || 0,
+        recordedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (err) {
+      console.error("Failed to write tracking point:", err);
+      renderConnection(false, "offline");
+    }
   }
 
   function pointFromDocument(doc) {
@@ -587,7 +667,6 @@
     }
 
     return {
-      pointId: doc.id,
       lat: data.lat,
       lon: data.lon,
       accuracy: data.accuracy,
@@ -612,7 +691,7 @@
 
   function colorForAlias(name) {
     let hash = 2166136261;
-    const value = String(name);
+    const value = aliasKey(name);
 
     for (let index = 0; index < value.length; index += 1) {
       hash ^= value.charCodeAt(index);
@@ -656,6 +735,44 @@
     if (resolve) resolve(confirmed);
   }
 
+  function noteGpsAllowed() {
+    gpsAllowed = true;
+    renderGpsStatus();
+  }
+
+  function noteGpsError(err) {
+    if (err && err.code === 1) gpsAllowed = false;
+    renderGpsStatus();
+  }
+
+  function watchGpsPermission() {
+    if (!navigator.geolocation) {
+      gpsAllowed = false;
+      return;
+    }
+    if (!navigator.permissions || !navigator.permissions.query) return;
+
+    navigator.permissions.query({ name: "geolocation" }).then((permission) => {
+      applyGpsPermission(permission.state);
+      permission.onchange = () => applyGpsPermission(permission.state);
+    });
+  }
+
+  function applyGpsPermission(state) {
+    if (state === "granted") gpsAllowed = true;
+    else if (state === "denied") gpsAllowed = false;
+    else gpsAllowed = null;
+    renderGpsStatus();
+  }
+
+  function renderGpsStatus() {
+    const allowedText = gpsAllowed === true ? "allowed" : gpsAllowed === false ? "denied" : "unknown";
+    const runningText = gpsRunning ? "running" : "stopped";
+    gpsStatusEl.textContent = `${allowedText} · ${runningText}`;
+    gpsStatusEl.classList.toggle("status-online", gpsAllowed === true && gpsRunning);
+    gpsStatusEl.classList.toggle("status-offline", gpsAllowed === false);
+  }
+
   function renderConnection(connected, text) {
     statusEl.textContent = text;
     statusEl.classList.toggle("status-online", connected);
@@ -680,6 +797,10 @@
 
   function sanitizeName(raw) {
     return String(raw || "").trim().slice(0, 30);
+  }
+
+  function aliasKey(name) {
+    return sanitizeName(name).toLowerCase();
   }
 
   function escapeHtml(str) {

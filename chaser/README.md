@@ -1,54 +1,37 @@
 # Chaser
 
-Live multi-user GPS map built with Leaflet + Firestore realtime updates.
+Live multi-user GPS map. Leaflet + Firestore, no auth.
 
-## Scope (MVP)
+## What it does
 
-- Full map canvas + right-side status panel
-- Multi-user live location display
-- Per-session breadcrumb tracks
-- Writer loop every 10 seconds while sharing is active
-
-Excluded in this phase:
-- GPX upload/matching
-- Leaderboards
-- Historical analytics UI
+- Tracestrack topo basemap
+- Course overlay from `gpx_tracks/El Camino de la Paz 2026.gpx`, framed on load
+- One live trace per alias. Case does not distinguish (`Kay` and `kay` are the same)
+- Last point shows the alias on a white stem, plus a dashed accuracy ring in the alias color
+- Alias labels shrink below zoom 14
+- Click the map to fade the panel. The ⓘ box brings it back
+- One button: **START / RESUME / STOP**
 
 ## Project files
 
-- `index.html` – page structure and SDK includes
-- `styles.css` – map/panel styling and user marker styles
-- `app.js` – map logic, Firestore subscription, geolocation writer
+- `index.html` – page, FAQ, Firebase web config
+- `styles.css` – panel, dialog, marker, accuracy-ring pulse
+- `app.js` – map, Firestore, GPS writer
+- `gpx_tracks/` – course file drawn on load
 
-## Firebase setup
+## Firebase
 
-`app.js` expects a global `window.CHASER_FIREBASE_CONFIG`.
+`window.CHASER_FIREBASE_CONFIG` is set in `index.html` before `app.js`. The web API key is public. Firestore rules are the lock.
 
-Add this block in `index.html` before `app.js`:
-
-```html
-<script>
-  window.CHASER_FIREBASE_CONFIG = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  };
-</script>
-```
-
-If this object is missing, realtime sync is disabled and the app logs a warning.
+If that object is missing, the map and GPX still load. Realtime sync stays offline.
 
 ## Firestore data model
 
 Collection: `trackingSessions`
 
-Document ID: generated once per tracking session
-
 Session fields:
-- `name` (alias, the only identity)
+
+- `name` (alias, stored as typed, max 30 characters)
 - `isActive` (boolean)
 - `startedAt` (server timestamp)
 - `endedAt` (server timestamp or `null`)
@@ -56,36 +39,27 @@ Session fields:
 Subcollection: `trackingSessions/{sessionId}/points`
 
 Point fields:
-- `lat` (number)
-- `lon` (number)
-- `accuracy` (number)
+
+- `lat`, `lon`, `accuracy` (numbers)
 - `recordedAt` (server timestamp)
+
+The client matches aliases with trim + lowercase. That does not add a field. Lookup loads active sessions and filters in the browser. The color is a hash of that same key, so both spellings share a color. The name drawn on the map is the casing stored on the document.
 
 ## Trace lifecycle
 
-An alias has one active trace. **Stop sharing** sets `isActive` to `false` and
-records `endedAt`. If several active traces share that alias, Stop ends all of
-them.
+One alias, one active trace, until Stop.
 
-**Start sharing** looks up that alias.
+**START / RESUME / STOP**
 
-- No active trace: a new trace is created and this page writes points to it.
-- An active trace: the page asks `Resume the trace for "<alias>" on this browser?`
-  - **Resume** writes points onto that existing trace.
-  - **Stop old & start new** ends every active trace for the alias, then creates
-    a new one and writes to it.
+- This page is already writing: the button stops that alias, after a confirm. The trace is removed from the live map. It is gone for good. A new trace is a later click.
+- No active trace for the typed alias: a new session is created and this page writes to it.
+- An active trace exists: **Resume** writes onto the oldest active session for that alias. **Stop tracking** ends every active session whose alias matches, ignoring case. It does not start a new one.
 
-GPS loss, network loss, a refresh, or closing the tab does not end the trace.
-The next Start with that alias finds it.
-
-The old `liveLocations` collection is not used by this model. Existing
-documents can remain in Firestore.
+GPS loss, a dropped network, refresh, tab close, or locking the phone does not end the Firestore trace. The writer on this page stops. Type the alias and Resume to continue it.
 
 ## Firestore rules
 
-These rules intentionally allow public, unauthenticated reads and validated
-writes. Anyone who knows the project configuration can view tracks, append
-points, or stop an active trace.
+Public unauthenticated reads. Writes are validated. Anyone with the project config can read tracks, append points to an active trace, or stop one.
 
 ```txt
 rules_version = '2';
@@ -143,34 +117,38 @@ service cloud.firestore {
 }
 ```
 
-Publish these rules in the Firebase console before testing the session model.
+Publish these in the Firebase console. A new field needs a rules change.
+
+## Basemap
+
+Topo tiles come from Tracestrack. The key sits in the tile URL in `app.js`. Restrict it in the Tracestrack console with a referer allow-list. Put origins in **Referers**. Leave **User Agents** empty.
+
+```txt
+http://127.0.0.1
+http://localhost
+https://tiroltrailhead.com
+```
+
+The page sends `strict-origin-when-cross-origin`, so the tile request includes the origin.
 
 ## Usage
 
-1. Serve the repository over localhost or HTTPS.
+1. Serve the repo over localhost or HTTPS.
 2. Open `chaser/`.
-3. Enter a display name.
-4. Click **Start sharing**.
-5. Allow browser location permission.
-6. Open the page on another device/browser to verify multi-user sync.
-7. Click **Stop sharing** to finish and hide the current track.
+3. Enter an alias.
+4. Click **START / RESUME / STOP** and allow location.
+5. Open the page on another device to see both traces.
+6. Click the same button again to stop. Confirm. The trace leaves the map.
 
-## Runtime behavior
+## Runtime
 
-- Writer cadence: every 10s (`WRITE_INTERVAL_MS`)
-- Start centers once on the first GPS fix at zoom level 17
-- The top-left session control manually centers on the latest local position
-- Breadcrumb color is a stable hash of the alias
-- The active-user panel shows one row per active trace
-- An alias with an active trace asks to resume it, or to stop it and start a new trace
-- Each writer interval appends one point to the active trace
-- Active points are connected by a Leaflet polyline
-- Stop sharing ends every active trace for the current alias
-- Completed traces remain stored but are hidden from the live map
-
-## Troubleshooting
-
-- **No users appear:** check Firebase config and browser console.
-- **Writes fail:** publish the Firestore rules above.
-- **Only your own marker appears:** open additional clients/devices.
-- **Location denied:** enable geolocation permission for the site.
+- GPS is `getCurrentPosition` with `enableHighAccuracy`. The first call runs in the button click, before any Firestore `await`, or mobile browsers drop the permission prompt.
+- A point is written every 10 seconds while this page is the writer.
+- The first fix on start or resume centers at zoom 17. Later points do not recenter. The top-left control recenters on this page's latest fix.
+- Portrait framing shifts the target up. Landscape shifts it left, clear of the panel.
+- Clicking a listed user with points centers on their last point.
+- An active session with no points is in the list and has no line.
+- The list marks a trace stale when the last stored point is older than 10 seconds. This page's own writer is never marked stale.
+- The GPS row is `allowed` / `denied` / `unknown` and `running` / `stopped`. `running` means this page started the 10-second loop. It does not prove points are being stored. iPhone Safari often stays `unknown` until a fix or a denial.
+- Locking the phone freezes the page. No new points are stored. If the page is still there when you unlock, the writer continues. If the phone discarded it, type the alias and Resume.
+- Completed traces stay in Firestore and are hidden from the live map.
