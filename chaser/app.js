@@ -1,6 +1,6 @@
 (function () {
-  const WRITE_INTERVAL_MS = 10 * 1000;
-  const SIGNAL_STALE_MS = 10 * 1000;
+  const WRITE_INTERVAL_MS = 5 * 1000;
+  const SIGNAL_STALE_MS = 5 * 1000;
   const SESSIONS_COLLECTION = "trackingSessions";
 
   const userListEl = document.getElementById("user-list");
@@ -299,7 +299,9 @@
     gpsRunning = active;
     renderGpsStatus();
     displayNameEl.disabled = active;
-    displayNameEl.placeholder = active ? "Tracking.." : "...put your name/alias here!";
+    displayNameEl.placeholder = active
+      ? "..currently tracking " + localStorage.getItem("chaser_display_name") + " from this device!"
+      : "...put your alias here!";
     displayNameEl.value = active
       ? ""
       : localStorage.getItem("chaser_display_name") || "";
@@ -510,7 +512,7 @@
           ? ` data-session-id="${escapeHtml(row.track.sessionId)}"`
           : "";
         const warning = row.signalStale
-          ? `<div class="user-item-stale">Tracking was interrupted! Resume or stop tracing using your alias!</div>`
+          ? `<div class="user-item-stale">Tracking paused.. Resume using your alias!</div>`
           : "";
 
         return `

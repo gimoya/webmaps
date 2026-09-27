@@ -143,12 +143,12 @@ The page sends `strict-origin-when-cross-origin`, so the tile request includes t
 ## Runtime
 
 - GPS is `getCurrentPosition` with `enableHighAccuracy`. The first call runs in the button click, before any Firestore `await`, or mobile browsers drop the permission prompt.
-- A point is written every 10 seconds while this page is the writer.
+- A point is written every 5 seconds while this page is the writer.
 - The first fix on start or resume centers at zoom 17. Later points do not recenter. The top-left control recenters on this page's latest fix.
 - Portrait framing shifts the target up. Landscape shifts it left, clear of the panel.
 - Clicking a listed user with points centers on their last point.
 - An active session with no points is in the list and has no line.
-- The list marks a trace stale when the last stored point is older than 10 seconds. This page's own writer is never marked stale.
-- The GPS row is `allowed` / `denied` / `unknown` and `running` / `stopped`. `running` means this page started the 10-second loop. It does not prove points are being stored. iPhone Safari often stays `unknown` until a fix or a denial.
+- The list marks a trace stale when the last stored point is older than 5 seconds. This page's own writer is never marked stale.
+- The GPS row is `allowed` / `denied` / `unknown` and `running` / `stopped`. `running` means this page started the 5-second loop. It does not prove points are being stored. iPhone Safari often stays `unknown` until a fix or a denial.
 - Locking the phone freezes the page. No new points are stored. If the page is still there when you unlock, the writer continues. If the phone discarded it, type the alias and Resume.
 - Completed traces stay in Firestore and are hidden from the live map.
