@@ -1,7 +1,7 @@
 // Portion length in meters. Grade is classed once per step of this distance.
 const RESOLUTION_M = 100;
 
-// Rise/run above this is uphill. 0.03 is a 3% grade. The rest is flat or downhill.
+// Rise/run above this is uphill. 0.02 is a 2% grade. The rest is flat or downhill.
 const UPHILL_SLOPE = 0.02;
 
 // points: [{ lat, lon, z }, ...] with z in meters.

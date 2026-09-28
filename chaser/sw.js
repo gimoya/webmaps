@@ -1,4 +1,4 @@
-const CACHE_NAME = "chaser-v3";
+const CACHE_NAME = "chaser-v7";
 const TILE_CACHE_NAME = "chaser-tiles";
 const MAX_CACHE_SIZE = 50 * 1024 * 1024;
 const TILE_EVICTION_DELAY_MS = 3000;
@@ -8,9 +8,9 @@ const urlsToCache = [
   "./index.html",
   "./styles.css",
   "./track-grade.js",
+  "./gpx.js",
   "./app.js",
   "./manifest.json",
-  "./gpx_tracks/El%20Camino%20de%20la%20Paz%202026.gpx",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-192-maskable.png",

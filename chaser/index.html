@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="is-viewer">
   <div class="app-layout">
     <div id="map"></div>
 
@@ -32,57 +32,86 @@
         <div id="panel-main">
           <header class="panel-header">
             <h1>GPS 📡 Chaser<sup><a href="#infos" class="info-link" title="FAQs">ⓘ</a></sup></h1>
-            <h2>Simplisitc Live Multi-User Map</h2>
+            <h2>Simplistic Live Multi-User Map</h2>
           </header>
 
+          <details class="panel-collapse" id="collapse-routes">
+            <summary class="panel-collapse-header">Routes</summary>
+            <div class="panel-collapse-body">
+              <ul id="route-list" class="route-list"></ul>
+            </div>
+          </details>
+
           <section class="panel-section panel-controls">
-            <input id="display-name" type="text" maxlength="30" placeholder="...put your alias here!">
-            <button id="start-share" type="button">START / RESUME / STOP</button>
+            <h3 id="rider-panel-title">Rider</h3>
+            <button id="stop-tracking" type="button" hidden>Stop tracking</button>
+            <div class="rider-status">
+              <div class="status-row">
+                <div class="status-label">GPS</div>
+                <div id="gps-status" class="status-pill">unknown · stopped</div>
+              </div>
+              <div class="status-row">
+                <div class="status-label">Connection</div>
+                <div id="connection-status" class="status-pill status-offline">offline</div>
+              </div>
+            </div>
           </section>
 
           <section class="panel-section">
-            <h3>Active users</h3>
+            <h3>Active Riders</h3>
             <ul id="user-list" class="user-list"></ul>
-          </section>
-
-          <section class="panel-section">
-            <div class="status-row">
-              <div class="status-label">GPS</div>
-              <div id="gps-status" class="status-pill">unknown · stopped</div>
-            </div>
-            <div class="status-row">
-              <div class="status-label">Connection</div>
-              <div id="connection-status" class="status-pill status-offline">offline</div>
-            </div>
-            <div class="status-row">
-              <div class="status-label">Writer interval</div>
-              <div class="status-value">5s</div>
-            </div>
           </section>
         </div>
 
         <div id="panel-info" hidden>
           <div class="panel-info-header">
-            <h2>Info &amp; FAQs</h2>
+            <h2>Usage</h2>
             <a href="#" class="panel-info-close" title="Close">×</a>
           </div>
           <dl class="info-faq">
+            <dt>How it works</dt>
+            <dd>Rider locations are logged and displayed on the map as a trace. The rider's position will only be logged when they are looking at the map with there GPS turned on, and the browser is given rights to use the GPS signal (you will be asked to give permission to use the GPS sensor).</dd>
+
             <dt>Alias</dt>
             <dd>The name you enter is the identity used. You will find the alias on your trace in the map and in the list of tracked users in the panel. Always use your own unique alias - using an alias someone else is already tracking can corrupt their trace.</dd>
+
+            <dt>Start/Resume/Stop</dt>
+            <dd>The Rider box starts a new trace, or resumes one already active for that name. Stop tracking ends the trace and removes it from the list and map.</dd>
 
             <dt>No tracking</dt>
             <dd>A fresh webpage load, a browser refresh, closing the webpage or a screen look stops this device/browser from tracing your GPS.</dd>
 
             <dt>Stale signal</dt>
-            <dd>A point is stored about every 5 seconds. If no new point is stored for more than 5 seconds, then the trace with the last known position will still be on the map but it will ask you to 'Resume or stop tracing using your alias!' in the list with the traced aliases. You can continue or stop your trace by typing your alias and hitting the button.</dd>
+            <dd>A point is stored about every 5 seconds. If no new point is stored for more than 5 seconds, the trace stays on the map at the last known position and the list marks it Tracking paused.</dd>
 
-            <dt>Start/Resume/Stop</dt>
-            <dd>'Start' will start a new trace for an alias that is not tracked. If an alias already has an active trace, 'Resume' continues it from last known position. Using 'Stop' for a given alias is the way to end the tracing completely and remove the alias from the list and map.</dd>
+            <dt>Routes</dt>
+            <dd>Open Routes menu and pick one to draw that track on the map. You can load GPX files whic will be added to available routes.</dd>
           </dl>
         </div>
       </div>
     </aside>
     <button id="panel-launcher" type="button" aria-label="Show panel">ⓘ</button>
+  </div>
+
+  <div id="entry-dialog" class="notice-dialog" hidden>
+    <div class="notice-dialog-card">
+      <p id="entry-dialog-title">Are you a Rider or a Viewer?</p>
+      <div class="notice-dialog-actions">
+        <button id="entry-rider" type="button">Rider</button>
+        <button id="entry-viewer" type="button" class="ghost">Viewer</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="rider-dialog" class="notice-dialog" hidden>
+    <form id="rider-form" class="notice-dialog-card">
+      <p id="rider-dialog-title">Rider..</p>
+      <input id="rider-name" type="text" maxlength="30" placeholder="your name/alias" autocomplete="nickname">
+      <p id="rider-log" hidden></p>
+      <div id="rider-actions" class="notice-dialog-actions">
+        <button id="rider-start" type="submit">Starting / Resuming Trace</button>
+      </div>
+    </form>
   </div>
 
   <div id="notice-dialog" class="notice-dialog" hidden>
@@ -109,6 +138,7 @@
     };
   </script>
   <script src="track-grade.js"></script>
+  <script src="gpx.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

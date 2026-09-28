@@ -5,7 +5,7 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 ## What it does
 
 - Tracestrack topo basemap
-- Course overlay from `gpx_tracks/El Camino de la Paz 2026.gpx`, framed on load unless the URL already has `lat`, `lng`, and `z`
+- Course overlay from a GPX the user uploads. The file is stored on the `routes` document. The chosen route id stays in the URL hash.
 - One live trace per alias. Case does not distinguish (`Kay` and `kay` are the same)
 - Last point shows the alias on a white stem, plus a dashed accuracy ring in the alias color
 - Alias labels shrink below zoom 14
@@ -17,16 +17,18 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 - `index.html` – page, FAQ, Firebase web config
 - `styles.css` – panel, dialog, marker, accuracy-ring pulse
 - `app.js` – map, Firestore, GPS writer
+- `gpx.js` – GPX parse, 10 m thinning, namespaced write
+- `track-grade.js` – uphill / flat split for the course line
 - `manifest.json` – installable app
 - `sw.js` – app shell and topo tile cache
 - `icons/` – 📡 app icons
-- `gpx_tracks/` – course file drawn on load
+- `gpx_tracks/` – sample course file, not loaded automatically
 
 ## Firebase
 
 `window.CHASER_FIREBASE_CONFIG` is set in `index.html` before `app.js`. The web API key is public. Firestore rules are the lock.
 
-If that object is missing, the map and GPX still load. Realtime sync stays offline.
+If that object is missing, the map still loads. Route storage and live traces stay offline.
 
 ## Firestore data model
 
@@ -47,6 +49,17 @@ Point fields:
 - `recordedAt` (server timestamp)
 
 The client matches aliases with trim + lowercase. That does not add a field. Lookup loads active sessions and filters in the browser. The color is a hash of that same key, so both spellings share a color. The name drawn on the map is the casing stored on the document.
+
+Collection: `routes`
+
+- Document id `route_1`, `route_2`, `route_3`, … The hash is that id.
+- `name` (the uploaded file name, without `.gpx`)
+- `gpx` (the file text)
+- `createdAt` (server timestamp)
+
+`routes/counter` stores `{ next }`, the next number to assign. An upload reads it and writes the route in one transaction. The list skips that document. `#admin` shows a delete button on each route.
+
+One document is at most 1 MiB. Vertices closer than 10 m are dropped first, and the stored file is that GPX. The upload refuses it when the result would not fit beside `name` and `createdAt`. Opening a route reads that document's `gpx`.
 
 ## Trace lifecycle
 
@@ -115,6 +128,40 @@ service cloud.firestore {
 
         allow update, delete: if false;
       }
+    }
+
+    match /routes/counter {
+      allow read: if true;
+
+      allow create: if
+        request.resource.data.keys().hasOnly(['next']) &&
+        request.resource.data.next == 2;
+
+      allow update: if
+        request.resource.data.keys().hasOnly(['next']) &&
+        request.resource.data.next is int &&
+        resource.data.next is int &&
+        request.resource.data.next == resource.data.next + 1;
+
+      allow delete: if false;
+    }
+
+    match /routes/{routeId} {
+      allow read: if true;
+
+      allow create: if
+        routeId.matches('^route_[1-9][0-9]*$') &&
+        request.resource.data.keys().hasOnly(['name', 'gpx', 'createdAt']) &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() >= 1 &&
+        request.resource.data.name.size() <= 200 &&
+        request.resource.data.gpx is string &&
+        request.resource.data.gpx.size() >= 1 &&
+        request.resource.data.gpx.size() <= 1000000 &&
+        request.resource.data.createdAt == request.time;
+
+      allow update: if false;
+      allow delete: if true;
     }
   }
 }

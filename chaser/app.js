@@ -3,8 +3,8 @@
   const ZOOM_MIN = 10;
   // Below this: one solid white outer line, solid dark-grey inner line, short course labels.
   const ZOOM_COURSE = 14;
-  // Above this: the main title indicator grows again.
-  const ZOOM_TITLE = 12;
+  // Above this: the main title stem grows to its longest.
+  const ZOOM_TITLE = 15;
   // Below this: alias labels on live traces shrink.
   const ZOOM_ALIAS = 14;
 
@@ -15,15 +15,65 @@
   const userListEl = document.getElementById("user-list");
   const statusEl = document.getElementById("connection-status");
   const gpsStatusEl = document.getElementById("gps-status");
-  const displayNameEl = document.getElementById("display-name");
-  const startBtn = document.getElementById("start-share");
+  const stopBtn = document.getElementById("stop-tracking");
   const panelMain = document.getElementById("panel-main");
   const panelInfo = document.getElementById("panel-info");
   const noticeDialog = document.getElementById("notice-dialog");
   const noticeMessage = document.getElementById("notice-dialog-message");
   const noticeConfirm = document.getElementById("notice-dialog-confirm");
   const noticeCancel = document.getElementById("notice-dialog-cancel");
+  const entryDialog = document.getElementById("entry-dialog");
+  const riderDialog = document.getElementById("rider-dialog");
+  const riderForm = document.getElementById("rider-form");
+  const riderNameEl = document.getElementById("rider-name");
+  const riderLog = document.getElementById("rider-log");
+  const riderTitle = document.getElementById("rider-dialog-title");
+  const riderPanelTitle = document.getElementById("rider-panel-title");
+  const riderActions = document.getElementById("rider-actions");
+  const riderStart = document.getElementById("rider-start");
+  const entryRider = document.getElementById("entry-rider");
+  const ENTRY_FEEDBACK_MS = 3000;
+  let riderCloseTimer = null;
+  const routeList = document.getElementById("route-list");
   let noticeResolver = null;
+  let selectedRouteId = null;
+  let drawnRouteId = null;
+  const routesById = new Map();
+  let routeListSignature = "";
+  const GPX_MAX_BYTES = 1024 * 1024 - 2048;
+
+  function isAdminMode() {
+    const raw = window.location.hash.slice(1);
+    return raw === "admin" || raw.endsWith("#admin");
+  }
+
+  function routeIdFromHash() {
+    let raw = window.location.hash.slice(1);
+    if (raw.endsWith("#admin")) raw = raw.slice(0, -"#admin".length);
+    if (!raw || raw === "infos" || raw === "admin") return null;
+    return decodeURIComponent(raw);
+  }
+
+  function writePageUrl(hash) {
+    const center = map.getCenter();
+    const params = new URLSearchParams();
+    params.set("lat", center.lat.toFixed(5));
+    params.set("lng", center.lng.toFixed(5));
+    params.set("z", String(map.getZoom()));
+    let fragment = hash == null ? window.location.hash.slice(1) : String(hash || "");
+    if (hash != null && fragment && fragment !== "infos" && !fragment.endsWith("#admin") && isAdminMode()) {
+      fragment = `${fragment}#admin`;
+    }
+    const nextHash = fragment ? `#${fragment}` : "";
+    history.replaceState(null, "", `${window.location.pathname}?${params}${nextHash}`);
+    routeInHash = routeIdFromHash();
+  }
+
+  function writeRouteHash(id) {
+    writePageUrl(id || "");
+  }
+
+  let routeInHash = routeIdFromHash();
 
   const togglePanelContent = () => {
     const showInfo = window.location.hash === "#infos";
@@ -31,18 +81,23 @@
     panelInfo.hidden = !showInfo;
   };
   togglePanelContent();
-  window.addEventListener("hashchange", togglePanelContent);
+  window.addEventListener("hashchange", () => {
+    togglePanelContent();
+    const previousRoute = routeInHash;
+    if (window.location.hash === "#admin" && previousRoute) writeRouteHash(previousRoute);
+    else routeInHash = routeIdFromHash();
+    renderRouteList();
+    const id = routeIdFromHash();
+    if (id) selectRoute(id, { frame: !parseMapView() });
+  });
   panelInfo.querySelector(".panel-info-close").addEventListener("click", (event) => {
     event.preventDefault();
-    history.replaceState(null, "", window.location.pathname + window.location.search);
+    writeRouteHash(selectedRouteId);
     panelMain.hidden = false;
     panelInfo.hidden = true;
   });
 
-  noticeConfirm.addEventListener("click", () => {
-    if (noticeConfirm.textContent === "Resume") requestDeviceLocation();
-    closeNotice(true);
-  });
+  noticeConfirm.addEventListener("click", () => closeNotice(true));
   noticeCancel.addEventListener("click", () => closeNotice(false));
   userListEl.addEventListener("click", centerOnListedUser);
 
@@ -54,6 +109,7 @@
   wirePanelFade();
   map.on("zoomend", syncLabelZoom);
   map.on("moveend", scheduleUrlSync);
+  writeMapUrl();
   syncLabelZoom();
   L.tileLayer("https://tile.tracestrack.com/topo__/{z}/{x}/{y}.png?key={apiKey}", {
     minZoom: 1,
@@ -64,10 +120,21 @@
 
   const gpxLayer = L.layerGroup().addTo(map);
   const tracksLayer = L.layerGroup().addTo(map);
-  loadGpxOverlay();
+  renderRouteList();
+  routeList.addEventListener("click", (event) => {
+    const deleteBtn = event.target.closest(".route-delete");
+    if (deleteBtn) {
+      deleteRoute(deleteBtn.dataset.routeId);
+      return;
+    }
+    const item = event.target.closest("[data-route-id]");
+    if (!item) return;
+    selectRoute(item.dataset.routeId, { frame: true, force: true });
+  });
   const tracksBySessionId = new Map();
 
   let sessionsUnsubscribe = null;
+  let routesUnsubscribe = null;
   let writeTimer = null;
   let activeSessionRef = null;
   let latestOwnPosition = null;
@@ -76,10 +143,15 @@
   let gpsRunning = false;
   let centerControlButton = null;
   let urlSyncTimer = null;
+  let db = null;
+  let sessionsRef = null;
 
+  addGpxLoadControl();
   addSessionCenterControl();
   watchGpsPermission();
   renderGpsStatus();
+  showEntryGate();
+  wireEntryGate();
 
   const firebaseConfig = window.CHASER_FIREBASE_CONFIG || null;
   if (!firebaseConfig) {
@@ -89,58 +161,142 @@
   }
 
   firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-  const sessionsRef = db.collection(SESSIONS_COLLECTION);
+  db = firebase.firestore();
+  sessionsRef = db.collection(SESSIONS_COLLECTION);
 
   attachSessionsSubscription(sessionsRef);
+  attachRoutesSubscription(db);
   setInterval(() => renderUserList(sortedTracks()), 5000);
   wireControls(sessionsRef);
 
-  function wireControls(ref) {
-    startBtn.addEventListener("click", async () => {
-      if (activeSessionRef) {
-        await stopTracking(ref);
-        return;
-      }
-
-      const name = sanitizeName(displayNameEl.value);
+  function wireEntryGate() {
+    document.getElementById("entry-viewer").addEventListener("click", () => {
+      entryDialog.hidden = true;
+    });
+    entryRider.addEventListener("click", () => {
+      entryDialog.hidden = true;
+      openRiderBox();
+    });
+    riderForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const name = sanitizeName(riderNameEl.value);
       if (!name) {
-        await showNotice("Please enter a display name.");
+        riderLog.hidden = true;
+        riderNameEl.focus();
         return;
       }
-
-      localStorage.setItem("chaser_display_name", name);
-      requestDeviceLocation();
-
-      try {
-        const activeRefs = await findActiveAliasSessions(ref, name);
-        if (!activeRefs.length) {
-          await beginWriting(await createAliasSession(ref, name));
-          return;
-        }
-
-        const shouldResume = await showNotice(
-          "Resume the trace for {alias} on this device/browser? Stop tracking removes it. It will be gone for good.",
-          { alias: name, confirmLabel: "Resume", cancelLabel: "Stop tracking" }
-        );
-        if (shouldResume) {
-          await beginWriting(activeRefs[0]);
-          return;
-        }
-
-        await endAliasSessions(activeRefs);
-      } catch (err) {
-        clearWriter();
-        console.error("Failed to start tracking session:", err);
-        renderConnection(false, "offline");
+      if (!sessionsRef) {
+        riderLog.textContent = "Firebase is not configured.";
+        riderLog.hidden = false;
+        return;
       }
+      riderStart.classList.add("is-fading");
+      riderStart.addEventListener("transitionend", function hideStart(event) {
+        if (event.propertyName !== "opacity") return;
+        riderStart.removeEventListener("transitionend", hideStart);
+        if (riderStart.classList.contains("is-fading")) riderActions.hidden = true;
+      });
+      requestDeviceLocation();
+      beginAliasTracking(sessionsRef, name);
     });
   }
 
+  function resetRiderForm() {
+    riderNameEl.disabled = false;
+    riderNameEl.hidden = false;
+    riderTitle.hidden = false;
+    riderLog.hidden = true;
+    riderLog.textContent = "";
+    riderStart.classList.remove("is-fading");
+    riderActions.hidden = false;
+    riderForm.classList.remove("is-result");
+    riderForm.style.minHeight = "";
+    riderDialog.classList.remove("is-fading");
+    riderForm.querySelectorAll("button").forEach((button) => {
+      button.disabled = false;
+    });
+  }
+
+  function openRiderBox() {
+    clearTimeout(riderCloseTimer);
+    resetRiderForm();
+    riderNameEl.value = localStorage.getItem("chaser_display_name") || "";
+    riderDialog.hidden = false;
+    riderNameEl.focus();
+  }
+
+  function setRiderPanelTitle(name) {
+    riderPanelTitle.replaceChildren("Rider ", aliasNode(name));
+  }
+
+  function showRiderResult(name, after) {
+    riderForm.style.minHeight = `${riderForm.offsetHeight}px`;
+    riderForm.classList.add("is-result");
+    riderTitle.hidden = true;
+    riderNameEl.hidden = true;
+    riderActions.hidden = true;
+    riderLog.replaceChildren("Rider ", aliasNode(name), after);
+    riderLog.hidden = false;
+  }
+
+  function fadeRiderBox() {
+    riderDialog.classList.add("is-fading");
+    riderDialog.addEventListener("transitionend", function done(event) {
+      if (event.target !== riderDialog || event.propertyName !== "opacity") return;
+      riderDialog.removeEventListener("transitionend", done);
+      if (!riderDialog.classList.contains("is-fading")) return;
+      riderDialog.hidden = true;
+      riderDialog.classList.remove("is-fading");
+      document.body.classList.remove("is-viewer");
+    });
+  }
+
+  function showEntryGate() {
+    clearTimeout(riderCloseTimer);
+    document.body.classList.add("is-viewer");
+    riderDialog.classList.remove("is-fading");
+    riderDialog.hidden = true;
+    entryDialog.hidden = false;
+  }
+
+  function wireControls(ref) {
+    stopBtn.addEventListener("click", () => {
+      if (activeSessionRef) stopTracking(ref);
+    });
+  }
+
+  async function beginAliasTracking(ref, name) {
+    localStorage.setItem("chaser_display_name", name);
+    setRiderPanelTitle(name);
+    riderNameEl.disabled = true;
+    riderForm.querySelectorAll("button").forEach((button) => {
+      button.disabled = true;
+    });
+
+    try {
+      const activeRefs = await findActiveAliasSessions(ref, name);
+      if (!activeRefs.length) {
+        const sessionRef = await createAliasSession(ref, name);
+        showRiderResult(name, " is starting his trace!");
+        beginWriting(sessionRef);
+      } else {
+        showRiderResult(name, " is resuming his trace");
+        beginWriting(activeRefs[0]);
+      }
+      clearTimeout(riderCloseTimer);
+      riderCloseTimer = setTimeout(fadeRiderBox, ENTRY_FEEDBACK_MS);
+    } catch (err) {
+      clearWriter();
+      console.error("Failed to start tracking session:", err);
+      renderConnection(false, "offline");
+      resetRiderForm();
+      riderLog.textContent = "Could not start tracking.";
+      riderLog.hidden = false;
+    }
+  }
+
   async function stopTracking(ref) {
-    const name = sanitizeName(
-      localStorage.getItem("chaser_display_name") || displayNameEl.value
-    );
+    const name = sanitizeName(localStorage.getItem("chaser_display_name"));
     if (!name) return;
 
     const confirmed = await showNotice(
@@ -158,6 +314,8 @@
       console.error("Failed to stop tracking session:", err);
       renderConnection(false, "offline");
     }
+
+    showEntryGate();
   }
 
   function syncLabelZoom() {
@@ -180,35 +338,36 @@
     });
   }
 
-  function addSessionCenterControl() {
-    const SessionCenterControl = L.Control.extend({
+  function addBarButton(className) {
+    let button = null;
+    const BarButton = L.Control.extend({
       options: { position: "topleft" },
 
       onAdd() {
-        const container = L.DomUtil.create(
-          "div",
-          "leaflet-bar session-center-control"
-        );
-        const button = L.DomUtil.create("a", "", container);
-
+        const container = L.DomUtil.create("div", `leaflet-bar ${className}`);
+        button = L.DomUtil.create("a", "", container);
         button.href = "#";
-        button.innerHTML = `
-          <svg class="session-center-icon" viewBox="0 0 512 512" aria-hidden="true">
-            <path d="M444.52 3.52 28.74 195.42c-47.97 22.39-31.98 92.75 19.19 92.75h175.91v175.91c0 51.17 70.36 67.17 92.75 19.19L508.49 67.49c15.99-38.39-25.59-79.97-63.97-63.97z"></path>
-          </svg>`;
         button.setAttribute("role", "button");
-
         L.DomEvent.disableClickPropagation(container);
-        L.DomEvent.on(button, "click", L.DomEvent.stop)
-          .on(button, "click", centerCurrentSession);
-
-        centerControlButton = button;
-        updateCenterControl();
         return container;
       }
     });
+    new BarButton().addTo(map);
+    return button;
+  }
 
-    new SessionCenterControl().addTo(map);
+  function addSessionCenterControl() {
+    const button = addBarButton("session-center-control");
+
+    button.classList.add("session-center-btn");
+    button.title = "Center map to GPS";
+    button.innerHTML = '<svg class="session-center-icon" viewBox="0 0 512 512" aria-hidden="true"><path d="M444.52 3.52 28.74 195.42c-47.97 22.39-31.98 92.75 19.19 92.75h175.91v175.91c0 51.17 70.36 67.17 92.75 19.19L508.49 67.49c15.99-38.39-25.59-79.97-63.97-63.97z"></path></svg>';
+
+    L.DomEvent.on(button, "click", L.DomEvent.stop)
+      .on(button, "click", centerCurrentSession);
+
+    centerControlButton = button;
+    updateCenterControl();
   }
 
   function centerCurrentSession() {
@@ -223,9 +382,7 @@
     centerControlButton.classList.toggle("is-active", sessionActive);
     centerControlButton.classList.toggle("is-disabled", !sessionActive);
     centerControlButton.setAttribute("aria-disabled", String(!sessionActive));
-    centerControlButton.title = sessionActive
-      ? "Center on this session"
-      : "Start sharing to center on this session";
+    centerControlButton.title = "Center map to GPS";
   }
 
   function centerMapOnPosition(position) {
@@ -316,13 +473,7 @@
   function setWriterState(active) {
     gpsRunning = active;
     renderGpsStatus();
-    displayNameEl.disabled = active;
-    displayNameEl.placeholder = active
-      ? "..currently tracking " + localStorage.getItem("chaser_display_name") + " from this device!"
-      : "...put your alias here!";
-    displayNameEl.value = active
-      ? ""
-      : localStorage.getItem("chaser_display_name") || "";
+    stopBtn.hidden = !active;
     updateCenterControl();
   }
 
@@ -333,7 +484,7 @@
         const seen = new Set();
 
         snapshot.forEach((doc) => {
-          const data = doc.data();
+        const data = doc.data();
           if (!isValidSessionRecord(doc.id, data)) return;
 
           seen.add(doc.id);
@@ -345,11 +496,11 @@
         });
 
         renderTracksAndPanel();
-        renderConnection(true, "online");
-      }, (error) => {
+      renderConnection(true, "online");
+    }, (error) => {
         console.error("Firestore sessions subscription error:", error);
-        renderConnection(false, "offline");
-      });
+      renderConnection(false, "offline");
+    });
   }
 
   function ensureTrackSubscription(sessionRef, session) {
@@ -503,13 +654,20 @@
   function renderUserList(tracks) {
     if (!tracks.length) {
       if (userListSignature !== "empty") {
-        userListEl.innerHTML = "<li class='user-item'><div class='user-item-meta'>No active users</div></li>";
+        userListEl.innerHTML = "<li class='user-item'><div class='user-item-meta'>No active riders</div></li>";
         userListSignature = "empty";
       }
       return;
     }
 
-    const rows = tracks.map((track) => {
+    const ordered = [...tracks].sort((a, b) => {
+      const aOwn = activeSessionRef && a.sessionId === activeSessionRef.id;
+      const bOwn = activeSessionRef && b.sessionId === activeSessionRef.id;
+      if (aOwn !== bOwn) return aOwn ? -1 : 1;
+      return 0;
+    });
+
+    const rows = ordered.map((track) => {
       const updatedAtMs = latestResolvedSignalMs(track);
       const pointLabel = track.points.length === 1 ? "point" : "points";
       const signalStale = signalStaleFor(track);
@@ -517,11 +675,12 @@
       return {
         track,
         signalStale,
+        own: Boolean(activeSessionRef && track.sessionId === activeSessionRef.id),
         meta: `last timestamp: ${formatClock(updatedAtMs, true)} · start time: ${formatClock(track.startedAtMs, false)} · ${track.points.length} ${pointLabel}`
       };
     });
     const signature = rows
-      .map((row) => `${row.track.sessionId}:${row.signalStale}:${row.track.points.length}:${row.track.name}`)
+      .map((row) => `${row.track.sessionId}:${row.own}:${row.signalStale}:${row.track.points.length}:${row.track.name}`)
       .join("|");
 
     if (signature !== userListSignature) {
@@ -530,16 +689,16 @@
           ? ` data-session-id="${escapeHtml(row.track.sessionId)}"`
           : "";
         const warning = row.signalStale
-          ? `<div class="user-item-stale">Tracking paused.. Resume using your alias!</div>`
+          ? `<div class="user-item-stale">Tracking paused.</div>`
           : "";
 
-        return `
-          <li class="user-item" data-track-id="${escapeHtml(row.track.sessionId)}"${sessionAttribute} style="border-left-color:${row.track.color}">
-            <div class="user-item-name">${escapeHtml(row.track.name)}</div>
+      return `
+          <li class="user-item${row.own ? " is-tracking" : ""}" data-track-id="${escapeHtml(row.track.sessionId)}"${sessionAttribute} style="border-left-color:${row.track.color}">
+            <div class="user-item-name notice-alias" style="color:${row.track.color}">${escapeHtml(row.track.name)}</div>
             ${warning}
             <div class="user-item-meta">${row.meta}</div>
-          </li>`;
-      }).join("");
+        </li>`;
+    }).join("");
       userListSignature = signature;
       return;
     }
@@ -591,12 +750,7 @@
   }
 
   function writeMapUrl() {
-    const center = map.getCenter();
-    const url = new URL(window.location.href);
-    url.searchParams.set("lat", center.lat.toFixed(5));
-    url.searchParams.set("lng", center.lng.toFixed(5));
-    url.searchParams.set("z", String(map.getZoom()));
-    history.replaceState(null, "", url.pathname + url.search + url.hash);
+    writePageUrl(null);
   }
 
   function scheduleUrlSync() {
@@ -656,7 +810,7 @@
     L.marker(latLng, { icon, interactive: false, keyboard: false }).addTo(gpxLayer);
   }
 
-  function addCourseMarkers(latLngs) {
+  function addCourseMarkers(latLngs, trackName) {
     const total = courseDistance(latLngs);
     addCoursePin(latLngs[0], "Start", cssColor("--color-course-start"));
     addCoursePin(latLngs[latLngs.length - 1], "Finish", cssColor("--color-course-finish"));
@@ -667,7 +821,7 @@
     const icon = L.divIcon({
       className: "course-title-icon",
       html: `<span class="course-callout course-callout-title">
-        <span class="course-callout-label course-title">El camino de la Paz 2026</span>
+        <span class="course-callout-label course-title">${escapeHtml(trackName)}</span>
         <span class="course-callout-stem"></span>
       </span>`,
       iconSize: [10, 10],
@@ -680,52 +834,264 @@
     }).addTo(gpxLayer);
   }
 
-  function loadGpxOverlay() {
-    const gpxNs = "http://www.topografix.com/GPX/1/1";
-    fetch(encodeURI("gpx_tracks/El Camino de la Paz 2026.gpx"))
-      .then((response) => {
-        if (!response.ok) throw new Error(`GPX request failed: ${response.status}`);
-        return response.text();
-      })
-      .then((xmlText) => {
-        const doc = new DOMParser().parseFromString(xmlText, "application/xml");
-        if (doc.querySelector("parsererror")) throw new Error("GPX parse failed");
+  function drawCourse(course, frame) {
+    gpxLayer.clearLayers();
+    const highlight = {
+      uphill: cssColor("--color-grade-uphill"),
+      flat: cssColor("--color-grade-flat")
+    };
+    splitTrackByGrade(course.points).forEach((portion) => {
+      L.polyline(portion.latLngs, {
+        className: "course-grade",
+        color: highlight[portion.kind],
+        weight: 7.5,
+        opacity: 0.85,
+        lineCap: "butt",
+        interactive: false
+      }).addTo(gpxLayer);
+    });
+    const latLngs = course.points.map((point) => [point.lat, point.lon]);
+    const line = L.polyline(latLngs, {
+      className: "course-line",
+      color: cssColor("--color-course"),
+      weight: 2.5,
+      opacity: 0.9,
+      dashArray: "4, 4",
+      lineCap: "butt",
+      interactive: false
+    }).addTo(gpxLayer);
+    if (frame) frameGpx(line.getBounds());
+    addCourseMarkers(latLngs, course.name);
+  }
 
-        const points = [...doc.getElementsByTagNameNS(gpxNs, "trkpt")].map((point) => ({
-          lat: Number(point.getAttribute("lat")),
-          lon: Number(point.getAttribute("lon")),
-          z: Number(point.getElementsByTagNameNS(gpxNs, "ele")[0].textContent)
-        }));
-        const highlight = {
-          uphill: cssColor("--color-grade-uphill"),
-          flat: cssColor("--color-grade-flat")
-        };
-        splitTrackByGrade(points).forEach((portion) => {
-          L.polyline(portion.latLngs, {
-            className: "course-grade",
-            color: highlight[portion.kind],
-            weight: 7.5,
-            opacity: 0.85,
-            lineCap: "butt",
-            interactive: false
-          }).addTo(gpxLayer);
+  function capLetters(text, max) {
+    if (text.length <= max) return text;
+    return `${text.slice(0, max)}...`;
+  }
+
+  function renderRouteList() {
+    const routes = [...routesById.values()].sort((a, b) => a.name.localeCompare(b.name));
+    const signature = [
+      isAdminMode() ? "admin" : "view",
+      ...routes.map((route) => `${route.id}\t${route.name}`)
+    ].join("\n");
+
+    if (signature !== routeListSignature) {
+      const scrollTop = routeList.scrollTop;
+      routeListSignature = signature;
+      routeList.replaceChildren();
+      if (!routes.length) {
+        const empty = document.createElement("li");
+        empty.className = "route-empty";
+        empty.textContent = "no routes yet - upload one";
+        routeList.append(empty);
+      } else {
+        routes.forEach((route) => {
+          const item = document.createElement("li");
+          item.className = "route-row";
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "route-item";
+          button.dataset.routeId = route.id;
+          button.textContent = capLetters(route.name, 25);
+          button.title = route.name;
+          item.append(button);
+          if (isAdminMode()) {
+            const del = document.createElement("button");
+            del.type = "button";
+            del.className = "route-delete";
+            del.dataset.routeId = route.id;
+            del.title = "Delete route";
+            del.textContent = "Del";
+            item.append(del);
+          }
+          routeList.append(item);
         });
-        const latLngs = points.map((point) => [point.lat, point.lon]);
-        const line = L.polyline(latLngs, {
-          className: "course-line",
-          color: cssColor("--color-course"),
-          weight: 2.5,
-          opacity: 0.9,
-          dashArray: "4, 4",
-          lineCap: "butt",
-          interactive: false
-        }).addTo(gpxLayer);
-        frameGpx(line.getBounds());
-        addCourseMarkers(latLngs);
-      })
-      .catch((err) => {
-        console.error("Failed to load GPX overlay:", err);
+      }
+      routeList.scrollTop = scrollTop;
+    }
+
+    routeList.querySelectorAll(".route-item").forEach((button) => {
+      button.classList.toggle("is-selected", button.dataset.routeId === selectedRouteId);
+    });
+  }
+
+  async function deleteRoute(id) {
+    const route = routesById.get(id);
+    if (!route || !db || !isAdminMode()) return;
+    const confirmed = await showNotice(`Delete route: ${route.name}?`, {
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel"
+    });
+    if (!confirmed) return;
+
+    try {
+      await db.collection("routes").doc(id).delete();
+    } catch (err) {
+      console.error("Failed to delete route:", err);
+      await showNotice("Route could not be deleted.");
+      return;
+    }
+
+    if (selectedRouteId === id) {
+      gpxLayer.clearLayers();
+      selectedRouteId = null;
+      drawnRouteId = null;
+    }
+    renderRouteList();
+  }
+
+  function attachRoutesSubscription(firestore) {
+    let reportedMissingRouteId = "";
+    routesUnsubscribe = firestore.collection("routes").onSnapshot((snapshot) => {
+      routesById.clear();
+      snapshot.forEach((doc) => {
+        if (doc.id === "counter") return;
+        const data = doc.data();
+        if (typeof data.name !== "string" || !data.name) return;
+        routesById.set(doc.id, { id: doc.id, name: data.name });
       });
+      renderRouteList();
+      const id = routeIdFromHash();
+      if (!id) return;
+      if (!routesById.has(id)) {
+        if (reportedMissingRouteId !== id) {
+          reportedMissingRouteId = id;
+          showNotice("That route is not in the list.");
+        }
+        return;
+      }
+      reportedMissingRouteId = "";
+      if (drawnRouteId !== id) selectRoute(id, { frame: !parseMapView() });
+    }, (error) => {
+      console.error("Firestore routes subscription error:", error);
+    });
+  }
+
+  async function selectRoute(id, options) {
+    const route = routesById.get(id);
+    if (!route || !db) return;
+    selectedRouteId = id;
+    writeRouteHash(id);
+    renderRouteList();
+    if (drawnRouteId === id && !options.force) return;
+
+    try {
+      const snap = await db.collection("routes").doc(id).get();
+      const gpx = snap.exists ? snap.data().gpx : "";
+      if (typeof gpx !== "string" || !gpx) {
+        await showNotice("GPX could not be loaded.");
+        return;
+      }
+      const parsed = parseGpx(gpx);
+      if (parsed.error) {
+        await showNotice(parsed.error);
+        return;
+      }
+      drawCourse(parsed, options.frame);
+      drawnRouteId = id;
+    } catch (err) {
+      console.error("Failed to load route GPX:", err);
+      await showNotice("GPX could not be loaded.");
+    }
+  }
+
+  function readGpxFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsText(file);
+    });
+  }
+
+  async function uploadGpxFile(file) {
+    if (!db) {
+      await showNotice("Firebase is not configured.");
+      return;
+    }
+    let xmlText = "";
+    try {
+      xmlText = await readGpxFile(file);
+    } catch (err) {
+      console.error("Failed to read GPX file:", err);
+      await showNotice("GPX could not be read.");
+      return;
+    }
+
+    const parsed = parseGpx(xmlText);
+    if (parsed.error) {
+      await showNotice(parsed.error);
+      return;
+    }
+    const fileName = file.name.replace(/\.gpx$/i, "").trim();
+    if (!fileName) {
+      await showNotice("GPX file name is missing.");
+      return;
+    }
+    if (fileName.length > 200) {
+      await showNotice("GPX file name is too long.");
+      return;
+    }
+    parsed.name = fileName;
+
+    const gpxText = gpxDocument(parsed);
+    if (new TextEncoder().encode(gpxText).length > GPX_MAX_BYTES) {
+      await showNotice("GPX is larger than 1 MB.");
+      return;
+    }
+
+    const counterRef = db.collection("routes").doc("counter");
+    let routeId = "";
+    try {
+      routeId = await db.runTransaction(async (transaction) => {
+        const snap = await transaction.get(counterRef);
+        const next = snap.exists ? snap.data().next : 1;
+        if (!Number.isInteger(next) || next < 1) {
+          throw new Error("Route counter is invalid.");
+        }
+        const id = `route_${next}`;
+        transaction.set(counterRef, { next: next + 1 });
+        transaction.set(db.collection("routes").doc(id), {
+          name: parsed.name,
+          gpx: gpxText,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        return id;
+      });
+    } catch (err) {
+      console.error("Failed to store GPX:", err);
+      await showNotice("GPX could not be stored.");
+      return;
+    }
+
+    routesById.set(routeId, { id: routeId, name: parsed.name });
+    drawCourse(parsed, true);
+    drawnRouteId = routeId;
+    selectedRouteId = routeId;
+    writeRouteHash(routeId);
+    renderRouteList();
+  }
+
+  function addGpxLoadControl() {
+    const button = addBarButton("gpx-load-control");
+    const input = L.DomUtil.create("input", "", map.getContainer());
+
+    button.classList.add("gpx-load-btn");
+    button.title = "Load GPX";
+    button.setAttribute("aria-label", "Load GPX");
+    button.innerHTML = '<svg class="gpx-load-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l5 5h-3v6h-4V8H7l5-5zm-7 14h14v2H5v-2z"></path></svg>';
+    input.type = "file";
+    input.accept = ".gpx,application/gpx+xml,application/xml,text/xml";
+    input.hidden = true;
+
+    L.DomEvent.on(button, "click", L.DomEvent.stop)
+      .on(button, "click", () => input.click());
+    input.addEventListener("change", () => {
+      const file = input.files && input.files[0];
+      input.value = "";
+      if (file) uploadGpxFile(file);
+    });
   }
 
   function requestDeviceLocation() {
@@ -830,24 +1196,28 @@
     return TRACE_COLORS[(hash >>> 0) % TRACE_COLORS.length];
   }
 
+  function aliasNode(name) {
+    const alias = document.createElement("span");
+    alias.className = "notice-alias";
+    alias.style.color = colorForAlias(name);
+    alias.textContent = name;
+    return alias;
+  }
+
   function showNotice(message, options = {}) {
     if (noticeResolver) closeNotice(false);
 
     noticeMessage.replaceChildren();
     if (options.alias) {
       const [before, after = ""] = message.split("{alias}");
-      const alias = document.createElement("span");
-      alias.className = "notice-alias";
-      alias.style.color = colorForAlias(options.alias);
-      alias.textContent = options.alias;
-      noticeMessage.append(before, alias, after);
+      noticeMessage.append(before, aliasNode(options.alias), after);
     } else {
       noticeMessage.textContent = message;
     }
     noticeConfirm.textContent = options.confirmLabel || "OK";
     noticeCancel.hidden = !options.cancelLabel;
     if (options.cancelLabel) noticeCancel.textContent = options.cancelLabel;
-    noticeConfirm.classList.toggle("is-danger", noticeConfirm.textContent === "Stop tracking");
+    noticeConfirm.classList.toggle("is-danger", noticeConfirm.textContent === "Stop tracking" || noticeConfirm.textContent === "Delete");
     noticeCancel.classList.toggle("is-danger", !noticeCancel.hidden && noticeCancel.textContent === "Stop tracking");
     noticeDialog.hidden = false;
     noticeConfirm.focus();
@@ -943,6 +1313,7 @@
 
   window.addEventListener("beforeunload", () => {
     if (sessionsUnsubscribe) sessionsUnsubscribe();
+    if (routesUnsubscribe) routesUnsubscribe();
     tracksBySessionId.forEach((track) => {
       if (track.unsubscribePoints) track.unsubscribePoints();
     });
