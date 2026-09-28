@@ -47,9 +47,27 @@
     return raw === "admin" || raw.endsWith("#admin");
   }
 
-  function routeIdFromHash() {
+  function stripHashSuffixes(raw) {
+    if (raw.endsWith("#admin")) raw = raw.slice(0, -"#admin".length);
+    if (raw === "viewing" || raw.endsWith("#viewing")) {
+      raw = raw === "viewing" ? "" : raw.slice(0, -"#viewing".length);
+    }
+    if (raw === "tracking" || raw.endsWith("#tracking")) {
+      raw = raw === "tracking" ? "" : raw.slice(0, -"#tracking".length);
+    }
+    return raw;
+  }
+
+  function modeFromHash() {
     let raw = window.location.hash.slice(1);
     if (raw.endsWith("#admin")) raw = raw.slice(0, -"#admin".length);
+    if (raw === "viewing" || raw.endsWith("#viewing")) return "viewing";
+    if (raw === "tracking" || raw.endsWith("#tracking")) return "tracking";
+    return null;
+  }
+
+  function routeIdFromHash() {
+    const raw = stripHashSuffixes(window.location.hash.slice(1));
     if (!raw || raw === "infos" || raw === "admin") return null;
     return decodeURIComponent(raw);
   }
@@ -61,8 +79,10 @@
     params.set("lng", center.lng.toFixed(5));
     params.set("z", String(map.getZoom()));
     let fragment = hash == null ? window.location.hash.slice(1) : String(hash || "");
-    if (hash != null && fragment && fragment !== "infos" && !fragment.endsWith("#admin") && isAdminMode()) {
-      fragment = `${fragment}#admin`;
+    if (hash != null && fragment !== "infos") {
+      fragment = stripHashSuffixes(fragment);
+      if (pageMode) fragment = fragment ? `${fragment}#${pageMode}` : pageMode;
+      if (isAdminMode()) fragment = fragment ? `${fragment}#admin` : "admin";
     }
     const nextHash = fragment ? `#${fragment}` : "";
     history.replaceState(null, "", `${window.location.pathname}?${params}${nextHash}`);
@@ -74,6 +94,12 @@
   }
 
   let routeInHash = routeIdFromHash();
+  let pageMode = modeFromHash();
+
+  function setPageMode(mode) {
+    pageMode = mode;
+    writeRouteHash(routeIdFromHash());
+  }
 
   const togglePanelContent = () => {
     const showInfo = window.location.hash === "#infos";
@@ -84,8 +110,16 @@
   window.addEventListener("hashchange", () => {
     togglePanelContent();
     const previousRoute = routeInHash;
+    pageMode = modeFromHash();
     if (window.location.hash === "#admin" && previousRoute) writeRouteHash(previousRoute);
     else routeInHash = routeIdFromHash();
+    if (pageMode === "viewing" && !activeSessionRef) {
+      document.body.classList.add("is-viewer");
+      entryDialog.hidden = true;
+    } else if (pageMode === "tracking" && !activeSessionRef && riderDialog.hidden) {
+      entryDialog.hidden = true;
+      openRiderBox();
+    }
     renderRouteList();
     const id = routeIdFromHash();
     if (id) selectRoute(id, { frame: !parseMapView() });
@@ -150,7 +184,7 @@
   addSessionCenterControl();
   watchGpsPermission();
   renderGpsStatus();
-  showEntryGate();
+  applyInitialMode();
   wireEntryGate();
 
   const firebaseConfig = window.CHASER_FIREBASE_CONFIG || null;
@@ -172,9 +206,14 @@
   function wireEntryGate() {
     document.getElementById("entry-viewer").addEventListener("click", () => {
       entryDialog.hidden = true;
+      document.body.classList.add("is-viewer");
+      setPageMode("viewing");
     });
     entryRider.addEventListener("click", () => {
       entryDialog.hidden = true;
+      openRiderBox();
+    });
+    document.getElementById("viewer-ride").addEventListener("click", () => {
       openRiderBox();
     });
     riderForm.addEventListener("submit", (event) => {
@@ -230,7 +269,7 @@
   }
 
   function showRiderResult(name, after) {
-    riderForm.style.minHeight = `${riderForm.offsetHeight}px`;
+    riderForm.style.minHeight = "";
     riderForm.classList.add("is-result");
     riderTitle.hidden = true;
     riderNameEl.hidden = true;
@@ -239,16 +278,37 @@
     riderLog.hidden = false;
   }
 
-  function fadeRiderBox() {
+  function fadeRiderBox(done) {
     riderDialog.classList.add("is-fading");
-    riderDialog.addEventListener("transitionend", function done(event) {
+    riderDialog.addEventListener("transitionend", function onFade(event) {
       if (event.target !== riderDialog || event.propertyName !== "opacity") return;
-      riderDialog.removeEventListener("transitionend", done);
+      riderDialog.removeEventListener("transitionend", onFade);
       if (!riderDialog.classList.contains("is-fading")) return;
       riderDialog.hidden = true;
       riderDialog.classList.remove("is-fading");
-      document.body.classList.remove("is-viewer");
+      if (done) done();
+      else {
+        document.body.classList.remove("is-viewer");
+        setPageMode("tracking");
+      }
     });
+  }
+
+  function showStoppedNotice() {
+    document.body.classList.add("is-viewer");
+    resetRiderForm();
+    riderTitle.hidden = true;
+    riderNameEl.hidden = true;
+    riderActions.hidden = true;
+    riderForm.classList.add("is-result");
+    riderLog.textContent = "Tracing stopped! Switching to Viewer Mode.";
+    riderLog.hidden = false;
+    riderDialog.hidden = false;
+    setPageMode("viewing");
+    clearTimeout(riderCloseTimer);
+    riderCloseTimer = setTimeout(() => fadeRiderBox(() => {
+      entryDialog.hidden = true;
+    }), ENTRY_FEEDBACK_MS);
   }
 
   function showEntryGate() {
@@ -257,6 +317,22 @@
     riderDialog.classList.remove("is-fading");
     riderDialog.hidden = true;
     entryDialog.hidden = false;
+  }
+
+  function applyInitialMode() {
+    if (pageMode === "viewing") {
+      document.body.classList.add("is-viewer");
+      entryDialog.hidden = true;
+      riderDialog.hidden = true;
+      return;
+    }
+    if (pageMode === "tracking") {
+      document.body.classList.add("is-viewer");
+      entryDialog.hidden = true;
+      openRiderBox();
+      return;
+    }
+    showEntryGate();
   }
 
   function wireControls(ref) {
@@ -277,7 +353,7 @@
       const activeRefs = await findActiveAliasSessions(ref, name);
       if (!activeRefs.length) {
         const sessionRef = await createAliasSession(ref, name);
-        showRiderResult(name, " is starting his trace!");
+        showRiderResult(name, " is starting his ride!");
         beginWriting(sessionRef);
       } else {
         showRiderResult(name, " is resuming his trace");
@@ -315,7 +391,7 @@
       renderConnection(false, "offline");
     }
 
-    showEntryGate();
+    showStoppedNotice();
   }
 
   function syncLabelZoom() {
@@ -615,7 +691,7 @@
       `<strong>${escapeHtml(track.name)}</strong>`,
       `Points: ${track.points.length}`,
       `Accuracy: ${Math.round(point.accuracy)} m`,
-      ageSec === null ? "Age: n/a" : `Age: ${ageSec}s`
+      ageSec === null ? "Time since last pt.: n/a" : `Time since last pt.: ${ageSec}s`
     ].join("<br>");
 
     if (!track.marker) {

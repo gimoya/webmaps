@@ -73,7 +73,7 @@
             <dd>Rider locations are logged and displayed on the map as a trace. The rider's position will only be logged when they are looking at the map with there GPS turned on, and the browser is given rights to use the GPS signal (you will be asked to give permission to use the GPS sensor).</dd>
 
             <dt>Alias</dt>
-            <dd>The name you enter is the identity used. You will find the alias on your trace in the map and in the list of tracked users in the panel. Always use your own unique alias - using an alias someone else is already tracking can corrupt their trace.</dd>
+            <dd>The name you enter is the identity used. You will find the alias on your trace in the map and in the list of tracked users in the panel. Always use your own unique alias - using an alias someone else is already tracking can corrupt their trace. Use something like <strong>Andi_1997</strong> to avoid conflict with other rider with name <strong>Andi!</strong></dd>
 
             <dt>Start/Resume/Stop</dt>
             <dd>The Rider box starts a new trace, or resumes one already active for that name. Stop tracking ends the trace and removes it from the list and map.</dd>
@@ -93,6 +93,12 @@
     <button id="panel-launcher" type="button" aria-label="Show panel">ⓘ</button>
   </div>
 
+    <button id="viewer-ride" class="viewer-ride" type="button" title="Start your Ride" aria-label="Start your Ride">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M15.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM5 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5zm5.8-10 2.4-2.4.8.8c1.3 1.3 3 2.1 5.1 2.1V9c-1.5 0-2.7-.6-3.6-1.5l-1.9-1.9c-.5-.4-1-.6-1.6-.6s-1.1.2-1.4.6L7.8 8.4c-.4.4-.6.9-.6 1.4 0 .6.2 1.1.6 1.4L11 14v5h2v-6.2l-2.2-2.3zM19 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5z"/>
+      </svg>
+    </button>
+
   <div id="entry-dialog" class="notice-dialog" hidden>
     <div class="notice-dialog-card">
       <p id="entry-dialog-title">Are you a Rider or a Viewer?</p>
@@ -106,10 +112,10 @@
   <div id="rider-dialog" class="notice-dialog" hidden>
     <form id="rider-form" class="notice-dialog-card">
       <p id="rider-dialog-title">Rider..</p>
-      <input id="rider-name" type="text" maxlength="30" placeholder="your name/alias" autocomplete="nickname">
+      <input id="rider-name" type="text" maxlength="30" placeholder="your unique (!) name/alias" autocomplete="nickname">
       <p id="rider-log" hidden></p>
       <div id="rider-actions" class="notice-dialog-actions">
-        <button id="rider-start" type="submit">Starting / Resuming Trace</button>
+        <button id="rider-start" type="submit">Start Ride / Resume Tracing</button>
       </div>
     </form>
   </div>
