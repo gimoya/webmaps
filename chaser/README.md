@@ -5,7 +5,7 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 ## What it does
 
 - Tracestrack topo basemap
-- Course overlay from `gpx_tracks/El Camino de la Paz 2026.gpx`, framed on load
+- Course overlay from `gpx_tracks/El Camino de la Paz 2026.gpx`, framed on load unless the URL already has `lat`, `lng`, and `z`
 - One live trace per alias. Case does not distinguish (`Kay` and `kay` are the same)
 - Last point shows the alias on a white stem, plus a dashed accuracy ring in the alias color
 - Alias labels shrink below zoom 14
@@ -17,6 +17,9 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 - `index.html` – page, FAQ, Firebase web config
 - `styles.css` – panel, dialog, marker, accuracy-ring pulse
 - `app.js` – map, Firestore, GPS writer
+- `manifest.json` – installable app
+- `sw.js` – app shell and topo tile cache
+- `icons/` – 📡 app icons
 - `gpx_tracks/` – course file drawn on load
 
 ## Firebase
@@ -152,3 +155,5 @@ The page sends `strict-origin-when-cross-origin`, so the tile request includes t
 - The GPS row is `allowed` / `denied` / `unknown` and `running` / `stopped`. `running` means this page started the 5-second loop. It does not prove points are being stored. iPhone Safari often stays `unknown` until a fix or a denial.
 - Locking the phone freezes the page. No new points are stored. If the page is still there when you unlock, the writer continues. If the phone discarded it, type the alias and Resume.
 - Completed traces stay in Firestore and are hidden from the live map.
+- Pan and zoom write `?lat=&lng=&z=` and keep the fragment, so `#infos` still opens the FAQ.
+- Installable from the manifest. `sw.js` serves the app shell network-first and caches Tracestrack tiles up to 50MB.

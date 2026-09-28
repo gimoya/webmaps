@@ -1,4 +1,13 @@
 (function () {
+  // Lowest zoom the map allows.
+  const ZOOM_MIN = 10;
+  // Below this: one solid white outer line, solid dark-grey inner line, short course labels.
+  const ZOOM_COURSE = 14;
+  // Above this: the main title indicator grows again.
+  const ZOOM_TITLE = 12;
+  // Below this: alias labels on live traces shrink.
+  const ZOOM_ALIAS = 14;
+
   const WRITE_INTERVAL_MS = 5 * 1000;
   const SIGNAL_STALE_MS = 5 * 1000;
   const SESSIONS_COLLECTION = "trackingSessions";
@@ -37,9 +46,14 @@
   noticeCancel.addEventListener("click", () => closeNotice(false));
   userListEl.addEventListener("click", centerOnListedUser);
 
-  const map = L.map("map", { zoomControl: true }).setView([47.2672, 11.3928], 12);
+  const initialView = parseMapView();
+  const map = L.map("map", { zoomControl: true, minZoom: ZOOM_MIN }).setView(
+    initialView ? [initialView.lat, initialView.lng] : [47.2672, 11.3928],
+    initialView ? initialView.zoom : 12
+  );
   wirePanelFade();
   map.on("zoomend", syncLabelZoom);
+  map.on("moveend", scheduleUrlSync);
   syncLabelZoom();
   L.tileLayer("https://tile.tracestrack.com/topo__/{z}/{x}/{y}.png?key={apiKey}", {
     minZoom: 1,
@@ -61,6 +75,7 @@
   let gpsAllowed = null;
   let gpsRunning = false;
   let centerControlButton = null;
+  let urlSyncTimer = null;
 
   addSessionCenterControl();
   watchGpsPermission();
@@ -146,7 +161,10 @@
   }
 
   function syncLabelZoom() {
-    document.body.classList.toggle("map-zoom-low", map.getZoom() < 14);
+    const zoom = map.getZoom();
+    document.body.classList.toggle("map-zoom-low", zoom < ZOOM_ALIAS);
+    document.body.classList.toggle("map-zoom-course", zoom < ZOOM_COURSE);
+    document.body.classList.toggle("map-zoom-title", zoom > ZOOM_TITLE);
   }
 
   function wirePanelFade() {
@@ -557,6 +575,111 @@
     map.setZoom(map.getZoom() - 1, { animate: false });
   }
 
+  function parseMapView() {
+    const params = new URLSearchParams(window.location.search);
+    const latRaw = params.get("lat");
+    const lngRaw = params.get("lng");
+    const zoomRaw = params.get("z");
+    if (latRaw == null || lngRaw == null || zoomRaw == null) return null;
+    if (latRaw === "" || lngRaw === "" || zoomRaw === "") return null;
+    const lat = Number(latRaw);
+    const lng = Number(lngRaw);
+    const zoom = Number(zoomRaw);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(zoom)) return null;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+    return { lat, lng, zoom };
+  }
+
+  function writeMapUrl() {
+    const center = map.getCenter();
+    const url = new URL(window.location.href);
+    url.searchParams.set("lat", center.lat.toFixed(5));
+    url.searchParams.set("lng", center.lng.toFixed(5));
+    url.searchParams.set("z", String(map.getZoom()));
+    history.replaceState(null, "", url.pathname + url.search + url.hash);
+  }
+
+  function scheduleUrlSync() {
+    clearTimeout(urlSyncTimer);
+    urlSyncTimer = setTimeout(writeMapUrl, 300);
+  }
+
+  function haversineMeters(a, b) {
+    const earth = 6371000;
+    const toRad = (degrees) => degrees * Math.PI / 180;
+    const dLat = toRad(b[0] - a[0]);
+    const dLon = toRad(b[1] - a[1]);
+    const lat1 = toRad(a[0]);
+    const lat2 = toRad(b[0]);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+    return 2 * earth * Math.asin(Math.sqrt(h));
+  }
+
+  function pointAtDistance(latLngs, targetMeters) {
+    let walked = 0;
+    for (let index = 1; index < latLngs.length; index += 1) {
+      const step = haversineMeters(latLngs[index - 1], latLngs[index]);
+      if (walked + step >= targetMeters) {
+        const t = step === 0 ? 0 : (targetMeters - walked) / step;
+        return [
+          latLngs[index - 1][0] + (latLngs[index][0] - latLngs[index - 1][0]) * t,
+          latLngs[index - 1][1] + (latLngs[index][1] - latLngs[index - 1][1]) * t
+        ];
+      }
+      walked += step;
+    }
+    return latLngs[latLngs.length - 1];
+  }
+
+  function courseDistance(latLngs) {
+    let walked = 0;
+    for (let index = 1; index < latLngs.length; index += 1) {
+      walked += haversineMeters(latLngs[index - 1], latLngs[index]);
+    }
+    return walked;
+  }
+
+  function addCoursePin(latLng, label, dotColor) {
+    const dot = dotColor
+      ? `<span class="course-callout-dot" style="background:${dotColor}"></span>`
+      : "";
+    const icon = L.divIcon({
+      className: "course-marker-icon",
+      html: `<span class="course-callout">
+        <span class="course-callout-label course-km-label">${label}</span>
+        <span class="course-callout-stem"></span>
+        ${dot}
+      </span>`,
+      iconSize: [10, 10],
+      iconAnchor: [5, 5]
+    });
+    L.marker(latLng, { icon, interactive: false, keyboard: false }).addTo(gpxLayer);
+  }
+
+  function addCourseMarkers(latLngs) {
+    const total = courseDistance(latLngs);
+    addCoursePin(latLngs[0], "Start", cssColor("--color-course-start"));
+    addCoursePin(latLngs[latLngs.length - 1], "Finish", cssColor("--color-course-finish"));
+    for (let km = 10; km * 1000 < total; km += 10) {
+      addCoursePin(pointAtDistance(latLngs, km * 1000), `${km} km`);
+    }
+
+    const icon = L.divIcon({
+      className: "course-title-icon",
+      html: `<span class="course-callout course-callout-title">
+        <span class="course-callout-label course-title">El camino de la Paz 2026</span>
+        <span class="course-callout-stem"></span>
+      </span>`,
+      iconSize: [10, 10],
+      iconAnchor: [5, 5]
+    });
+    L.marker(pointAtDistance(latLngs, total / 2), {
+      icon,
+      interactive: false,
+      keyboard: false
+    }).addTo(gpxLayer);
+  }
+
   function loadGpxOverlay() {
     const gpxNs = "http://www.topografix.com/GPX/1/1";
     fetch(encodeURI("gpx_tracks/El Camino de la Paz 2026.gpx"))
@@ -568,24 +691,37 @@
         const doc = new DOMParser().parseFromString(xmlText, "application/xml");
         if (doc.querySelector("parsererror")) throw new Error("GPX parse failed");
 
-        const latLngs = [...doc.getElementsByTagNameNS(gpxNs, "trkpt")].map((point) => [
-          Number(point.getAttribute("lat")),
-          Number(point.getAttribute("lon"))
-        ]);
-        L.polyline(latLngs, {
-          color: "#fff",
-          weight: 7.5,
-          opacity: 0.35,
-          interactive: false
-        }).addTo(gpxLayer);
+        const points = [...doc.getElementsByTagNameNS(gpxNs, "trkpt")].map((point) => ({
+          lat: Number(point.getAttribute("lat")),
+          lon: Number(point.getAttribute("lon")),
+          z: Number(point.getElementsByTagNameNS(gpxNs, "ele")[0].textContent)
+        }));
+        const highlight = {
+          uphill: cssColor("--color-grade-uphill"),
+          flat: cssColor("--color-grade-flat")
+        };
+        splitTrackByGrade(points).forEach((portion) => {
+          L.polyline(portion.latLngs, {
+            className: "course-grade",
+            color: highlight[portion.kind],
+            weight: 7.5,
+            opacity: 0.85,
+            lineCap: "butt",
+            interactive: false
+          }).addTo(gpxLayer);
+        });
+        const latLngs = points.map((point) => [point.lat, point.lon]);
         const line = L.polyline(latLngs, {
-          color: "#960018",
+          className: "course-line",
+          color: cssColor("--color-course"),
           weight: 2.5,
           opacity: 0.9,
           dashArray: "4, 4",
+          lineCap: "butt",
           interactive: false
         }).addTo(gpxLayer);
         frameGpx(line.getBounds());
+        addCourseMarkers(latLngs);
       })
       .catch((err) => {
         console.error("Failed to load GPX overlay:", err);
@@ -676,20 +812,11 @@
     };
   }
 
-  const TRACE_COLORS = [
-    "#ffe500",
-    "#00e5ff",
-    "#ff4dff",
-    "#7cff3f",
-    "#4c7dff",
-    "#ff7a00",
-    "#ff4d6a",
-    "#c8a2ff",
-    "#00f0a8",
-    "#e8ff4d",
-    "#ff9ec8",
-    "#9af6ff"
-  ];
+  function cssColor(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  const TRACE_COLORS = Array.from({ length: 12 }, (_, index) => cssColor(`--color-trace-${index + 1}`));
 
   function colorForAlias(name) {
     let hash = 2166136261;
