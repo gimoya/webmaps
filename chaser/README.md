@@ -7,10 +7,10 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 - Tracestrack topo basemap
 - Course overlay from a GPX the user uploads. The file is stored on the `routes` document. The chosen route id stays in the URL hash.
 - One live trace per alias. Case does not distinguish (`Kay` and `kay` are the same)
-- Last point shows the alias on a white stem, plus a dashed accuracy ring in the alias color
+- Last point shows the alias on a white stem, plus a dashed accuracy ring in the alias color. A finished ride drops the ring.
 - Alias labels shrink below zoom 14
 - Click the map to fade the panel. The ⓘ box brings it back
-- One button: **START / RESUME / STOP**
+- A fresh load asks Rider or Viewer. **Start Ride / Resume Tracing** starts or continues a trace that is not finished. **Stop tracking** stops this page's writer and finishes the ride. The trace stays on the map.
 
 ## Project files
 
@@ -20,7 +20,7 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 - `gpx.js` – GPX parse, 10 m thinning, namespaced write
 - `track-grade.js` – uphill / flat split for the course line
 - `manifest.json` – installable app
-- `sw.js` – app shell and topo tile cache
+- `sw.js` – app shell and topo tile cache. The page does not register it.
 - `icons/` – 📡 app icons
 - `gpx_tracks/` – sample course file, not loaded automatically
 
@@ -39,15 +39,15 @@ Session fields:
 - `name` (alias, stored as typed, max 30 characters)
 - `isActive` (boolean)
 - `startedAt` (server timestamp)
-- `endedAt` (server timestamp or `null`)
+- `endedAt` (server timestamp or `null`). **Stop tracking** sets it. The finished list line shows that time.
+- `finished` (boolean). `false` when the session is created. **Stop tracking** sets it `true`. The session stays `isActive`, so the trace stays on the map. The list shows `Tracking stopped/finished` and the end time. That alias cannot start or resume. `#admin` shows **Clear all traces**, which deletes every tracking session and its points.
 
 Subcollection: `trackingSessions/{sessionId}/points`
 
 Point fields:
 
 - `lat`, `lon`, `accuracy` (numbers)
-- `age` (integer seconds since the previous vertex; `0` on the first point). A segment that ends at a point with `age` over 20 seconds is drawn dotted. Points with no `age` stay solid.
-- `recordedAt` (server timestamp)
+- `recordedAt` (server timestamp). The segment that ends at a point is drawn dotted when that `recordedAt` is more than 20 seconds after the previous point's `recordedAt`.
 
 The client matches aliases with trim + lowercase. That does not add a field. Lookup loads active sessions and filters in the browser. The color is a hash of that same key, so both spellings share a color. The name drawn on the map is the casing stored on the document.
 
@@ -64,19 +64,20 @@ One document is at most 1 MiB. Vertices closer than 10 m are dropped first, and 
 
 ## Trace lifecycle
 
-One alias, one active trace, until Stop.
+One alias, one active trace.
 
-**START / RESUME / STOP**
+A fresh load with no mode hash asks Rider or Viewer. Viewer sets `#viewing`. The bike button, or a load that already has `#tracking`, opens the name box. **Start Ride / Resume Tracing** calls GPS in that click, then:
 
-- This page is already writing: the button stops that alias, after a confirm. The trace is removed from the live map. It is gone for good. A new trace is a later click.
-- No active trace for the typed alias: a new session is created and this page writes to it.
-- An active trace exists: **Resume** writes onto the oldest active session for that alias. **Stop tracking** ends every active session whose alias matches, ignoring case. It does not start a new one.
+- No active trace for the typed alias: a new session is created and this page writes to it. The hash becomes `#tracking`.
+- An active trace exists and is not finished: writing continues on the oldest active session for that alias.
+- An active trace for that alias is finished: the name box shows `{alias} already finished the ride!` and does not write. The box then closes and the page stays a viewer.
+- This page is already writing: **Stop tracking** asks for a confirm, then sets `finished` and `endedAt` and stops this page's writer. The trace stays on the map. The list shows `Tracking stopped/finished` in green with the end time. The page becomes a viewer (`#viewing`).
 
-GPS loss, a dropped network, refresh, tab close, or locking the phone does not end the Firestore trace. The writer on this page stops. Type the alias and Resume to continue it.
+GPS loss, a dropped network, refresh, tab close, or locking the phone does not end the Firestore trace. The writer on this page stops. Open the name box and submit the alias again to continue it.
 
 ## Firestore rules
 
-Public unauthenticated reads. Writes are validated. Anyone with the project config can read tracks, append points to an active trace, or stop one.
+Public unauthenticated reads. Writes are validated. Anyone with the project config can read tracks, append points to an active trace that is not finished, or mark one finished.
 
 ```txt
 rules_version = '2';
@@ -88,31 +89,44 @@ service cloud.firestore {
 
       allow create: if
         request.resource.data.keys().hasOnly([
-          'name', 'isActive', 'startedAt', 'endedAt'
+          'name', 'isActive', 'startedAt', 'endedAt', 'finished'
         ]) &&
         request.resource.data.name is string &&
         request.resource.data.name.size() >= 1 &&
         request.resource.data.name.size() <= 30 &&
         request.resource.data.isActive == true &&
         request.resource.data.startedAt == request.time &&
-        request.resource.data.endedAt == null;
+        request.resource.data.endedAt == null &&
+        request.resource.data.finished == false;
 
       allow update: if
         resource.data.isActive == true &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'isActive', 'endedAt'
-        ]) &&
-        request.resource.data.isActive == false &&
-        request.resource.data.endedAt == request.time;
+        resource.data.finished != true &&
+        (
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'finished', 'endedAt'
+            ]) &&
+            request.resource.data.finished == true &&
+            request.resource.data.endedAt == request.time
+          ) ||
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'isActive', 'endedAt'
+            ]) &&
+            request.resource.data.isActive == false &&
+            request.resource.data.endedAt == request.time
+          )
+        );
 
-      allow delete: if false;
+      allow delete: if true;
 
       match /points/{pointId} {
         allow read: if true;
 
         allow create: if
           request.resource.data.keys().hasOnly([
-            'lat', 'lon', 'accuracy', 'age', 'recordedAt'
+            'lat', 'lon', 'accuracy', 'recordedAt'
           ]) &&
           request.resource.data.lat is number &&
           request.resource.data.lat >= -90 &&
@@ -122,14 +136,16 @@ service cloud.firestore {
           request.resource.data.lon <= 180 &&
           request.resource.data.accuracy is number &&
           request.resource.data.accuracy >= 0 &&
-          request.resource.data.age is int &&
-          request.resource.data.age >= 0 &&
           request.resource.data.recordedAt == request.time &&
           get(
             /databases/$(database)/documents/trackingSessions/$(sessionId)
-          ).data.isActive == true;
+          ).data.isActive == true &&
+          get(
+            /databases/$(database)/documents/trackingSessions/$(sessionId)
+          ).data.finished != true;
 
-        allow update, delete: if false;
+        allow update: if false;
+        allow delete: if true;
       }
     }
 
@@ -192,22 +208,23 @@ The page sends `strict-origin-when-cross-origin`, so the tile request includes t
 
 1. Serve the repo over localhost or HTTPS.
 2. Open `chaser/`.
-3. Enter an alias.
-4. Click **START / RESUME / STOP** and allow location.
-5. Open the page on another device to see both traces.
-6. Click the same button again to stop. Confirm. The trace leaves the map.
+3. Choose Rider, or Viewer and then the bike button.
+4. Enter an alias and click **Start Ride / Resume Tracing**. Allow location.
+5. Open the page on another device to see the live trace.
+6. Click **Stop tracking** and confirm. This page stops writing and switches to viewer. The trace stays on the map with `Tracking stopped/finished` and the end time. That alias cannot start again.
 
 ## Runtime
 
 - GPS is `getCurrentPosition` with `enableHighAccuracy`. The first call runs in the button click, before any Firestore `await`, or mobile browsers drop the permission prompt.
-- A point is written every 5 seconds while this page is the writer.
+- A point is written every 5 seconds while this page is the writer. A fix closer than 5 m to the last stored point is skipped. A fix is also skipped when that distance divided by the time since that point is over 30 m/s. The next fix is checked against that same stored point.
 - The first fix on start or resume centers at zoom 17. Later points do not recenter. The top-left control recenters on this page's latest fix.
 - Portrait framing shifts the target up. Landscape shifts it left, clear of the panel.
 - Clicking a listed user with points centers on their last point.
 - An active session with no points is in the list and has no line.
-- The list marks a trace stale when the last stored point is older than 5 seconds. This page's own writer is never marked stale.
+- The list marks a trace stale when the last stored point is older than 5 seconds. This page's own writer is never marked stale. A finished ride shows `Tracking stopped/finished` in green with `end time: HH:MM:SS` from `endedAt`.
+- The marker popup's last line is `Tracing 1 point every 5s` while this page is storing fixes, `Slow or no rider movement` when a fix is under 5 m from the last stored point, and `Tracing paused!` when this page is not writing. A fix over 30 m/s does not change that line. Other viewers see `Tracing paused!` once the last stored point is older than 5 seconds.
 - The GPS row is `allowed` / `denied` / `unknown` and `running` / `stopped`. `running` means this page started the 5-second loop. It does not prove points are being stored. iPhone Safari often stays `unknown` until a fix or a denial.
-- Locking the phone freezes the page. No new points are stored. If the page is still there when you unlock, the writer continues. If the phone discarded it, type the alias and Resume.
+- Locking the phone freezes the page. No new points are stored. If the page is still there when you unlock, the writer continues. If the phone discarded it, open the name box and submit the alias again.
 - Completed traces stay in Firestore and are hidden from the live map.
 - Pan and zoom write `?lat=&lng=&z=` and keep the fragment, so `#infos` still opens the FAQ.
-- Installable from the manifest. `sw.js` serves the app shell network-first and caches Tracestrack tiles up to 50MB.
+- Installable from the manifest. `sw.js` is not registered, so its app-shell and tile cache do not run.

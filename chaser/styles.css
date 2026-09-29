@@ -35,18 +35,31 @@
   --color-course-label: rgba(51, 51, 51, 1);
   --color-grade-uphill: rgba(251, 21, 21, 0.5);
   --color-grade-flat: rgba(4, 255, 0, 0.5);
-  --color-trace-1: rgb(255, 61, 61);
-  --color-trace-2: rgba(0, 229, 255, 1);
-  --color-trace-3: rgba(255, 77, 255, 1);
-  --color-trace-4: rgba(124, 255, 63, 1);
-  --color-trace-5: rgba(76, 125, 255, 1);
-  --color-trace-6: rgba(255, 122, 0, 1);
-  --color-trace-7: rgb(255, 242, 0);
-  --color-trace-8: rgba(200, 162, 255, 1);
-  --color-trace-9: rgba(0, 240, 168, 1);
-  --color-trace-10: rgb(201, 222, 62);
-  --color-trace-11: rgba(255, 158, 200, 1);
-  --color-ctrl-bg: rgba(30, 30, 34, 1);
+  --color-trace-1: rgb(231, 205, 11);
+  --color-trace-2: rgb(0, 255, 242);
+  --color-trace-3: rgb(255, 20, 59);
+  --color-trace-4: rgb(46, 152, 20);
+  --color-trace-5: rgb(230, 107, 0);
+  --color-trace-6: rgb(119, 98, 98);
+  --color-trace-7: rgb(74, 151, 123);
+  --color-trace-8: rgb(180, 172, 115);
+  --color-trace-9: rgb(8, 175, 246);
+  --color-trace-10: rgb(151, 107, 255);
+  --color-trace-11: rgb(173, 4, 199);
+  --color-trace-12: rgb(45, 189, 45);
+  --color-trace-13: rgb(228, 7, 125);
+  --color-trace-14: rgb(46, 230, 0);
+  --color-trace-15: rgb(92, 124, 255);
+  --color-trace-16: rgb(114, 63, 18);
+  --color-trace-17: rgb(255, 46, 46);
+  --color-trace-18: rgb(0, 230, 199);
+  --color-trace-19: rgb(58, 0, 192);
+  --color-trace-20: rgb(2, 253, 161);
+  --color-trace-21: rgb(230, 199, 0);
+  --color-trace-22: rgb(100, 31, 68);
+  --color-trace-23: rgb(15, 80, 71);
+  --color-trace-24: rgb(216, 249, 140);
+   --color-ctrl-bg: rgba(30, 30, 34, 1);
   --color-ctrl-bg-hover: rgba(42, 42, 48, 1);
   --color-ctrl-bg-active: rgba(240, 240, 240, 1);
   --color-ctrl-fg: rgba(240, 240, 240, 1);
@@ -442,6 +455,24 @@ a.info-link:hover { color: var(--color-accent); }
   color: var(--color-white);
 }
 
+#clear-sessions {
+  margin-bottom: 0.5rem;
+  padding: 0.2rem 0.45rem;
+  font-family: var(--font-family-heading);
+  font-size: 0.72rem;
+  background: var(--color-bg-panel-elevated);
+  color: var(--color-danger);
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#clear-sessions:hover {
+  background: var(--color-danger);
+  color: var(--color-white);
+  border-color: var(--color-danger);
+}
+
 .panel-section h3 {
   margin: 0 0 0.5rem;
   font-family: var(--font-family-heading);
@@ -498,6 +529,13 @@ a.info-link:hover { color: var(--color-accent); }
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--color-danger);
+}
+
+.user-item-finished {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-success);
 }
 
 .user-item-meta {

@@ -11,9 +11,15 @@
   const WRITE_INTERVAL_MS = 5 * 1000;
   const SIGNAL_STALE_MS = 5 * 1000;
   const GAP_DOT_SEC = 20;
+  const MIN_MOVE_M = 5;
+  const MAX_SPEED_MPS = 30;
+  const TRACE_LINE_PAUSED = "Tracing paused!";
+  const TRACE_LINE_WRITING = "Tracing points every 5s";
+  const TRACE_LINE_SLOW = "Slow/no rider movement";
   const SESSIONS_COLLECTION = "trackingSessions";
 
   const userListEl = document.getElementById("user-list");
+  const clearSessionsBtn = document.getElementById("clear-sessions");
   const statusEl = document.getElementById("connection-status");
   const gpsStatusEl = document.getElementById("gps-status");
   const stopBtn = document.getElementById("stop-tracking");
@@ -122,6 +128,7 @@
       openRiderBox();
     }
     renderRouteList();
+    syncAdminControls();
     const id = routeIdFromHash();
     if (id) selectRoute(id, { frame: !parseMapView() });
   });
@@ -172,6 +179,8 @@
   let routesUnsubscribe = null;
   let writeTimer = null;
   let activeSessionRef = null;
+  let acceptedFix = null;
+  let writerTraceLine = TRACE_LINE_PAUSED;
   let latestOwnPosition = null;
   let locationRequest = null;
   let gpsAllowed = null;
@@ -186,6 +195,10 @@
   watchGpsPermission();
   renderGpsStatus();
   applyInitialMode();
+  syncAdminControls();
+  clearSessionsBtn.addEventListener("click", () => {
+    clearAllTrackingSessions();
+  });
   wireEntryGate();
 
   const firebaseConfig = window.CHASER_FIREBASE_CONFIG || null;
@@ -201,9 +214,11 @@
 
   attachSessionsSubscription(sessionsRef);
   attachRoutesSubscription(db);
-  setInterval(() => renderUserList(sortedTracks()), 5000);
-  setInterval(tickMarkerClocks, 1000);
-  wireControls(sessionsRef);
+  setInterval(() => {
+    renderUserList(sortedTracks());
+    refreshTracePopups();
+  }, 5000);
+  wireControls();
 
   function wireEntryGate() {
     document.getElementById("entry-viewer").addEventListener("click", () => {
@@ -229,6 +244,10 @@
       if (!sessionsRef) {
         riderLog.textContent = "Firebase is not configured.";
         riderLog.hidden = false;
+        return;
+      }
+      if (aliasFinished(name)) {
+        showFinishedRide(name);
         return;
       }
       riderStart.classList.add("is-fading");
@@ -270,6 +289,29 @@
     riderPanelTitle.replaceChildren("Rider ", aliasNode(name));
   }
 
+  function showViewerNotice(fillLog) {
+    document.body.classList.add("is-viewer");
+    resetRiderForm();
+    riderTitle.hidden = true;
+    riderNameEl.hidden = true;
+    riderActions.hidden = true;
+    riderForm.classList.add("is-result");
+    fillLog(riderLog);
+    riderLog.hidden = false;
+    riderDialog.hidden = false;
+    setPageMode("viewing");
+    clearTimeout(riderCloseTimer);
+    riderCloseTimer = setTimeout(() => fadeRiderBox(() => {
+      entryDialog.hidden = true;
+    }), ENTRY_FEEDBACK_MS);
+  }
+
+  function showFinishedRide(name) {
+    showViewerNotice((log) => {
+      log.replaceChildren(aliasNode(name), " already finished the ride!");
+    });
+  }
+
   function showRiderResult(name, after) {
     riderForm.style.minHeight = "";
     riderForm.classList.add("is-result");
@@ -297,20 +339,9 @@
   }
 
   function showStoppedNotice() {
-    document.body.classList.add("is-viewer");
-    resetRiderForm();
-    riderTitle.hidden = true;
-    riderNameEl.hidden = true;
-    riderActions.hidden = true;
-    riderForm.classList.add("is-result");
-    riderLog.textContent = "Tracing stopped! Switching to Viewer Mode.";
-    riderLog.hidden = false;
-    riderDialog.hidden = false;
-    setPageMode("viewing");
-    clearTimeout(riderCloseTimer);
-    riderCloseTimer = setTimeout(() => fadeRiderBox(() => {
-      entryDialog.hidden = true;
-    }), ENTRY_FEEDBACK_MS);
+    showViewerNotice((log) => {
+      log.textContent = "Tracing stopped! Switching to Viewer Mode.";
+    });
   }
 
   function showEntryGate() {
@@ -337,9 +368,40 @@
     showEntryGate();
   }
 
-  function wireControls(ref) {
+  function syncAdminControls() {
+    clearSessionsBtn.hidden = !isAdminMode();
+  }
+
+  async function clearAllTrackingSessions() {
+    if (!db || !isAdminMode()) return;
+    const confirmed = await showNotice(
+      "Clear all tracking sessions? Every trace will leave the map.",
+      { confirmLabel: "Clear all", cancelLabel: "Cancel" }
+    );
+    if (!confirmed) return;
+
+    clearWriter();
+    try {
+      const sessions = await db.collection(SESSIONS_COLLECTION).get();
+      for (const sessionDoc of sessions.docs) {
+        const points = await sessionDoc.ref.collection("points").get();
+        const refs = points.docs.map((doc) => doc.ref);
+        refs.push(sessionDoc.ref);
+        for (let index = 0; index < refs.length; index += 500) {
+          const batch = db.batch();
+          refs.slice(index, index + 500).forEach((ref) => batch.delete(ref));
+          await batch.commit();
+        }
+      }
+    } catch (err) {
+      console.error("Failed to clear tracking sessions:", err);
+      await showNotice("Tracking sessions could not be cleared.");
+    }
+  }
+
+  function wireControls() {
     stopBtn.addEventListener("click", () => {
-      if (activeSessionRef) stopTracking(ref);
+      if (activeSessionRef) stopTracking();
     });
   }
 
@@ -352,14 +414,19 @@
     });
 
     try {
-      const activeRefs = await findActiveAliasSessions(ref, name);
-      if (!activeRefs.length) {
+      const activeDocs = await findActiveAliasSessions(ref, name);
+      if (activeDocs.some((doc) => doc.data().finished === true)) {
+        locationRequest = null;
+        showFinishedRide(name);
+        return;
+      }
+      if (!activeDocs.length) {
         const sessionRef = await createAliasSession(ref, name);
-        showRiderResult(name, " is starting his ride!");
+        showRiderResult(name, "..is starting!");
         beginWriting(sessionRef);
       } else {
-        showRiderResult(name, " is resuming his trace");
-        beginWriting(activeRefs[0]);
+        showRiderResult(name, "..is resuming his ride!");
+        beginWriting(activeDocs[0].ref);
       }
       clearTimeout(riderCloseTimer);
       riderCloseTimer = setTimeout(fadeRiderBox, ENTRY_FEEDBACK_MS);
@@ -373,26 +440,33 @@
     }
   }
 
-  async function stopTracking(ref) {
+  async function stopTracking() {
     const name = sanitizeName(localStorage.getItem("chaser_display_name"));
-    if (!name) return;
+    const sessionRef = activeSessionRef;
+    if (!name || !sessionRef) return;
 
     const confirmed = await showNotice(
-      "Stop tracking {alias}? This trace will be gone for good.",
+      "Stop tracking {alias}? GPS Tracking will stop if the ride is finished. Your trace will stay on the map!",
       { alias: name, confirmLabel: "Stop tracking", cancelLabel: "Cancel" }
     );
-    if (!confirmed) return;
-
-    clearWriter();
+    if (!confirmed || sessionRef !== activeSessionRef) return;
 
     try {
-      const activeRefs = await findActiveAliasSessions(ref, name);
-      await endAliasSessions(activeRefs);
+      await sessionRef.update({
+        finished: true,
+        endedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
     } catch (err) {
-      console.error("Failed to stop tracking session:", err);
+      console.error("Failed to finish tracking session:", err);
       renderConnection(false, "offline");
+      await showNotice("Could not finish the ride.");
+      return;
     }
 
+    const track = tracksBySessionId.get(sessionRef.id);
+    if (track) track.finished = true;
+    if (sessionRef === activeSessionRef) clearWriter();
+    renderTracksAndPanel();
     showStoppedNotice();
   }
 
@@ -499,7 +573,6 @@
     return snapshot.docs
       .filter((doc) => aliasKey(doc.data().name) === key)
       .sort((a, b) => (toMillis(a.data().startedAt) || 0) - (toMillis(b.data().startedAt) || 0))
-      .map((doc) => doc.ref);
   }
 
   async function createAliasSession(ref, name) {
@@ -508,20 +581,16 @@
       name,
       isActive: true,
       startedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      endedAt: null
+      endedAt: null,
+      finished: false
     });
     return sessionRef;
   }
 
-  async function endAliasSessions(sessionRefs) {
-    await Promise.all(sessionRefs.map((sessionRef) => sessionRef.update({
-      isActive: false,
-      endedAt: firebase.firestore.FieldValue.serverTimestamp()
-    })));
-  }
-
   function beginWriting(sessionRef) {
     latestOwnPosition = null;
+    acceptedFix = null;
+    writerTraceLine = TRACE_LINE_WRITING;
     activeSessionRef = sessionRef;
     setWriterState(true);
     renderTracksAndPanel();
@@ -542,10 +611,13 @@
 
   function clearWriter() {
     activeSessionRef = null;
+    acceptedFix = null;
+    writerTraceLine = TRACE_LINE_PAUSED;
     clearInterval(writeTimer);
     writeTimer = null;
     latestOwnPosition = null;
     setWriterState(false);
+    refreshTracePopups();
   }
 
   function setWriterState(active) {
@@ -587,6 +659,8 @@
       existing.name = session.name;
       existing.color = colorForAlias(session.name);
       existing.startedAtMs = toMillis(session.startedAt);
+      existing.endedAtMs = toMillis(session.endedAt);
+      existing.finished = session.finished === true;
       return;
     }
 
@@ -594,8 +668,11 @@
       sessionId: sessionRef.id,
       name: session.name,
       startedAtMs: toMillis(session.startedAt),
+      endedAtMs: toMillis(session.endedAt),
+      finished: session.finished === true,
       color: colorForAlias(session.name),
       points: [],
+      pointsReady: false,
       marker: null,
       accuracyRing: null,
       lines: null,
@@ -607,6 +684,7 @@
       .collection("points")
       .orderBy("recordedAt", "asc")
       .onSnapshot((snapshot) => {
+        track.pointsReady = true;
         track.points = snapshot.docs
           .map((doc) => pointFromDocument(doc))
           .filter(Boolean);
@@ -663,7 +741,7 @@
 
     const runs = [];
     for (let index = 1; index < points.length; index += 1) {
-      const dotted = typeof points[index].age === "number" && points[index].age > GAP_DOT_SEC;
+      const dotted = gapSec(points[index], points[index - 1]) > GAP_DOT_SEC;
       const end = [points[index].lat, points[index].lon];
       const last = runs[runs.length - 1];
       if (last && last.dotted === dotted) {
@@ -679,6 +757,14 @@
   }
 
   function upsertAccuracyRing(track, point) {
+    if (track.finished) {
+      if (track.accuracyRing) {
+        tracksLayer.removeLayer(track.accuracyRing);
+        track.accuracyRing = null;
+      }
+      return;
+    }
+
     const style = {
       color: track.color,
       weight: 2,
@@ -702,31 +788,32 @@
     track.accuracyRing.setStyle(style);
   }
 
-  function formatAge(age) {
-    if (typeof age !== "number") return "n/a";
-    const hours = Math.floor(age / 3600);
-    const minutes = Math.floor((age % 3600) / 60);
-    const seconds = age % 60;
-    const part = (value) => String(value).padStart(2, "0");
-    return `${part(hours)}:${part(minutes)}:${part(seconds)}`;
+  function gapSec(current, previous) {
+    if (!previous) return 0;
+    if (!current.recordedAtMs || !previous.recordedAtMs) return null;
+    return Math.max(0, Math.round((current.recordedAtMs - previous.recordedAtMs) / 1000));
   }
 
   function markerPopup(track, point) {
-    const elapsed = point.recordedAtMs
-      ? Math.max(0, Math.round((Date.now() - point.recordedAtMs) / 1000))
-      : null;
     return [
       `<span class="notice-alias" style="color:${track.color}">${escapeHtml(track.name)}</span>`,
-      `Points: ${track.points.length}`,
-      `Accuracy: ${Math.round(point.accuracy)} m`,
-      `Time since last pt.: ${formatAge(elapsed)}`
+      `Rec. points: ${track.points.length}`,
+      `Rec. accuracy: ${Math.round(point.accuracy)} m`,
+      traceStatusLine(track)
     ].join("<br>");
   }
 
-  function tickMarkerClocks() {
+  function traceStatusLine(track) {
+    if (track.finished) return TRACE_LINE_PAUSED;
+    if (activeSessionRef && track.sessionId === activeSessionRef.id) return writerTraceLine;
+    if (signalStaleFor(track)) return TRACE_LINE_PAUSED;
+    return TRACE_LINE_WRITING;
+  }
+
+  function refreshTracePopups() {
     tracksBySessionId.forEach((track) => {
-      if (!track.marker || !track.points.length) return;
-      track.marker.setPopupContent(markerPopup(track, track.points[track.points.length - 1]));
+      const point = track.points[track.points.length - 1];
+      if (track.marker && point) track.marker.setPopupContent(markerPopup(track, point));
     });
   }
 
@@ -800,17 +887,19 @@
     const rows = ordered.map((track) => {
       const updatedAtMs = latestResolvedSignalMs(track);
       const pointLabel = track.points.length === 1 ? "point" : "points";
-      const signalStale = signalStaleFor(track);
+      const finished = track.finished === true;
+      const signalStale = finished ? false : signalStaleFor(track);
 
       return {
         track,
+        finished,
         signalStale,
         own: Boolean(activeSessionRef && track.sessionId === activeSessionRef.id),
         meta: `last timestamp: ${formatClock(updatedAtMs, true)} · start time: ${formatClock(track.startedAtMs, false)} · ${track.points.length} ${pointLabel}`
       };
     });
     const signature = rows
-      .map((row) => `${row.track.sessionId}:${row.own}:${row.signalStale}:${row.track.points.length}:${row.track.name}`)
+      .map((row) => `${row.track.sessionId}:${row.own}:${row.finished}:${row.track.endedAtMs || ""}:${row.signalStale}:${row.track.points.length}:${row.track.name}`)
       .join("|");
 
     if (signature !== userListSignature) {
@@ -818,9 +907,11 @@
         const sessionAttribute = row.track.points.length
           ? ` data-session-id="${escapeHtml(row.track.sessionId)}"`
           : "";
-        const warning = row.signalStale
-          ? `<div class="user-item-stale">Tracking paused.</div>`
-          : "";
+        const warning = row.finished
+          ? `<div class="user-item-finished">Tracking stopped/finished · end time: ${formatClock(row.track.endedAtMs, true)}</div>`
+          : row.signalStale
+            ? `<div class="user-item-stale">Tracking paused.</div>`
+            : "";
 
       return `
           <li class="user-item${row.own ? " is-tracking" : ""}" data-track-id="${escapeHtml(row.track.sessionId)}"${sessionAttribute} style="border-left-color:${row.track.color}">
@@ -1157,7 +1248,7 @@
       }
       drawCourse(parsed, options.frame);
       drawnRouteId = id;
-    } catch (err) {
+      } catch (err) {
       console.error("Failed to load route GPX:", err);
       await showNotice("GPX could not be loaded.");
     }
@@ -1245,7 +1336,7 @@
     const input = L.DomUtil.create("input", "", map.getContainer());
 
     button.classList.add("gpx-load-btn");
-    button.title = "Load GPX";
+    button.title = "Load GPX Route";
     button.setAttribute("aria-label", "Load GPX");
     button.innerHTML = '<svg class="gpx-load-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l5 5h-3v6h-4V8H7l5-5zm-7 14h14v2H5v-2z"></path></svg>';
     input.type = "file";
@@ -1308,6 +1399,8 @@
 
   async function writePoint(sessionRef, position, centerMap) {
     if (sessionRef !== activeSessionRef) return;
+    const track = tracksBySessionId.get(sessionRef.id);
+    if (track && track.finished === true) return;
 
     noteGpsAllowed();
 
@@ -1315,31 +1408,52 @@
     if (centerMap) centerMapOnPosition(position);
 
     try {
-      const previous = await sessionRef.collection("points")
-        .orderBy("recordedAt", "desc")
-        .limit(1)
-        .get();
-      if (sessionRef !== activeSessionRef) return;
-
-      let age = 0;
-      if (!previous.empty) {
-        const recordedAtMs = toMillis(previous.docs[0].get("recordedAt"));
-        if (recordedAtMs) {
-          age = Math.max(0, Math.round((Date.now() - recordedAtMs) / 1000));
+      const baseline = speedBaseline(sessionRef.id);
+      if (baseline === undefined) return;
+      if (baseline) {
+        const meters = haversineMeters(
+          [baseline.lat, baseline.lon],
+          [position.coords.latitude, position.coords.longitude]
+        );
+        const seconds = (Date.now() - baseline.atMs) / 1000;
+        if (meters < MIN_MOVE_M) {
+          writerTraceLine = TRACE_LINE_SLOW;
+          refreshTracePopups();
+          return;
         }
+        if (seconds <= 0 || meters / seconds > MAX_SPEED_MPS) return;
       }
 
       await sessionRef.collection("points").add({
         lat: position.coords.latitude,
         lon: position.coords.longitude,
         accuracy: position.coords.accuracy || 0,
-        age,
         recordedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+      if (sessionRef !== activeSessionRef) return;
+      writerTraceLine = TRACE_LINE_WRITING;
+      acceptedFix = {
+        lat: position.coords.latitude,
+        lon: position.coords.longitude,
+        atMs: Date.now()
+      };
     } catch (err) {
       console.error("Failed to write tracking point:", err);
       renderConnection(false, "offline");
     }
+  }
+
+  function speedBaseline(sessionId) {
+    const track = tracksBySessionId.get(sessionId);
+    if (!track || !track.pointsReady) return undefined;
+
+    const stored = track.points[track.points.length - 1];
+    if (acceptedFix && (!stored || !stored.recordedAtMs || acceptedFix.atMs > stored.recordedAtMs)) {
+      return acceptedFix;
+    }
+    if (!stored) return null;
+    if (!stored.recordedAtMs) return undefined;
+    return { lat: stored.lat, lon: stored.lon, atMs: stored.recordedAtMs };
   }
 
   function pointFromDocument(doc) {
@@ -1356,7 +1470,6 @@
       lat: data.lat,
       lon: data.lon,
       accuracy: data.accuracy,
-      age: typeof data.age === "number" ? data.age : undefined,
       recordedAtMs: toMillis(data.recordedAt)
     };
   }
@@ -1365,7 +1478,7 @@
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   }
 
-  const TRACE_COLORS = Array.from({ length: 12 }, (_, index) => cssColor(`--color-trace-${index + 1}`));
+  const TRACE_COLORS = Array.from({ length: 24 }, (_, index) => cssColor(`--color-trace-${index + 1}`));
 
   function colorForAlias(name) {
     let hash = 2166136261;
@@ -1400,7 +1513,7 @@
     noticeConfirm.textContent = options.confirmLabel || "OK";
     noticeCancel.hidden = !options.cancelLabel;
     if (options.cancelLabel) noticeCancel.textContent = options.cancelLabel;
-    noticeConfirm.classList.toggle("is-danger", noticeConfirm.textContent === "Stop tracking" || noticeConfirm.textContent === "Delete");
+    noticeConfirm.classList.toggle("is-danger", noticeConfirm.textContent === "Stop tracking" || noticeConfirm.textContent === "Delete" || noticeConfirm.textContent === "Clear all");
     noticeCancel.classList.toggle("is-danger", !noticeCancel.hidden && noticeCancel.textContent === "Stop tracking");
     noticeDialog.hidden = false;
     noticeConfirm.focus();
@@ -1483,6 +1596,13 @@
 
   function aliasKey(name) {
     return sanitizeName(name).toLowerCase();
+  }
+
+  function aliasFinished(name) {
+    const key = aliasKey(name);
+    return [...tracksBySessionId.values()].some(
+      (track) => aliasKey(track.name) === key && track.finished === true
+    );
   }
 
   function escapeHtml(str) {

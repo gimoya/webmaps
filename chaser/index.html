@@ -59,6 +59,7 @@
 
           <section class="panel-section">
             <h3>Active Riders</h3>
+            <button id="clear-sessions" type="button" hidden>Clear all traces</button>
             <ul id="user-list" class="user-list"></ul>
           </section>
         </div>
@@ -76,16 +77,16 @@
             <dd>The name you enter is the identity used. You will find the alias on your trace in the map and in the list of tracked users in the panel. Always use your own unique alias - using an alias someone else is already tracking can corrupt their trace. Use something like <strong>Andi_1997</strong> to avoid conflict with other rider with name <strong>Andi!</strong></dd>
 
             <dt>Start/Resume/Stop</dt>
-            <dd>The Rider box starts a new trace, or resumes one already active for that name. Stop tracking ends the trace and removes it from the list and map.</dd>
+            <dd>The Rider box starts a new trace, or resumes one already active for that name. Stop tracking stops this page from writing, switches to viewer, and leaves the trace on the map. The list shows Tracking stopped/finished and the end time. Submitting that name again shows that the alias already finished the ride, then the box closes.</dd>
 
             <dt>No tracking</dt>
             <dd>A fresh webpage load, a browser refresh, closing the webpage or a screen look stops this device/browser from tracing your GPS.</dd>
 
             <dt>Stale signal</dt>
-            <dd>A point is stored about every 5 seconds. If no new point is stored for more than 5 seconds, the trace stays on the map at the last known position and the list marks it Tracking paused.</dd>
+            <dd>A fix is requested about every 5 seconds. If you have not moved at least 5 m, or the jump is faster than 30 m/s, that fix is not stored. If no new point is stored for more than 5 seconds, the trace stays on the map at the last known position and other viewers' lists mark it Tracking paused. Your own row does not show that while this page is writing.</dd>
 
             <dt>Routes</dt>
-            <dd>Open Routes menu and pick one to draw that track on the map. You can load GPX files whic will be added to available routes.</dd>
+            <dd>Open Routes menu and pick one to draw that track on the map. You can load GPX files which will be added to available routes.</dd>
           </dl>
         </div>
       </div>
@@ -112,7 +113,7 @@
   <div id="rider-dialog" class="notice-dialog" hidden>
     <form id="rider-form" class="notice-dialog-card">
       <p id="rider-dialog-title">Rider..</p>
-      <input id="rider-name" type="text" maxlength="30" placeholder="your unique (!) name/alias" autocomplete="nickname">
+      <input id="rider-name" type="text" maxlength="30" placeholder="Put your unique name" autocomplete="nickname">
       <p id="rider-log" hidden></p>
       <div id="rider-actions" class="notice-dialog-actions">
         <button id="rider-start" type="submit">Start Ride / Resume Tracing</button>
