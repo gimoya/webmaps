@@ -68,6 +68,12 @@ html, body {
   font-family: var(--font-family);
   color: var(--color-text);
   background: var(--color-bg);
+  user-select: none;
+}
+
+input,
+textarea {
+  user-select: text;
 }
 
 .app-layout {
@@ -896,6 +902,45 @@ body.is-viewer .viewer-ride {
 .notice-dialog-actions button.ghost.is-danger { background: var(--color-danger); }
 .notice-dialog-actions button.is-danger:hover,
 .notice-dialog-actions button.ghost.is-danger:hover { background: var(--color-danger-hover); }
+
+.trace-popup .leaflet-popup-content-wrapper {
+  width: 260px;
+  padding: 0;
+  background: var(--color-bg-panel);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 24px var(--color-shadow);
+}
+
+.trace-popup .leaflet-popup-content {
+  width: auto !important;
+  margin: 0.7rem 0.8rem;
+  padding-right: 0.7rem;
+  font-family: var(--font-family);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.leaflet-popup.trace-popup {
+  margin-bottom: 22px;
+}
+
+.trace-popup .leaflet-popup-tip-container {
+  display: none;
+}
+
+.trace-popup .leaflet-popup-close-button {
+  color: var(--color-text);
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  padding: 2px 4px 0 0;
+}
+
+.trace-popup .leaflet-popup-close-button:hover {
+  color: var(--color-white);
+}
 
 @media (orientation: portrait) {
   .unified-panel,

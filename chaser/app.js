@@ -10,6 +10,7 @@
 
   const WRITE_INTERVAL_MS = 5 * 1000;
   const SIGNAL_STALE_MS = 5 * 1000;
+  const GAP_DOT_SEC = 20;
   const SESSIONS_COLLECTION = "trackingSessions";
 
   const userListEl = document.getElementById("user-list");
@@ -201,6 +202,7 @@
   attachSessionsSubscription(sessionsRef);
   attachRoutesSubscription(db);
   setInterval(() => renderUserList(sortedTracks()), 5000);
+  setInterval(tickMarkerClocks, 1000);
   wireControls(sessionsRef);
 
   function wireEntryGate() {
@@ -596,7 +598,7 @@
       points: [],
       marker: null,
       accuracyRing: null,
-      line: null,
+      lines: null,
       unsubscribePoints: null
     };
 
@@ -629,7 +631,6 @@
     if (!track.points.length) return;
 
     const latestPoint = track.points[track.points.length - 1];
-    const latLngs = track.points.map((point) => [point.lat, point.lon]);
     const lineStyle = {
       color: track.color,
       weight: 2,
@@ -638,15 +639,43 @@
       lineJoin: "round"
     };
 
-    if (!track.line) {
-      track.line = L.polyline(latLngs, lineStyle).addTo(tracksLayer);
+    if (!track.lines) {
+      track.lines = L.layerGroup().addTo(tracksLayer);
     } else {
-      track.line.setLatLngs(latLngs);
-      track.line.setStyle(lineStyle);
+      track.lines.clearLayers();
     }
+
+    traceRuns(track.points).forEach((run) => {
+      const style = run.dotted
+        ? { ...lineStyle, dashArray: "1 6" }
+        : lineStyle;
+      track.lines.addLayer(L.polyline(run.latLngs, style));
+    });
 
     upsertAccuracyRing(track, latestPoint);
     upsertMarker(track, latestPoint);
+  }
+
+  function traceRuns(points) {
+    if (points.length === 1) {
+      return [{ dotted: false, latLngs: [[points[0].lat, points[0].lon]] }];
+    }
+
+    const runs = [];
+    for (let index = 1; index < points.length; index += 1) {
+      const dotted = typeof points[index].age === "number" && points[index].age > GAP_DOT_SEC;
+      const end = [points[index].lat, points[index].lon];
+      const last = runs[runs.length - 1];
+      if (last && last.dotted === dotted) {
+        last.latLngs.push(end);
+      } else {
+        runs.push({
+          dotted,
+          latLngs: [[points[index - 1].lat, points[index - 1].lon], end]
+        });
+      }
+    }
+    return runs;
   }
 
   function upsertAccuracyRing(track, point) {
@@ -673,6 +702,34 @@
     track.accuracyRing.setStyle(style);
   }
 
+  function formatAge(age) {
+    if (typeof age !== "number") return "n/a";
+    const hours = Math.floor(age / 3600);
+    const minutes = Math.floor((age % 3600) / 60);
+    const seconds = age % 60;
+    const part = (value) => String(value).padStart(2, "0");
+    return `${part(hours)}:${part(minutes)}:${part(seconds)}`;
+  }
+
+  function markerPopup(track, point) {
+    const elapsed = point.recordedAtMs
+      ? Math.max(0, Math.round((Date.now() - point.recordedAtMs) / 1000))
+      : null;
+    return [
+      `<span class="notice-alias" style="color:${track.color}">${escapeHtml(track.name)}</span>`,
+      `Points: ${track.points.length}`,
+      `Accuracy: ${Math.round(point.accuracy)} m`,
+      `Time since last pt.: ${formatAge(elapsed)}`
+    ].join("<br>");
+  }
+
+  function tickMarkerClocks() {
+    tracksBySessionId.forEach((track) => {
+      if (!track.marker || !track.points.length) return;
+      track.marker.setPopupContent(markerPopup(track, track.points[track.points.length - 1]));
+    });
+  }
+
   function upsertMarker(track, point) {
     const icon = L.divIcon({
       className: "chaser-marker-icon",
@@ -684,19 +741,16 @@
       iconSize: [14, 14],
       iconAnchor: [7, 7]
     });
-    const ageSec = point.recordedAtMs
-      ? Math.max(0, Math.round((Date.now() - point.recordedAtMs) / 1000))
-      : null;
-    const popup = [
-      `<strong>${escapeHtml(track.name)}</strong>`,
-      `Points: ${track.points.length}`,
-      `Accuracy: ${Math.round(point.accuracy)} m`,
-      ageSec === null ? "Time since last pt.: n/a" : `Time since last pt.: ${ageSec}s`
-    ].join("<br>");
+    const popup = markerPopup(track, point);
 
     if (!track.marker) {
       track.marker = L.marker([point.lat, point.lon], { icon }).addTo(tracksLayer);
-      track.marker.bindPopup(popup);
+      track.marker.bindPopup(popup, {
+        className: "trace-popup",
+        minWidth: 260,
+        maxWidth: 260,
+        offset: [0, 0]
+      });
       return;
     }
 
@@ -712,7 +766,7 @@
     if (track.unsubscribePoints) track.unsubscribePoints();
     if (track.marker) tracksLayer.removeLayer(track.marker);
     if (track.accuracyRing) tracksLayer.removeLayer(track.accuracyRing);
-    if (track.line) tracksLayer.removeLayer(track.line);
+    if (track.lines) tracksLayer.removeLayer(track.lines);
     tracksBySessionId.delete(sessionId);
   }
 
@@ -1002,7 +1056,44 @@
     if (!confirmed) return;
 
     try {
-      await db.collection("routes").doc(id).delete();
+      await db.runTransaction(async (transaction) => {
+        const counterRef = db.collection("routes").doc("counter");
+        const counterSnap = await transaction.get(counterRef);
+        const routeRef = db.collection("routes").doc(id);
+        const routeSnap = await transaction.get(routeRef);
+        if (!routeSnap.exists) throw new Error("Route is already gone.");
+
+        let next = null;
+        if (counterSnap.exists) {
+          next = counterSnap.data().next;
+          if (!Number.isInteger(next) || next < 1) {
+            throw new Error("Route counter is invalid.");
+          }
+        }
+
+        const snaps = [];
+        if (next != null) {
+          for (let n = 1; n < next; n += 1) {
+            if (`route_${n}` === id) continue;
+            snaps.push(transaction.get(db.collection("routes").doc(`route_${n}`)));
+          }
+        }
+        const existing = await Promise.all(snaps);
+
+        transaction.delete(routeRef);
+        if (next == null) return;
+
+        let max = 0;
+        existing.forEach((snap) => {
+          if (!snap.exists) return;
+          const match = /^route_([1-9][0-9]*)$/.exec(snap.id);
+          if (!match) return;
+          const n = Number(match[1]);
+          if (n > max) max = n;
+        });
+        const newNext = max + 1;
+        if (newNext !== next) transaction.set(counterRef, { next: newNext });
+      });
     } catch (err) {
       console.error("Failed to delete route:", err);
       await showNotice("Route could not be deleted.");
@@ -1224,10 +1315,25 @@
     if (centerMap) centerMapOnPosition(position);
 
     try {
+      const previous = await sessionRef.collection("points")
+        .orderBy("recordedAt", "desc")
+        .limit(1)
+        .get();
+      if (sessionRef !== activeSessionRef) return;
+
+      let age = 0;
+      if (!previous.empty) {
+        const recordedAtMs = toMillis(previous.docs[0].get("recordedAt"));
+        if (recordedAtMs) {
+          age = Math.max(0, Math.round((Date.now() - recordedAtMs) / 1000));
+        }
+      }
+
       await sessionRef.collection("points").add({
         lat: position.coords.latitude,
         lon: position.coords.longitude,
         accuracy: position.coords.accuracy || 0,
+        age,
         recordedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     } catch (err) {
@@ -1250,6 +1356,7 @@
       lat: data.lat,
       lon: data.lon,
       accuracy: data.accuracy,
+      age: typeof data.age === "number" ? data.age : undefined,
       recordedAtMs: toMillis(data.recordedAt)
     };
   }

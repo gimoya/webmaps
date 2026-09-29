@@ -46,6 +46,7 @@ Subcollection: `trackingSessions/{sessionId}/points`
 Point fields:
 
 - `lat`, `lon`, `accuracy` (numbers)
+- `age` (integer seconds since the previous vertex; `0` on the first point). A segment that ends at a point with `age` over 20 seconds is drawn dotted. Points with no `age` stay solid.
 - `recordedAt` (server timestamp)
 
 The client matches aliases with trim + lowercase. That does not add a field. Lookup loads active sessions and filters in the browser. The color is a hash of that same key, so both spellings share a color. The name drawn on the map is the casing stored on the document.
@@ -57,7 +58,7 @@ Collection: `routes`
 - `gpx` (the file text)
 - `createdAt` (server timestamp)
 
-`routes/counter` stores `{ next }`, the next number to assign. An upload reads it and writes the route in one transaction. The list skips that document. `#admin` shows a delete button on each route.
+`routes/counter` stores `{ next }`, the next number to assign. An upload reads it and writes the route in one transaction. The list skips that document. `#admin` shows a delete button on each route. That delete removes the route and sets `next` to one higher than the highest `route_N` still stored, or `1` when none remain. Deleting an older route leaves `next` where it is.
 
 One document is at most 1 MiB. Vertices closer than 10 m are dropped first, and the stored file is that GPX. The upload refuses it when the result would not fit beside `name` and `createdAt`. Opening a route reads that document's `gpx`.
 
@@ -111,7 +112,7 @@ service cloud.firestore {
 
         allow create: if
           request.resource.data.keys().hasOnly([
-            'lat', 'lon', 'accuracy', 'recordedAt'
+            'lat', 'lon', 'accuracy', 'age', 'recordedAt'
           ]) &&
           request.resource.data.lat is number &&
           request.resource.data.lat >= -90 &&
@@ -121,6 +122,8 @@ service cloud.firestore {
           request.resource.data.lon <= 180 &&
           request.resource.data.accuracy is number &&
           request.resource.data.accuracy >= 0 &&
+          request.resource.data.age is int &&
+          request.resource.data.age >= 0 &&
           request.resource.data.recordedAt == request.time &&
           get(
             /databases/$(database)/documents/trackingSessions/$(sessionId)
@@ -141,7 +144,11 @@ service cloud.firestore {
         request.resource.data.keys().hasOnly(['next']) &&
         request.resource.data.next is int &&
         resource.data.next is int &&
-        request.resource.data.next == resource.data.next + 1;
+        request.resource.data.next >= 1 &&
+        (
+          request.resource.data.next == resource.data.next + 1 ||
+          request.resource.data.next < resource.data.next
+        );
 
       allow delete: if false;
     }
