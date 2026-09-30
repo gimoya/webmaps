@@ -35,30 +35,30 @@
   --color-course-label: rgba(51, 51, 51, 1);
   --color-grade-uphill: rgba(251, 21, 21, 0.5);
   --color-grade-flat: rgba(4, 255, 0, 0.5);
-  --color-trace-1: rgb(231, 205, 11);
+  --color-trace-1: rgb(25, 254, 0);
   --color-trace-2: rgb(0, 255, 242);
-  --color-trace-3: rgb(255, 20, 59);
-  --color-trace-4: rgb(46, 152, 20);
-  --color-trace-5: rgb(230, 107, 0);
+  --color-trace-3: rgb(241, 26, 26);
+  --color-trace-4: rgb(46, 67, 255);
+  --color-trace-5: rgb(247, 117, 2);
   --color-trace-6: rgb(119, 98, 98);
-  --color-trace-7: rgb(74, 151, 123);
+  --color-trace-7: rgb(23, 131, 91);
   --color-trace-8: rgb(180, 172, 115);
   --color-trace-9: rgb(8, 175, 246);
-  --color-trace-10: rgb(151, 107, 255);
-  --color-trace-11: rgb(173, 4, 199);
-  --color-trace-12: rgb(45, 189, 45);
+  --color-trace-10: rgb(170, 136, 249);
+  --color-trace-11: rgb(221, 0, 255);
+  --color-trace-12: rgb(32, 182, 32);
   --color-trace-13: rgb(228, 7, 125);
-  --color-trace-14: rgb(46, 230, 0);
-  --color-trace-15: rgb(92, 124, 255);
+  --color-trace-14: rgb(98, 179, 0);
+  --color-trace-15: rgb(89, 120, 245);
   --color-trace-16: rgb(114, 63, 18);
   --color-trace-17: rgb(255, 46, 46);
-  --color-trace-18: rgb(0, 230, 199);
-  --color-trace-19: rgb(58, 0, 192);
+  --color-trace-18: rgb(0, 158, 137);
+  --color-trace-19: rgb(57, 0, 189);
   --color-trace-20: rgb(2, 253, 161);
-  --color-trace-21: rgb(230, 199, 0);
+  --color-trace-21: rgb(255, 221, 0);
   --color-trace-22: rgb(100, 31, 68);
   --color-trace-23: rgb(15, 80, 71);
-  --color-trace-24: rgb(216, 249, 140);
+  --color-trace-24: rgb(211, 255, 109);
    --color-ctrl-bg: rgba(30, 30, 34, 1);
   --color-ctrl-bg-hover: rgba(42, 42, 48, 1);
   --color-ctrl-bg-active: rgba(240, 240, 240, 1);
@@ -100,6 +100,10 @@ textarea {
   position: absolute;
   inset: 0;
   background: var(--color-map-bg);
+}
+
+#map .leaflet-tile-pane {
+  filter: brightness(0.6);
 }
 
 body.panel-faded .unified-panel {
@@ -666,6 +670,10 @@ body.map-zoom-low .chaser-callout-label {
   background: var(--color-course-pin-bg);
 }
 
+.course-km-label.is-km {
+  color: rgb(255, 221, 0);
+}
+
 .course-callout-title .course-callout-stem {
   height: 176px;
 }
@@ -682,9 +690,12 @@ body.map-zoom-low .chaser-callout-label {
   text-shadow: 0 1px 2px var(--color-shadow);
 }
 
+body:not(.map-zoom-course) .course-outline {
+  display: none;
+}
+
 body.map-zoom-course .course-grade {
-  stroke: var(--color-white);
-  stroke-opacity: 1;
+  display: none;
 }
 
 body.map-zoom-course .course-line {

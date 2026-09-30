@@ -440,7 +440,7 @@
   }
 
   async function beginAliasTracking(ref, name) {
-    localStorage.setItem("chaser_display_name", name);
+      localStorage.setItem("chaser_display_name", name);
     setRiderPanelTitle(name);
     riderNameEl.disabled = true;
     riderForm.querySelectorAll("button").forEach((button) => {
@@ -464,7 +464,7 @@
       }
       clearTimeout(riderCloseTimer);
       riderCloseTimer = setTimeout(fadeRiderBox, ENTRY_FEEDBACK_MS);
-    } catch (err) {
+      } catch (err) {
       clearWriter();
       console.error("Failed to start tracking session:", err);
       renderConnection(false, "offline");
@@ -757,6 +757,19 @@
     } else {
       track.lines.clearLayers();
     }
+
+    track.lines.addLayer(L.polyline(
+      track.points.map((point) => [point.lat, point.lon]),
+      {
+        color: "#e0e0e0", // light grey
+        weight: 4,
+        opacity: 0.4,
+        lineCap: "round",
+        lineJoin: "round",
+        interactive: false
+   
+      }
+    ));
 
     traceRuns(track.points).forEach((run) => {
       const style = run.dotted
@@ -1056,7 +1069,7 @@
     const icon = L.divIcon({
       className: "course-marker-icon",
       html: `<span class="course-callout">
-        <span class="course-callout-label course-km-label">${label}</span>
+        <span class="course-callout-label course-km-label${label.endsWith(" km") ? " is-km" : ""}">${label}</span>
         <span class="course-callout-stem"></span>
         ${dot}
       </span>`,
@@ -1096,6 +1109,16 @@
       uphill: cssColor("--color-grade-uphill"),
       flat: cssColor("--color-grade-flat")
     };
+    const latLngs = course.points.map((point) => [point.lat, point.lon]);
+    L.polyline(latLngs, {
+      className: "course-outline",
+      color: cssColor("--color-white"),
+      weight: 4.5,
+      opacity: 1,
+      lineCap: "round",
+      lineJoin: "round",
+      interactive: false
+    }).addTo(gpxLayer);
     splitTrackByGrade(course.points).forEach((portion) => {
       L.polyline(portion.latLngs, {
         className: "course-grade",
@@ -1106,7 +1129,6 @@
         interactive: false
       }).addTo(gpxLayer);
     });
-    const latLngs = course.points.map((point) => [point.lat, point.lon]);
     const line = L.polyline(latLngs, {
       className: "course-line",
       color: cssColor("--color-course"),

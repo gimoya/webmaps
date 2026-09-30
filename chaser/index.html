@@ -71,23 +71,20 @@
             <a href="#" class="panel-info-close" title="Close">×</a>
           </div>
           <dl class="info-faq">
-            <dt>How it works</dt>
-            <dd>Rider locations are logged and displayed on the map as a trace. The rider's position will only be logged when they are looking at the map with there GPS turned on, and the browser is given rights to use the GPS signal (you will be asked to give permission to use the GPS sensor).</dd>
+            <dt>Logging</dt>
+            <dd>As long as you keep this page open, given that you permitted GPS Sensor usage, you location will be logged. A Refresh, close, or a locked screen stops logging and you will be asked to resum when you come back to page.</dd>
 
-            <dt>Alias</dt>
-            <dd>The name you enter is the identity used. You will find the alias on your trace in the map and in the list of tracked users in the panel. Always use your own unique alias - using an alias someone else is already tracking can corrupt their trace. Use something like <strong>Andi_1997</strong> to avoid conflict with other rider with name <strong>Andi!</strong></dd>
+            <dt>Name</dt>
+            <dd>Use your own unique name or alias. Caution (!): A name or alias someone of seomone else would mix into their trace!</dd>
 
-            <dt>Start/Resume/Stop</dt>
-            <dd>The Rider box starts a new trace, or resumes one already active for that name. Stop tracking stops this page from writing, switches to viewer, and leaves the trace on the map. The list shows Tracking stopped/finished and the end time. Submitting that name again shows that the alias already finished the ride, then the box closes.</dd>
+            <dt>Start and stop</dt>
+            <dd>after klicking the 'Biker Icon' the button 'Start/Resume' begins or resumes your trace. Stop ends the ride and leaves the trace on the map. Caution (!): That name/alias cannot start again!</dd>
 
-            <dt>No tracking</dt>
-            <dd>A fresh webpage load, a browser refresh, closing the webpage or a screen look stops this device/browser from tracing your GPS.</dd>
-
-            <dt>Stale signal</dt>
-            <dd>A fix is requested about every 5 seconds. If you have not moved at least 5 m, or the jump is faster than 30 m/s, that fix is not stored. If no new point is stored for more than 5 seconds, the trace stays on the map at the last known position and other viewers' lists mark it Tracking paused. Your own row does not show that while this page is writing.</dd>
+            <dt>Points</dt>
+            <dd>A point is stored about every 5 s if you moved at least 5 m. If you move slowly (less than 5 m in 5 s) or when you have the browser closed and dont write your locations, other viewers see 'Tracking paused'.</dd>
 
             <dt>Routes</dt>
-            <dd>Open Routes menu and pick one to draw that track on the map. You can load GPX files which will be added to available routes.</dd>
+            <dd>Open Routes and pick one. The upload button adds a GPX Route.</dd>
           </dl>
         </div>
       </div>
