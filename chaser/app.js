@@ -13,6 +13,9 @@
   const GAP_DOT_SEC = 20;
   const MIN_MOVE_M = 5;
   const MAX_SPEED_MPS = 30;
+  const SIM_ACCURACY_M = 8;
+  const SIM_STEP_MAX_M = 50;
+  const SIM_SLOW_CAP_M = 4.99999;
   const TRACE_LINE_PAUSED = "Tracing paused!";
   const TRACE_LINE_WRITING = "Tracing points every 5s";
   const TRACE_LINE_SLOW = "Slow/no rider movement";
@@ -20,6 +23,8 @@
 
   const userListEl = document.getElementById("user-list");
   const clearSessionsBtn = document.getElementById("clear-sessions");
+  const simLogEl = document.getElementById("sim-log");
+  const simLines = [];
   const statusEl = document.getElementById("connection-status");
   const gpsStatusEl = document.getElementById("gps-status");
   const stopBtn = document.getElementById("stop-tracking");
@@ -49,25 +54,41 @@
   let routeListSignature = "";
   const GPX_MAX_BYTES = 1024 * 1024 - 2048;
 
-  function isAdminMode() {
-    const raw = window.location.hash.slice(1);
-    return raw === "admin" || raw.endsWith("#admin");
+  function hashTokens() {
+    return window.location.hash.slice(1).split("#").filter(Boolean);
   }
 
-  function stripHashSuffixes(raw) {
-    if (raw.endsWith("#admin")) raw = raw.slice(0, -"#admin".length);
-    if (raw === "viewing" || raw.endsWith("#viewing")) {
-      raw = raw === "viewing" ? "" : raw.slice(0, -"#viewing".length);
-    }
-    if (raw === "tracking" || raw.endsWith("#tracking")) {
-      raw = raw === "tracking" ? "" : raw.slice(0, -"#tracking".length);
+  function isAdminMode() {
+    return hashTokens().includes("admin");
+  }
+
+  function isSimulationMode() {
+    return hashTokens().includes("simulation");
+  }
+
+  function stripNamedSuffixes(raw, suffixes) {
+    let changed = true;
+    while (raw && changed) {
+      changed = false;
+      for (const suffix of suffixes) {
+        if (raw === suffix.slice(1)) {
+          raw = "";
+          changed = true;
+        } else if (raw.endsWith(suffix)) {
+          raw = raw.slice(0, -suffix.length);
+          changed = true;
+        }
+      }
     }
     return raw;
   }
 
+  function stripHashSuffixes(raw) {
+    return stripNamedSuffixes(raw, ["#admin", "#simulation", "#viewing", "#tracking"]);
+  }
+
   function modeFromHash() {
-    let raw = window.location.hash.slice(1);
-    if (raw.endsWith("#admin")) raw = raw.slice(0, -"#admin".length);
+    const raw = stripNamedSuffixes(window.location.hash.slice(1), ["#admin", "#simulation"]);
     if (raw === "viewing" || raw.endsWith("#viewing")) return "viewing";
     if (raw === "tracking" || raw.endsWith("#tracking")) return "tracking";
     return null;
@@ -75,7 +96,7 @@
 
   function routeIdFromHash() {
     const raw = stripHashSuffixes(window.location.hash.slice(1));
-    if (!raw || raw === "infos" || raw === "admin") return null;
+    if (!raw || raw === "infos" || raw === "admin" || raw === "simulation") return null;
     return decodeURIComponent(raw);
   }
 
@@ -89,6 +110,7 @@
     if (hash != null && fragment !== "infos") {
       fragment = stripHashSuffixes(fragment);
       if (pageMode) fragment = fragment ? `${fragment}#${pageMode}` : pageMode;
+      if (isSimulationMode()) fragment = fragment ? `${fragment}#simulation` : "simulation";
       if (isAdminMode()) fragment = fragment ? `${fragment}#admin` : "admin";
     }
     const nextHash = fragment ? `#${fragment}` : "";
@@ -118,7 +140,9 @@
     togglePanelContent();
     const previousRoute = routeInHash;
     pageMode = modeFromHash();
-    if (window.location.hash === "#admin" && previousRoute) writeRouteHash(previousRoute);
+    const tokens = hashTokens();
+    const onlyFlags = tokens.length > 0 && tokens.every((token) => token === "admin" || token === "simulation");
+    if (onlyFlags && previousRoute) writeRouteHash(previousRoute);
     else routeInHash = routeIdFromHash();
     if (pageMode === "viewing" && !activeSessionRef) {
       document.body.classList.add("is-viewer");
@@ -370,6 +394,16 @@
 
   function syncAdminControls() {
     clearSessionsBtn.hidden = !isAdminMode();
+    simLogEl.hidden = !isSimulationMode();
+  }
+
+  function noteSim(meters, seconds, label) {
+    if (!isSimulationMode()) return;
+    const speed = seconds > 0 ? meters / seconds : 0;
+    simLines.push(`${meters.toFixed(2)} m · ${speed.toFixed(2)} m/s · ${label}`);
+    if (simLines.length > 8) simLines.shift();
+    simLogEl.textContent = simLines.map((line) => `${line}\n---`).join("\n");
+    simLogEl.scrollTop = simLogEl.scrollHeight;
   }
 
   async function clearAllTrackingSessions() {
@@ -597,15 +631,16 @@
 
     const requested = locationRequest;
     locationRequest = null;
-    writeTimer = setInterval(
-      () => sendOwnLocation(sessionRef),
-      WRITE_INTERVAL_MS
-    );
+    writeTimer = setInterval(() => {
+      if (isSimulationMode()) sendSimulatedLocation(sessionRef);
+      else sendOwnLocation(sessionRef);
+    }, WRITE_INTERVAL_MS);
 
     return Promise.resolve(requested).then((position) => {
       if (sessionRef !== activeSessionRef) return;
       if (position) return writePoint(sessionRef, position, true);
-      sendOwnLocation(sessionRef, true);
+      if (isSimulationMode()) sendSimulatedLocation(sessionRef, true);
+      else sendOwnLocation(sessionRef, true);
     });
   }
 
@@ -1352,7 +1387,115 @@
     });
   }
 
+  let simFix = null;
+  let simSlowLeft = 0;
+  let simAnchor = null;
+  let simTickAtMs = null;
+  let simIdlePending = false;
+
+  function offsetMeters(origin, bearingDeg, meters) {
+    const rad = bearingDeg * Math.PI / 180;
+    const latRad = origin.lat * Math.PI / 180;
+    return {
+      lat: origin.lat + (meters * Math.cos(rad)) / 111320,
+      lon: origin.lon + (meters * Math.sin(rad)) / (111320 * Math.cos(latRad))
+    };
+  }
+
+  function writableStepMeters() {
+    return MIN_MOVE_M + (SIM_STEP_MAX_M - MIN_MOVE_M) * Math.random() ** 2;
+  }
+
+  function placeSimIdleJump(sessionRef, position) {
+    if (!isSimulationMode() || !simIdlePending || !position.simStep) return;
+    const baseline = speedBaseline(sessionRef.id);
+    if (baseline === null) {
+      simIdlePending = false;
+      return;
+    }
+    if (!baseline) return;
+    const gapSec = (Date.now() - baseline.atMs) / 1000;
+    simIdlePending = false;
+    if (gapSec <= GAP_DOT_SEC) return;
+    const meters = writableStepMeters() * (gapSec / (WRITE_INTERVAL_MS / 1000));
+    const moved = offsetMeters(baseline, Math.random() * 360, meters);
+    position.coords.latitude = moved.lat;
+    position.coords.longitude = moved.lon;
+    position.simStep.meters = meters;
+    simFix = { lat: moved.lat, lon: moved.lon };
+    simSlowLeft = 0;
+    simAnchor = null;
+  }
+
+  function simulationPosition() {
+    if (!simFix) {
+      const center = map.getCenter();
+      simFix = { lat: center.lat, lon: center.lng };
+    }
+
+    const now = Date.now();
+    const firstTick = simTickAtMs == null;
+    const tickGapSec = firstTick ? 0 : (now - simTickAtMs) / 1000;
+    simTickAtMs = now;
+    if (firstTick) simIdlePending = true;
+
+    if (!firstTick && simIdlePending) {
+      return {
+        coords: {
+          latitude: simFix.lat,
+          longitude: simFix.lon,
+          accuracy: SIM_ACCURACY_M
+        },
+        simStep: { meters: 0 }
+      };
+    }
+
+    const bearing = Math.random() * 360;
+    let meters;
+    if (tickGapSec > GAP_DOT_SEC) {
+      simSlowLeft = 0;
+      simAnchor = null;
+      simIdlePending = false;
+      meters = writableStepMeters() * (tickGapSec / (WRITE_INTERVAL_MS / 1000));
+      simFix = offsetMeters(simFix, bearing, meters);
+    } else if (simSlowLeft > 0) {
+      simSlowLeft -= 1;
+      meters = Math.random() * SIM_SLOW_CAP_M;
+      simFix = offsetMeters(simAnchor, bearing, meters);
+    } else if (Math.random() < 0.05) {
+      simSlowLeft = 6 + Math.floor(Math.random() * 5);
+      meters = Math.random() * SIM_SLOW_CAP_M;
+      simAnchor = acceptedFix
+        ? { lat: acceptedFix.lat, lon: acceptedFix.lon }
+        : { lat: simFix.lat, lon: simFix.lon };
+      simFix = offsetMeters(simAnchor, bearing, meters);
+    } else {
+      if (simAnchor) {
+        simFix = { lat: simAnchor.lat, lon: simAnchor.lon };
+        simAnchor = null;
+      }
+      meters = writableStepMeters();
+      simFix = offsetMeters(simFix, bearing, meters);
+    }
+
+    return {
+      coords: {
+        latitude: simFix.lat,
+        longitude: simFix.lon,
+        accuracy: SIM_ACCURACY_M
+      },
+      simStep: { meters }
+    };
+  }
+
   function requestDeviceLocation() {
+    if (isSimulationMode()) {
+      noteGpsAllowed();
+      const request = Promise.resolve(simulationPosition());
+      locationRequest = request;
+      return request;
+    }
+
     if (!navigator.geolocation) return null;
 
     const request = new Promise((resolve) => {
@@ -1375,6 +1518,12 @@
     });
     locationRequest = request;
     return request;
+  }
+
+  function sendSimulatedLocation(sessionRef, centerMap = false) {
+    if (sessionRef !== activeSessionRef) return;
+    noteGpsAllowed();
+    writePoint(sessionRef, simulationPosition(), centerMap);
   }
 
   function sendOwnLocation(sessionRef, centerMap = false) {
@@ -1403,6 +1552,7 @@
     if (track && track.finished === true) return;
 
     noteGpsAllowed();
+    placeSimIdleJump(sessionRef, position);
 
     latestOwnPosition = position;
     if (centerMap) centerMapOnPosition(position);
@@ -1410,18 +1560,24 @@
     try {
       const baseline = speedBaseline(sessionRef.id);
       if (baseline === undefined) return;
+      let meters = position.simStep ? position.simStep.meters : 0;
+      let seconds = WRITE_INTERVAL_MS / 1000;
       if (baseline) {
-        const meters = haversineMeters(
+        meters = haversineMeters(
           [baseline.lat, baseline.lon],
           [position.coords.latitude, position.coords.longitude]
         );
-        const seconds = (Date.now() - baseline.atMs) / 1000;
+        seconds = (Date.now() - baseline.atMs) / 1000;
         if (meters < MIN_MOVE_M) {
           writerTraceLine = TRACE_LINE_SLOW;
           refreshTracePopups();
+          noteSim(meters, seconds, "slow/no move skip");
           return;
         }
-        if (seconds <= 0 || meters / seconds > MAX_SPEED_MPS) return;
+        if (seconds <= 0 || meters / seconds > MAX_SPEED_MPS) {
+          noteSim(meters, seconds, "+30 m/s skip");
+          return;
+        }
       }
 
       await sessionRef.collection("points").add({
@@ -1437,6 +1593,7 @@
         lon: position.coords.longitude,
         atMs: Date.now()
       };
+      noteSim(meters, seconds, "normal write");
     } catch (err) {
       console.error("Failed to write tracking point:", err);
       renderConnection(false, "offline");

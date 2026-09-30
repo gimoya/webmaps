@@ -73,6 +73,8 @@ A fresh load with no mode hash asks Rider or Viewer. Viewer sets `#viewing`. The
 - An active trace for that alias is finished: the name box shows `{alias} already finished the ride!` and does not write. The box then closes and the page stays a viewer.
 - This page is already writing: **Stop tracking** asks for a confirm, then sets `finished` and `endedAt` and stops this page's writer. The trace stays on the map. The list shows `Tracking stopped/finished` in green with the end time. The page becomes a viewer (`#viewing`).
 
+`#simulation` on the hash uses a generated fix instead of the device. Bearing is random, 0–360. Step length is left-weighted from 5 m to 50 m. From time to time a run of steps stays under 5 m, measured from the last stored point, so the writer skips them as slow. If the generator itself was idle for more than 20 s, the next fix is one step at that same riding speed across the whole gap. That point is stored, and the segment is dashed because the stored timestamps are more than 20 s apart. The fix still writes only for this page's active rider. The log under Active Riders shows meters, m/s, and `slow/no move skip`, `+30 m/s skip`, or `normal write`.
+
 GPS loss, a dropped network, refresh, tab close, or locking the phone does not end the Firestore trace. The writer on this page stops. Open the name box and submit the alias again to continue it.
 
 ## Firestore rules
