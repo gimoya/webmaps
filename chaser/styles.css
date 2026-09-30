@@ -917,6 +917,10 @@ body.is-viewer .viewer-ride {
   gap: 0.35rem;
 }
 
+#rider-actions {
+  flex-direction: column;
+}
+
 #rider-actions[hidden] {
   display: none;
 }

@@ -257,6 +257,13 @@
     document.getElementById("viewer-ride").addEventListener("click", () => {
       openRiderBox();
     });
+    document.getElementById("rider-cancel").addEventListener("click", () => {
+      clearTimeout(riderCloseTimer);
+      resetRiderForm();
+      riderDialog.hidden = true;
+      document.body.classList.add("is-viewer");
+      setPageMode("viewing");
+    });
     riderForm.addEventListener("submit", (event) => {
       event.preventDefault();
       const name = sanitizeName(riderNameEl.value);
