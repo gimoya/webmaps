@@ -50,17 +50,17 @@
   --color-trace-13: rgb(228, 7, 125);
   --color-trace-14: rgb(98, 179, 0);
   --color-trace-15: rgb(89, 120, 245);
-  --color-trace-16: rgb(114, 63, 18);
+  --color-trace-16: rgb(146, 93, 47);
   --color-trace-17: rgb(255, 46, 46);
   --color-trace-18: rgb(0, 158, 137);
   --color-trace-19: rgb(57, 0, 189);
   --color-trace-20: rgb(2, 253, 161);
   --color-trace-21: rgb(255, 221, 0);
-  --color-trace-22: rgb(100, 31, 68);
-  --color-trace-23: rgb(15, 80, 71);
+  --color-trace-22: rgb(182, 73, 0);
+  --color-trace-23: rgb(7, 187, 163);
   --color-trace-24: rgb(211, 255, 109);
-   --color-ctrl-bg: rgba(30, 30, 34, 1);
-  --color-ctrl-bg-hover: rgba(42, 42, 48, 1);
+   --color-ctrl-bg: rgb(57, 57, 57);
+  --color-ctrl-bg-hover: rgb(120, 120, 128);
   --color-ctrl-bg-active: rgba(240, 240, 240, 1);
   --color-ctrl-fg: rgba(240, 240, 240, 1);
   --color-ctrl-fg-active: rgba(30, 30, 34, 1);
@@ -69,6 +69,7 @@
   --color-ctrl-divider: rgba(255, 255, 255, 0.22);
   --color-ctrl-disabled-bg: rgba(22, 22, 24, 1);
   --color-ctrl-disabled-fg: rgba(240, 240, 240, 0.35);
+  --map-tile-brightness: 0.6;
 }
 
 * { box-sizing: border-box; }
@@ -103,7 +104,11 @@ textarea {
 }
 
 #map .leaflet-tile-pane {
-  filter: brightness(0.6);
+  filter: brightness(var(--map-tile-brightness));
+}
+
+body.is-replaying {
+  --map-tile-brightness: 0.4;
 }
 
 body.panel-faded .unified-panel {
@@ -586,6 +591,10 @@ a.info-link:hover { color: var(--color-accent); }
   pointer-events: none;
 }
 
+.chaser-place {
+  margin-right: 0.3em;
+}
+
 .chaser-callout-label {
   position: absolute;
   left: 7px;
@@ -872,8 +881,41 @@ body.is-viewer .viewer-ride {
   justify-content: center;
 }
 
+body.is-replaying #viewer-ride {
+  display: none;
+}
+
+.viewer-replay {
+  top: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.viewer-replay[aria-pressed="true"] {
+  background: var(--color-ctrl-bg-running);
+  color: var(--color-ctrl-fg-active);
+}
+
+.viewer-replay .replay-stop {
+  display: none;
+}
+
+.viewer-replay[aria-pressed="true"] .replay-play {
+  display: none;
+}
+
+.viewer-replay[aria-pressed="true"] .replay-stop {
+  display: block;
+}
+
 .viewer-ride:hover {
   background: var(--color-ctrl-bg-hover);
+}
+
+.viewer-replay[aria-pressed="true"]:hover {
+  background: var(--color-ctrl-bg-hover);
+  color: var(--color-ctrl-fg-active);
 }
 
 .viewer-ride svg {

@@ -1,4 +1,6 @@
 (function () {
+  const REPLAY_SPEED = 60;
+
   // Lowest zoom the map allows.
   const ZOOM_MIN = 10;
   // Below this: one solid white outer line, solid dark-grey inner line, short course labels.
@@ -14,12 +16,15 @@
   const MIN_MOVE_M = 5;
   const MAX_SPEED_MPS = 30;
   const SIM_ACCURACY_M = 8;
-  const SIM_STEP_MAX_M = 50;
-  const SIM_SLOW_CAP_M = 4.99999;
+  const SIM_SPEED_MIN_KMH = 10;
+  const SIM_SPEED_MAX_KMH = 25;
   const TRACE_LINE_PAUSED = "Tracing paused!";
   const TRACE_LINE_WRITING = "Tracing points every 5s";
   const TRACE_LINE_SLOW = "Slow/no rider movement";
   const SESSIONS_COLLECTION = "trackingSessions";
+  const PLACEMENT_COLLECTION = "placement";
+  const PLACEMENT_DOC = "current";
+  const PLACE_CUPS = ["🥇", "🥈", "🥉"];
 
   const userListEl = document.getElementById("user-list");
   const clearSessionsBtn = document.getElementById("clear-sessions");
@@ -50,6 +55,7 @@
   let noticeResolver = null;
   let selectedRouteId = null;
   let drawnRouteId = null;
+  let routeLatLngs = null;
   const routesById = new Map();
   let routeListSignature = "";
   const GPX_MAX_BYTES = 1024 * 1024 - 2048;
@@ -87,15 +93,25 @@
     return stripNamedSuffixes(raw, ["#admin", "#simulation", "#viewing", "#tracking"]);
   }
 
+  function withoutRider(raw) {
+    return raw.split("#").filter((token) => !token.startsWith("rider=")).join("#");
+  }
+
+  function riderFromHash() {
+    const token = hashTokens().find((part) => part.startsWith("rider="));
+    if (!token) return "";
+    return sanitizeName(decodeURIComponent(token.slice(6)));
+  }
+
   function modeFromHash() {
-    const raw = stripNamedSuffixes(window.location.hash.slice(1), ["#admin", "#simulation"]);
+    const raw = stripNamedSuffixes(withoutRider(window.location.hash.slice(1)), ["#admin", "#simulation"]);
     if (raw === "viewing" || raw.endsWith("#viewing")) return "viewing";
     if (raw === "tracking" || raw.endsWith("#tracking")) return "tracking";
     return null;
   }
 
   function routeIdFromHash() {
-    const raw = stripHashSuffixes(window.location.hash.slice(1));
+    const raw = stripHashSuffixes(withoutRider(window.location.hash.slice(1)));
     if (!raw || raw === "infos" || raw === "admin" || raw === "simulation") return null;
     return decodeURIComponent(raw);
   }
@@ -108,7 +124,8 @@
     params.set("z", String(map.getZoom()));
     let fragment = hash == null ? window.location.hash.slice(1) : String(hash || "");
     if (hash != null && fragment !== "infos") {
-      fragment = stripHashSuffixes(fragment);
+      fragment = stripHashSuffixes(withoutRider(fragment));
+      if (hashRider) fragment = fragment ? `${fragment}#rider=${encodeURIComponent(hashRider)}` : `rider=${encodeURIComponent(hashRider)}`;
       if (pageMode) fragment = fragment ? `${fragment}#${pageMode}` : pageMode;
       if (isSimulationMode()) fragment = fragment ? `${fragment}#simulation` : "simulation";
       if (isAdminMode()) fragment = fragment ? `${fragment}#admin` : "admin";
@@ -124,6 +141,7 @@
 
   let routeInHash = routeIdFromHash();
   let pageMode = modeFromHash();
+  let hashRider = riderFromHash();
 
   function setPageMode(mode) {
     pageMode = mode;
@@ -143,7 +161,10 @@
     const tokens = hashTokens();
     const onlyFlags = tokens.length > 0 && tokens.every((token) => token === "admin" || token === "simulation");
     if (onlyFlags && previousRoute) writeRouteHash(previousRoute);
-    else routeInHash = routeIdFromHash();
+    else {
+      hashRider = riderFromHash();
+      routeInHash = routeIdFromHash();
+    }
     if (pageMode === "viewing" && !activeSessionRef) {
       document.body.classList.add("is-viewer");
       entryDialog.hidden = true;
@@ -201,6 +222,7 @@
 
   let sessionsUnsubscribe = null;
   let routesUnsubscribe = null;
+  let placementUnsubscribe = null;
   let writeTimer = null;
   let activeSessionRef = null;
   let acceptedFix = null;
@@ -238,6 +260,7 @@
 
   attachSessionsSubscription(sessionsRef);
   attachRoutesSubscription(db);
+  attachPlacementSubscription(db);
   setInterval(() => {
     renderUserList(sortedTracks());
     refreshTracePopups();
@@ -256,6 +279,10 @@
     });
     document.getElementById("viewer-ride").addEventListener("click", () => {
       openRiderBox();
+    });
+    document.getElementById("viewer-replay").addEventListener("click", () => {
+      if (replayActive) stopReplay();
+      else startReplay();
     });
     document.getElementById("rider-cancel").addEventListener("click", () => {
       clearTimeout(riderCloseTimer);
@@ -279,6 +306,10 @@
       }
       if (aliasFinished(name)) {
         showFinishedRide(name);
+        return;
+      }
+      if (isSimulationMode() && !(routeLatLngs && routeLatLngs.length > 1)) {
+        showNotice("No GPX route is drawn. Simulation stopped.");
         return;
       }
       riderStart.classList.add("is-fading");
@@ -311,7 +342,7 @@
   function openRiderBox() {
     clearTimeout(riderCloseTimer);
     resetRiderForm();
-    riderNameEl.value = localStorage.getItem("chaser_display_name") || "";
+    riderNameEl.value = hashRider;
     riderDialog.hidden = false;
     riderNameEl.focus();
   }
@@ -434,6 +465,7 @@
           await batch.commit();
         }
       }
+      await writePlacement([], []);
     } catch (err) {
       console.error("Failed to clear tracking sessions:", err);
       await showNotice("Tracking sessions could not be cleared.");
@@ -447,7 +479,9 @@
   }
 
   async function beginAliasTracking(ref, name) {
-      localStorage.setItem("chaser_display_name", name);
+    hashRider = name;
+    localStorage.setItem("chaser_display_name", name);
+    writeRouteHash(routeIdFromHash());
     setRiderPanelTitle(name);
     riderNameEl.disabled = true;
     riderForm.querySelectorAll("button").forEach((button) => {
@@ -455,23 +489,25 @@
     });
 
     try {
-      const activeDocs = await findActiveAliasSessions(ref, name);
+      const activeDocs = findActiveAliasSessions(ref, name);
       if (activeDocs.some((doc) => doc.data().finished === true)) {
         locationRequest = null;
         showFinishedRide(name);
         return;
       }
       if (!activeDocs.length) {
+        if (isSimulationMode()) beginNewSimulation();
         const sessionRef = await createAliasSession(ref, name);
         showRiderResult(name, "..is starting!");
         beginWriting(sessionRef);
       } else {
+        if (isSimulationMode()) placeSimulationOnRoute(activeDocs[0].id);
         showRiderResult(name, "..is resuming his ride!");
         beginWriting(activeDocs[0].ref);
       }
       clearTimeout(riderCloseTimer);
       riderCloseTimer = setTimeout(fadeRiderBox, ENTRY_FEEDBACK_MS);
-      } catch (err) {
+    } catch (err) {
       clearWriter();
       console.error("Failed to start tracking session:", err);
       renderConnection(false, "offline");
@@ -505,7 +541,11 @@
     }
 
     const track = tracksBySessionId.get(sessionRef.id);
-    if (track) track.finished = true;
+    if (track) {
+      track.finished = true;
+      if (track.pointsReady) dropPointsListener(track);
+    }
+    await lockPlacement(sessionRef.id);
     if (sessionRef === activeSessionRef) clearWriter();
     renderTracksAndPanel();
     showStoppedNotice();
@@ -608,12 +648,20 @@
     centerMapOnLatLng(point.lat, point.lon);
   }
 
-  async function findActiveAliasSessions(ref, name) {
+  function findActiveAliasSessions(ref, name) {
     const key = aliasKey(name);
-    const snapshot = await ref.where("isActive", "==", true).get();
-    return snapshot.docs
-      .filter((doc) => aliasKey(doc.data().name) === key)
-      .sort((a, b) => (toMillis(a.data().startedAt) || 0) - (toMillis(b.data().startedAt) || 0))
+    return [...tracksBySessionId.values()]
+      .filter((track) => aliasKey(track.name) === key)
+      .sort((a, b) => (a.startedAtMs || 0) - (b.startedAtMs || 0))
+      .map((track) => ({
+        id: track.sessionId,
+        ref: ref.doc(track.sessionId),
+        data: () => ({
+          name: track.name,
+          finished: track.finished === true,
+          startedAt: track.startedAtMs
+        })
+      }));
   }
 
   async function createAliasSession(ref, name) {
@@ -695,6 +743,12 @@
     });
   }
 
+  function dropPointsListener(track) {
+    if (!track.unsubscribePoints) return;
+    track.unsubscribePoints();
+    track.unsubscribePoints = null;
+  }
+
   function ensureTrackSubscription(sessionRef, session) {
     const existing = tracksBySessionId.get(sessionRef.id);
     if (existing) {
@@ -703,6 +757,7 @@
       existing.startedAtMs = toMillis(session.startedAt);
       existing.endedAtMs = toMillis(session.endedAt);
       existing.finished = session.finished === true;
+      if (existing.finished && existing.pointsReady) dropPointsListener(existing);
       return;
     }
 
@@ -726,10 +781,31 @@
       .collection("points")
       .orderBy("recordedAt", "asc")
       .onSnapshot((snapshot) => {
-        track.pointsReady = true;
-        track.points = snapshot.docs
-          .map((doc) => pointFromDocument(doc))
-          .filter(Boolean);
+        if (!track.pointsReady) {
+          track.points = snapshot.docs
+            .map((doc) => pointFromDocument(doc))
+            .filter(Boolean);
+          track.pointsReady = true;
+        } else {
+          snapshot.docChanges().forEach((change) => {
+            if (change.type === "added") {
+              const point = pointFromDocument(change.doc);
+              if (point) track.points.push(point);
+              return;
+            }
+            if (change.type === "modified") {
+              const point = pointFromDocument(change.doc);
+              const index = track.points.findIndex((row) => row.id === change.doc.id);
+              if (point && index >= 0) track.points[index] = point;
+              else if (point) track.points.push(point);
+              return;
+            }
+            if (change.type === "removed") {
+              track.points = track.points.filter((row) => row.id !== change.doc.id);
+            }
+          });
+        }
+        if (track.finished) dropPointsListener(track);
         renderTracksAndPanel();
       }, (error) => {
         console.error(`Firestore points subscription error for ${sessionRef.id}:`, error);
@@ -741,13 +817,289 @@
     return [...tracksBySessionId.values()].sort((a, b) => a.name.localeCompare(b.name));
   }
 
+  let placementCurrent = null;
+  let placeCups = new Map();
+
+  function stringList(value) {
+    return Array.isArray(value) && value.every((item) => typeof item === "string") ? value : null;
+  }
+
+  function placementFromData(data) {
+    if (!data) return null;
+    const order = stringList(data.order);
+    const locked = stringList(data.locked);
+    if (!order || !locked) return null;
+    return { order, locked, recordedAtMs: toMillis(data.recordedAt) };
+  }
+
+  function placeMark(index) {
+    if (index < PLACE_CUPS.length) return PLACE_CUPS[index];
+    return `${index + 1}.th #`;
+  }
+
+  function marksFromOrder(order) {
+    const marks = new Map();
+    (order || []).forEach((id, index) => marks.set(id, placeMark(index)));
+    return marks;
+  }
+
+  function applyLivePlacement() {
+    placeCups = marksFromOrder(placementCurrent && placementCurrent.order);
+  }
+
+  function attachPlacementSubscription(firestore) {
+    if (placementUnsubscribe) placementUnsubscribe();
+    placementUnsubscribe = firestore.collection(PLACEMENT_COLLECTION).doc(PLACEMENT_DOC).onSnapshot((doc) => {
+      placementCurrent = doc.exists ? placementFromData(doc.data()) : null;
+      applyLivePlacement();
+      renderTracksAndPanel();
+    }, (error) => {
+      console.error("Firestore placement subscription error:", error);
+    });
+  }
+
+  function orderWithLocks(fix) {
+    const previous = placementCurrent;
+    const locked = new Set((previous && previous.locked) || []);
+    const pins = new Map();
+    if (previous) {
+      previous.order.forEach((id, index) => {
+        if (locked.has(id)) pins.set(index, id);
+      });
+    }
+
+    const ranked = [];
+    const seen = new Set(locked);
+    tracksBySessionId.forEach((track) => {
+      if (seen.has(track.sessionId)) return;
+      const point = track.sessionId === fix.sessionId
+        ? { lat: fix.lat, lon: fix.lon }
+        : track.points[track.points.length - 1];
+      if (!point) return;
+      seen.add(track.sessionId);
+      ranked.push({
+        id: track.sessionId,
+        meters: metersLeftOnRoute(routeLatLngs, point.lat, point.lon)
+      });
+    });
+    if (!seen.has(fix.sessionId)) {
+      ranked.push({
+        id: fix.sessionId,
+        meters: metersLeftOnRoute(routeLatLngs, fix.lat, fix.lon)
+      });
+    }
+    ranked.sort((a, b) => a.meters - b.meters || a.id.localeCompare(b.id));
+
+    const pinIndexes = [...pins.keys()];
+    const lastPin = pinIndexes.length ? Math.max(...pinIndexes) : -1;
+    const length = Math.max(lastPin + 1, pins.size + ranked.length);
+    const order = [];
+    let next = 0;
+    for (let index = 0; index < length; index += 1) {
+      if (pins.has(index)) {
+        order.push(pins.get(index));
+        continue;
+      }
+      if (next < ranked.length) {
+        order.push(ranked[next].id);
+        next += 1;
+        continue;
+      }
+      const held = previous && previous.order[index];
+      if (held && !order.includes(held)) order.push(held);
+    }
+    return { order, locked: [...locked] };
+  }
+
+  function sameStringList(a, b) {
+    return a.length === b.length && a.every((item, index) => item === b[index]);
+  }
+
+  async function writePlacement(order, locked) {
+    if (
+      placementCurrent &&
+      sameStringList(placementCurrent.order, order) &&
+      sameStringList(placementCurrent.locked, locked)
+    ) {
+      return;
+    }
+    await db.collection(PLACEMENT_COLLECTION).doc(PLACEMENT_DOC).set({
+      order,
+      locked,
+      recordedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }
+
+  async function publishPlacement(fix) {
+    if (!routeLatLngs || routeLatLngs.length < 2) return;
+    const next = orderWithLocks(fix);
+    await writePlacement(next.order, next.locked);
+  }
+
+  async function lockPlacement(sessionId) {
+    const current = placementCurrent;
+    if (!current || !current.order.includes(sessionId) || current.locked.includes(sessionId)) return;
+    try {
+      await writePlacement(current.order, current.locked.concat(sessionId));
+    } catch (err) {
+      console.error("Failed to lock placement:", err);
+    }
+  }
+
   function renderTracksAndPanel() {
     const tracks = sortedTracks();
     tracks.forEach(renderTrack);
     renderUserList(tracks);
   }
 
+  let replayActive = false;
+  let replayFrame = 0;
+  let replayLayer = null;
+
+  function hideLiveTraceLayers() {
+    tracksBySessionId.forEach((track) => {
+      if (track.marker) {
+        tracksLayer.removeLayer(track.marker);
+        track.marker = null;
+      }
+      if (track.accuracyRing) {
+        tracksLayer.removeLayer(track.accuracyRing);
+        track.accuracyRing = null;
+      }
+      if (track.lines) {
+        tracksLayer.removeLayer(track.lines);
+        track.lines = null;
+      }
+    });
+  }
+
+  function replaySources() {
+    return sortedTracks().flatMap((track) => {
+      const points = track.points.filter((point) => point.recordedAtMs != null);
+      if (!points.length) return [];
+      return [{
+        sessionId: track.sessionId,
+        name: track.name,
+        color: track.color,
+        t0: points[0].recordedAtMs,
+        points
+      }];
+    });
+  }
+
+  function paintReplayActor(actor) {
+    const points = actor.source.points.slice(0, actor.shown);
+    const latest = points[points.length - 1];
+    const lineStyle = {
+      color: actor.source.color,
+      weight: 2,
+      opacity: 1,
+      lineCap: "round",
+      lineJoin: "round"
+    };
+    actor.lines.clearLayers();
+    actor.lines.addLayer(L.polyline(
+      points.map((point) => [point.lat, point.lon]),
+      {
+        color: "#e0e0e0",
+        weight: 4,
+        opacity: 0.4,
+        lineCap: "round",
+        lineJoin: "round",
+        interactive: false
+      }
+    ));
+    traceRuns(points).forEach((run) => {
+      const style = run.dotted ? { ...lineStyle, dashArray: "1 6" } : lineStyle;
+      actor.lines.addLayer(L.polyline(run.latLngs, style));
+    });
+    const icon = traceMarkerIcon(actor.source.name, actor.source.color, actor.cup);
+    if (!actor.marker) {
+      actor.marker = L.marker([latest.lat, latest.lon], {
+        icon,
+        interactive: false,
+        keyboard: false
+      }).addTo(replayLayer);
+      return;
+    }
+    actor.marker.setLatLng([latest.lat, latest.lon]);
+    actor.marker.setIcon(icon);
+  }
+
+  function startReplay() {
+    const sources = replaySources();
+    if (!sources.length || replayActive) return;
+    replayActive = true;
+    document.body.classList.add("is-replaying");
+    document.getElementById("viewer-replay").setAttribute("aria-pressed", "true");
+    hideLiveTraceLayers();
+    replayLayer = L.layerGroup().addTo(map);
+    const actors = sources.map((source) => ({
+      source,
+      shown: 0,
+      cup: "",
+      lines: L.layerGroup().addTo(replayLayer),
+      marker: null
+    }));
+    const started = performance.now();
+
+    const frame = (now) => {
+      if (!replayActive) return;
+      const elapsed = (now - started) * REPLAY_SPEED;
+      let finished = true;
+      let moved = false;
+      actors.forEach((actor) => {
+        const points = actor.source.points;
+        let count = actor.shown;
+        while (count < points.length && points[count].recordedAtMs - actor.source.t0 <= elapsed) {
+          count += 1;
+        }
+        if (count < points.length) finished = false;
+        if (count !== actor.shown) moved = true;
+        actor.shown = count;
+      });
+      if (!moved) {
+        if (finished) {
+          stopReplay();
+          return;
+        }
+        replayFrame = requestAnimationFrame(frame);
+        return;
+      }
+      const cups = marksFromOrder(placementCurrent && placementCurrent.order);
+      actors.forEach((actor) => {
+        if (!actor.shown) return;
+        const cup = cups.get(actor.source.sessionId) || "";
+        if (actor.marker && actor.cup === cup && actor.painted === actor.shown) return;
+        actor.cup = cup;
+        actor.painted = actor.shown;
+        paintReplayActor(actor);
+      });
+      if (finished) {
+        stopReplay();
+        return;
+      }
+      replayFrame = requestAnimationFrame(frame);
+    };
+    replayFrame = requestAnimationFrame(frame);
+  }
+
+  function stopReplay() {
+    if (!replayActive) return;
+    replayActive = false;
+    cancelAnimationFrame(replayFrame);
+    replayFrame = 0;
+    document.body.classList.remove("is-replaying");
+    document.getElementById("viewer-replay").setAttribute("aria-pressed", "false");
+    if (replayLayer) {
+      map.removeLayer(replayLayer);
+      replayLayer = null;
+    }
+    renderTracksAndPanel();
+  }
+
   function renderTrack(track) {
+    if (replayActive) return;
     if (!track.points.length) return;
 
     const latestPoint = track.points[track.points.length - 1];
@@ -872,17 +1224,22 @@
     });
   }
 
-  function upsertMarker(track, point) {
-    const icon = L.divIcon({
+  function traceMarkerIcon(name, color, mark = "") {
+    const place = mark ? `<span class="chaser-place">${escapeHtml(mark)}</span>` : "";
+    return L.divIcon({
       className: "chaser-marker-icon",
       html: `<span class="chaser-callout">
-        <span class="chaser-callout-label" style="color:${track.color}">${escapeHtml(track.name)}</span>
+        <span class="chaser-callout-label" style="color:${color}">${place}${escapeHtml(name)}</span>
         <span class="chaser-callout-stem"></span>
-        <span class="chaser-user-marker" style="background:${track.color}"></span>
+        <span class="chaser-user-marker" style="background:${color}"></span>
       </span>`,
       iconSize: [14, 14],
       iconAnchor: [7, 7]
     });
+  }
+
+  function upsertMarker(track, point) {
+    const icon = traceMarkerIcon(track.name, track.color, placeCups.get(track.sessionId) || "");
     const popup = markerPopup(track, point);
 
     if (!track.marker) {
@@ -953,8 +1310,9 @@
         meta: `last timestamp: ${formatClock(updatedAtMs, true)} · start time: ${formatClock(track.startedAtMs, false)} · ${track.points.length} ${pointLabel}`
       };
     });
-    const signature = rows
-      .map((row) => `${row.track.sessionId}:${row.own}:${row.finished}:${row.track.endedAtMs || ""}:${row.signalStale}:${row.track.points.length}:${row.track.name}`)
+    const viewing = document.body.classList.contains("is-viewer");
+    const signature = `${viewing ? "view" : "ride"}|` + rows
+      .map((row) => `${row.track.sessionId}:${row.own}:${row.finished}:${row.track.endedAtMs || ""}:${row.signalStale}:${row.track.points.length}:${row.track.name}:${placeCups.get(row.track.sessionId) || ""}`)
       .join("|");
 
     if (signature !== userListSignature) {
@@ -964,13 +1322,17 @@
           : "";
         const warning = row.finished
           ? `<div class="user-item-finished">Tracking stopped/finished · end time: ${formatClock(row.track.endedAtMs, true)}</div>`
-          : row.signalStale
+          : row.signalStale && !viewing
             ? `<div class="user-item-stale">Tracking paused.</div>`
             : "";
+        const mark = placeCups.get(row.track.sessionId) || "";
+        const name = mark
+          ? `<span class="chaser-place">${escapeHtml(mark)}</span>${escapeHtml(row.track.name)}`
+          : escapeHtml(row.track.name);
 
       return `
           <li class="user-item${row.own ? " is-tracking" : ""}" data-track-id="${escapeHtml(row.track.sessionId)}"${sessionAttribute} style="border-left-color:${row.track.color}">
-            <div class="user-item-name notice-alias" style="color:${row.track.color}">${escapeHtml(row.track.name)}</div>
+            <div class="user-item-name notice-alias" style="color:${row.track.color}">${name}</div>
             ${warning}
             <div class="user-item-meta">${row.meta}</div>
         </li>`;
@@ -1032,6 +1394,38 @@
   function scheduleUrlSync() {
     clearTimeout(urlSyncTimer);
     urlSyncTimer = setTimeout(writeMapUrl, 300);
+  }
+
+  function metersLeftOnRoute(latLngs, lat, lon) {
+    const latScale = 110540;
+    const lonScale = 111320 * Math.cos(((latLngs[0][0] + latLngs[latLngs.length - 1][0]) / 2) * Math.PI / 180);
+    const px = lon * lonScale;
+    const py = lat * latScale;
+    let walked = 0;
+    let bestAt = 0;
+    let bestOff = Infinity;
+    for (let index = 1; index < latLngs.length; index += 1) {
+      const a = latLngs[index - 1];
+      const b = latLngs[index];
+      const ax = a[1] * lonScale;
+      const ay = a[0] * latScale;
+      const bx = b[1] * lonScale;
+      const by = b[0] * latScale;
+      const abx = bx - ax;
+      const aby = by - ay;
+      const len2 = abx * abx + aby * aby;
+      const t = len2 === 0 ? 0 : Math.min(1, Math.max(0, ((px - ax) * abx + (py - ay) * aby) / len2));
+      const offX = px - (ax + abx * t);
+      const offY = py - (ay + aby * t);
+      const off = offX * offX + offY * offY;
+      const step = haversineMeters(a, b);
+      if (off < bestOff) {
+        bestOff = off;
+        bestAt = walked + t * step;
+      }
+      walked += step;
+    }
+    return walked - bestAt;
   }
 
   function haversineMeters(a, b) {
@@ -1147,6 +1541,8 @@
     }).addTo(gpxLayer);
     if (frame) frameGpx(line.getBounds());
     addCourseMarkers(latLngs, course.name);
+    routeLatLngs = latLngs.length > 1 ? latLngs : null;
+    renderTracksAndPanel();
   }
 
   function capLetters(text, max) {
@@ -1259,6 +1655,8 @@
       gpxLayer.clearLayers();
       selectedRouteId = null;
       drawnRouteId = null;
+      routeLatLngs = null;
+      renderTracksAndPanel();
     }
     renderRouteList();
   }
@@ -1417,112 +1815,78 @@
   }
 
   let simFix = null;
-  let simSlowLeft = 0;
-  let simAnchor = null;
+  let simAlongM = 0;
+  let simSpeedMps = null;
   let simTickAtMs = null;
-  let simIdlePending = false;
 
-  function offsetMeters(origin, bearingDeg, meters) {
-    const rad = bearingDeg * Math.PI / 180;
-    const latRad = origin.lat * Math.PI / 180;
+  function simSpeedPick() {
+    const kmh = SIM_SPEED_MIN_KMH + Math.random() * (SIM_SPEED_MAX_KMH - SIM_SPEED_MIN_KMH);
+    return kmh / 3.6;
+  }
+
+  function simCoords(metersMoved) {
+    const at = pointAtDistance(routeLatLngs, simAlongM);
+    simFix = { lat: at[0], lon: at[1] };
     return {
-      lat: origin.lat + (meters * Math.cos(rad)) / 111320,
-      lon: origin.lon + (meters * Math.sin(rad)) / (111320 * Math.cos(latRad))
+      coords: {
+        latitude: at[0],
+        longitude: at[1],
+        accuracy: SIM_ACCURACY_M
+      },
+      simStep: { meters: metersMoved }
     };
   }
 
-  function writableStepMeters() {
-    return MIN_MOVE_M + (SIM_STEP_MAX_M - MIN_MOVE_M) * Math.random() ** 2;
+  function beginNewSimulation() {
+    simSpeedMps = simSpeedPick();
+    simAlongM = 0;
+    simTickAtMs = Date.now();
+    locationRequest = Promise.resolve(simCoords(0));
   }
 
-  function placeSimIdleJump(sessionRef, position) {
-    if (!isSimulationMode() || !simIdlePending || !position.simStep) return;
-    const baseline = speedBaseline(sessionRef.id);
-    if (baseline === null) {
-      simIdlePending = false;
-      return;
+  function placeSimulationOnRoute(sessionId) {
+    if (simSpeedMps == null) simSpeedMps = simSpeedPick();
+    if (simTickAtMs == null) {
+      const track = tracksBySessionId.get(sessionId);
+      const last = track && track.points[track.points.length - 1];
+      let walked = 0;
+      let bestAt = 0;
+      let best = Infinity;
+      routeLatLngs.forEach((latLng, index) => {
+        if (index > 0) walked += haversineMeters(routeLatLngs[index - 1], latLng);
+        if (!last) return;
+        const distance = haversineMeters(latLng, [last.lat, last.lon]);
+        if (distance < best) {
+          best = distance;
+          bestAt = walked;
+        }
+      });
+      simAlongM = last ? bestAt : 0;
     }
-    if (!baseline) return;
-    const gapSec = (Date.now() - baseline.atMs) / 1000;
-    simIdlePending = false;
-    if (gapSec <= GAP_DOT_SEC) return;
-    const meters = writableStepMeters() * (gapSec / (WRITE_INTERVAL_MS / 1000));
-    const moved = offsetMeters(baseline, Math.random() * 360, meters);
-    position.coords.latitude = moved.lat;
-    position.coords.longitude = moved.lon;
-    position.simStep.meters = meters;
-    simFix = { lat: moved.lat, lon: moved.lon };
-    simSlowLeft = 0;
-    simAnchor = null;
+    simTickAtMs = Date.now();
+    locationRequest = Promise.resolve(simCoords(0));
   }
 
   function simulationPosition() {
-    if (!simFix) {
-      const center = map.getCenter();
-      simFix = { lat: center.lat, lon: center.lng };
+    if (!routeLatLngs || routeLatLngs.length < 2) {
+      showNotice("No GPX route is drawn. Simulation stopped.");
+      clearWriter();
+      return null;
     }
-
+    if (simSpeedMps == null) simSpeedMps = simSpeedPick();
     const now = Date.now();
-    const firstTick = simTickAtMs == null;
-    const tickGapSec = firstTick ? 0 : (now - simTickAtMs) / 1000;
+    const dt = simTickAtMs == null ? 0 : (now - simTickAtMs) / 1000;
     simTickAtMs = now;
-    if (firstTick) simIdlePending = true;
-
-    if (!firstTick && simIdlePending) {
-      return {
-        coords: {
-          latitude: simFix.lat,
-          longitude: simFix.lon,
-          accuracy: SIM_ACCURACY_M
-        },
-        simStep: { meters: 0 }
-      };
-    }
-
-    const bearing = Math.random() * 360;
-    let meters;
-    if (tickGapSec > GAP_DOT_SEC) {
-      simSlowLeft = 0;
-      simAnchor = null;
-      simIdlePending = false;
-      meters = writableStepMeters() * (tickGapSec / (WRITE_INTERVAL_MS / 1000));
-      simFix = offsetMeters(simFix, bearing, meters);
-    } else if (simSlowLeft > 0) {
-      simSlowLeft -= 1;
-      meters = Math.random() * SIM_SLOW_CAP_M;
-      simFix = offsetMeters(simAnchor, bearing, meters);
-    } else if (Math.random() < 0.05) {
-      simSlowLeft = 6 + Math.floor(Math.random() * 5);
-      meters = Math.random() * SIM_SLOW_CAP_M;
-      simAnchor = acceptedFix
-        ? { lat: acceptedFix.lat, lon: acceptedFix.lon }
-        : { lat: simFix.lat, lon: simFix.lon };
-      simFix = offsetMeters(simAnchor, bearing, meters);
-    } else {
-      if (simAnchor) {
-        simFix = { lat: simAnchor.lat, lon: simAnchor.lon };
-        simAnchor = null;
-      }
-      meters = writableStepMeters();
-      simFix = offsetMeters(simFix, bearing, meters);
-    }
-
-    return {
-      coords: {
-        latitude: simFix.lat,
-        longitude: simFix.lon,
-        accuracy: SIM_ACCURACY_M
-      },
-      simStep: { meters }
-    };
+    const moved = simSpeedMps * dt;
+    simAlongM += moved;
+    return simCoords(moved);
   }
 
   function requestDeviceLocation() {
     if (isSimulationMode()) {
       noteGpsAllowed();
-      const request = Promise.resolve(simulationPosition());
-      locationRequest = request;
-      return request;
+      locationRequest = Promise.resolve(null);
+      return locationRequest;
     }
 
     if (!navigator.geolocation) return null;
@@ -1551,8 +1915,10 @@
 
   function sendSimulatedLocation(sessionRef, centerMap = false) {
     if (sessionRef !== activeSessionRef) return;
+    const position = simulationPosition();
+    if (!position) return;
     noteGpsAllowed();
-    writePoint(sessionRef, simulationPosition(), centerMap);
+    writePoint(sessionRef, position, centerMap);
   }
 
   function sendOwnLocation(sessionRef, centerMap = false) {
@@ -1581,7 +1947,6 @@
     if (track && track.finished === true) return;
 
     noteGpsAllowed();
-    placeSimIdleJump(sessionRef, position);
 
     latestOwnPosition = position;
     if (centerMap) centerMapOnPosition(position);
@@ -1615,6 +1980,15 @@
         accuracy: position.coords.accuracy || 0,
         recordedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+      try {
+        await publishPlacement({
+          sessionId: sessionRef.id,
+          lat: position.coords.latitude,
+          lon: position.coords.longitude
+        });
+      } catch (err) {
+        console.error("Failed to write placement:", err);
+      }
       if (sessionRef !== activeSessionRef) return;
       writerTraceLine = TRACE_LINE_WRITING;
       acceptedFix = {
@@ -1653,6 +2027,7 @@
     }
 
     return {
+      id: doc.id,
       lat: data.lat,
       lon: data.lon,
       accuracy: data.accuracy,

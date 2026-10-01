@@ -40,7 +40,7 @@ Session fields:
 - `isActive` (boolean)
 - `startedAt` (server timestamp)
 - `endedAt` (server timestamp or `null`). **Stop tracking** sets it. The finished list line shows that time.
-- `finished` (boolean). `false` when the session is created. **Stop tracking** sets it `true`. The session stays `isActive`, so the trace stays on the map. The list shows `Tracking stopped/finished` and the end time. That alias cannot start or resume. `#admin` shows **Clear all traces**, which deletes every tracking session and its points.
+- `finished` (boolean). `false` when the session is created. **Stop tracking** sets it `true`. The session stays `isActive`, so the trace stays on the map. The list shows `Tracking stopped/finished` and the end time. That alias cannot start or resume. `#admin` shows **Clear all traces**, which deletes every tracking session and its points and clears `placement/current`.
 
 Subcollection: `trackingSessions/{sessionId}/points`
 
@@ -69,11 +69,12 @@ One alias, one active trace.
 A fresh load with no mode hash asks Rider or Viewer. Viewer sets `#viewing`. The bike button, or a load that already has `#tracking`, opens the name box. **Start Ride / Resume Tracing** calls GPS in that click, then:
 
 - No active trace for the typed alias: a new session is created and this page writes to it. The hash becomes `#tracking`.
+- Start and resume also write the alias as a `#rider=` token (URL-encoded). The name box is filled from that token.
 - An active trace exists and is not finished: writing continues on the oldest active session for that alias.
 - An active trace for that alias is finished: the name box shows `{alias} already finished the ride!` and does not write. The box then closes and the page stays a viewer.
 - This page is already writing: **Stop tracking** asks for a confirm, then sets `finished` and `endedAt` and stops this page's writer. The trace stays on the map. The list shows `Tracking stopped/finished` in green with the end time. The page becomes a viewer (`#viewing`).
 
-`#simulation` on the hash uses a generated fix instead of the device. Bearing is random, 0–360. Step length is left-weighted from 5 m to 50 m. From time to time a run of steps stays under 5 m, measured from the last stored point, so the writer skips them as slow. If the generator itself was idle for more than 20 s, the next fix is one step at that same riding speed across the whole gap. That point is stored, and the segment is dashed because the stored timestamps are more than 20 s apart. The fix still writes only for this page's active rider. The log under Active Riders shows meters, m/s, and `slow/no move skip`, `+30 m/s skip`, or `normal write`.
+`#simulation` on the hash uses a generated fix instead of the device. It runs only while a GPX route is drawn. Otherwise the start is refused and a notice says the simulation stopped. A new ride begins at the route start. One speed is picked for the ride, evenly between 10 and 25 km/h, and each fix advances that far along the route. A resume on a fresh page starts at the route vertex nearest the last stored point. The fix still writes only for this page's active rider. The log under Active Riders shows meters, m/s, and `slow/no move skip`, `+30 m/s skip`, or `normal write`.
 
 GPS loss, a dropped network, refresh, tab close, or locking the phone does not end the Firestore trace. The writer on this page stops. Open the name box and submit the alias again to continue it.
 
@@ -188,11 +189,28 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if true;
     }
+
+    match /placement/{placementId} {
+      allow read: if true;
+
+      allow create, update: if
+        placementId == 'current' &&
+        request.resource.data.keys().hasOnly(['order', 'locked', 'recordedAt']) &&
+        request.resource.data.order is list &&
+        request.resource.data.order.size() <= 100 &&
+        request.resource.data.order.join(',') is string &&
+        request.resource.data.locked is list &&
+        request.resource.data.locked.size() <= 100 &&
+        request.resource.data.locked.join(',') is string &&
+        request.resource.data.recordedAt == request.time;
+
+      allow delete: if false;
+    }
   }
 }
 ```
 
-Publish these in the Firebase console. A new field needs a rules change.
+Publish these in the Firebase console. The `placement` collection stays denied until this paste is published. Point writes do not need it.
 
 ## Basemap
 
@@ -218,7 +236,7 @@ The page sends `strict-origin-when-cross-origin`, so the tile request includes t
 ## Runtime
 
 - GPS is `getCurrentPosition` with `enableHighAccuracy`. The first call runs in the button click, before any Firestore `await`, or mobile browsers drop the permission prompt.
-- A point is written every 5 seconds while this page is the writer. A fix closer than 5 m to the last stored point is skipped. A fix is also skipped when that distance divided by the time since that point is over 30 m/s. The next fix is checked against that same stored point.
+- A point is written every 5 seconds while this page is the writer. A fix closer than 5 m to the last stored point is skipped. A fix is also skipped when that distance divided by the time since that point is over 30 m/s. The next fix is checked against that same stored point. After a stored point, while a GPX route is drawn, this page overwrites `placement/current` when the order or locks changed: `order` is every session id, first to last, by meters still left along the line, and `locked` keeps stopped riders in the index they held. **Stop tracking** appends that rider to `locked` on the same document. Cups on the map and in Active Riders come from that order: a cup plus the alias for the first three, then `4.th # Alias` and so on. Reaching the end of the line does not lock a place. Finished rides drop their points listener after the first full load; the line stays in memory. Until the placement rules are published, the point still stores and the placement write is denied.
 - The first fix on start or resume centers at zoom 17. Later points do not recenter. The top-left control recenters on this page's latest fix.
 - Portrait framing shifts the target up. Landscape shifts it left, clear of the panel.
 - Clicking a listed user with points centers on their last point.
