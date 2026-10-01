@@ -1,5 +1,5 @@
 (function () {
-  const REPLAY_SPEED = 60;
+  const REPLAY_SPEED = 120;
 
   // Lowest zoom the map allows.
   const ZOOM_MIN = 10;
@@ -480,7 +480,6 @@
 
   async function beginAliasTracking(ref, name) {
     hashRider = name;
-    localStorage.setItem("chaser_display_name", name);
     writeRouteHash(routeIdFromHash());
     setRiderPanelTitle(name);
     riderNameEl.disabled = true;
@@ -518,9 +517,11 @@
   }
 
   async function stopTracking() {
-    const name = sanitizeName(localStorage.getItem("chaser_display_name"));
     const sessionRef = activeSessionRef;
-    if (!name || !sessionRef) return;
+    if (!sessionRef) return;
+    const track = tracksBySessionId.get(sessionRef.id);
+    const name = sanitizeName(track && track.name);
+    if (!name) return;
 
     const confirmed = await showNotice(
       "Stop tracking {alias}? GPS Tracking will stop if the ride is finished. Your trace will stay on the map!",
@@ -540,7 +541,6 @@
       return;
     }
 
-    const track = tracksBySessionId.get(sessionRef.id);
     if (track) {
       track.finished = true;
       if (track.pointsReady) dropPointsListener(track);
@@ -724,7 +724,7 @@
         const seen = new Set();
 
         snapshot.forEach((doc) => {
-        const data = doc.data();
+          const data = doc.data();
           if (!isValidSessionRecord(doc.id, data)) return;
 
           seen.add(doc.id);
@@ -736,11 +736,11 @@
         });
 
         renderTracksAndPanel();
-      renderConnection(true, "online");
-    }, (error) => {
+        renderConnection(true, "online");
+      }, (error) => {
         console.error("Firestore sessions subscription error:", error);
-      renderConnection(false, "offline");
-    });
+        renderConnection(false, "offline");
+      });
   }
 
   function dropPointsListener(track) {
@@ -992,17 +992,18 @@
     const latest = points[points.length - 1];
     const lineStyle = {
       color: actor.source.color,
-      weight: 2,
+      weight: 1.5,
       opacity: 1,
       lineCap: "round",
-      lineJoin: "round"
+      lineJoin: "round",
+      interactive: false
     };
     actor.lines.clearLayers();
     actor.lines.addLayer(L.polyline(
       points.map((point) => [point.lat, point.lon]),
       {
         color: "#e0e0e0",
-        weight: 4,
+        weight: 2.5,
         opacity: 0.4,
         lineCap: "round",
         lineJoin: "round",
@@ -1029,6 +1030,11 @@
   function startReplay() {
     const sources = replaySources();
     if (!sources.length || replayActive) return;
+    const bounds = L.latLngBounds([]);
+    sources.forEach((source) => {
+      source.points.forEach((point) => bounds.extend([point.lat, point.lon]));
+    });
+    if (bounds.isValid()) frameGpx(bounds);
     replayActive = true;
     document.body.classList.add("is-replaying");
     document.getElementById("viewer-replay").setAttribute("aria-pressed", "true");
@@ -1103,12 +1109,14 @@
     if (!track.points.length) return;
 
     const latestPoint = track.points[track.points.length - 1];
+    const latLngs = track.points.map((point) => [point.lat, point.lon]);
     const lineStyle = {
       color: track.color,
-      weight: 2,
+      weight: 1.5,
       opacity: 1,
       lineCap: "round",
-      lineJoin: "round"
+      lineJoin: "round",
+      interactive: false
     };
 
     if (!track.lines) {
@@ -1117,18 +1125,38 @@
       track.lines.clearLayers();
     }
 
-    track.lines.addLayer(L.polyline(
-      track.points.map((point) => [point.lat, point.lon]),
+    track.lines.addLayer(L.polyline(latLngs, {
+      color: "#e0e0e0",
+      weight: 2.5,
+      opacity: 0.4,
+      lineCap: "round",
+      lineJoin: "round",
+      interactive: false
+    }));
+
+    const hit = L.polyline(latLngs, {
+      color: track.color,
+      weight: 14,
+      opacity: 0,
+      lineCap: "round",
+      lineJoin: "round",
+      interactive: true,
+      className: "trace-hit"
+    });
+    hit.on("mousedown click", (event) => {
+      L.DomEvent.preventDefault(event);
+      L.DomEvent.stopPropagation(event);
+    });
+    hit.bindTooltip(
+      `<span class="notice-alias" style="color:${track.color}">${escapeHtml(track.name)}</span>`,
       {
-        color: "#e0e0e0", // light grey
-        weight: 4,
-        opacity: 0.4,
-        lineCap: "round",
-        lineJoin: "round",
-        interactive: false
-   
+        sticky: true,
+        direction: "top",
+        opacity: 1,
+        className: "trace-hover-label"
       }
-    ));
+    );
+    track.lines.addLayer(hit);
 
     traceRuns(track.points).forEach((run) => {
       const style = run.dotted
@@ -1224,13 +1252,27 @@
     });
   }
 
+  function stemMetrics(name) {
+    const base = 56;
+    const key = aliasKey(name);
+    let hash = 2166136261;
+    for (let index = 0; index < key.length; index += 1) {
+      hash ^= key.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    const factor = 0.8 + (hash >>> 0) % 1001 / 1000 * 0.4;
+    const stem = Math.round(base * factor);
+    return { stem, labelBottom: stem + 8 };
+  }
+
   function traceMarkerIcon(name, color, mark = "") {
     const place = mark ? `<span class="chaser-place">${escapeHtml(mark)}</span>` : "";
+    const stem = stemMetrics(name);
     return L.divIcon({
       className: "chaser-marker-icon",
       html: `<span class="chaser-callout">
-        <span class="chaser-callout-label" style="color:${color}">${place}${escapeHtml(name)}</span>
-        <span class="chaser-callout-stem"></span>
+        <span class="chaser-callout-label" style="color:${color};bottom:${stem.labelBottom}px">${place}${escapeHtml(name)}</span>
+        <span class="chaser-callout-stem" style="height:${stem.stem}px"></span>
         <span class="chaser-user-marker" style="background:${color}"></span>
       </span>`,
       iconSize: [14, 14],
@@ -1289,11 +1331,27 @@
       return;
     }
 
+    const placeOrder = (placementCurrent && placementCurrent.order) || [];
+    const placeRank = new Map(placeOrder.map((id, index) => [id, index]));
+    const pinnedKey = activeSessionRef
+      ? null
+      : (hashRider ? aliasKey(hashRider) : null);
+
     const ordered = [...tracks].sort((a, b) => {
-      const aOwn = activeSessionRef && a.sessionId === activeSessionRef.id;
-      const bOwn = activeSessionRef && b.sessionId === activeSessionRef.id;
+      const aOwn = Boolean(
+        (activeSessionRef && a.sessionId === activeSessionRef.id) ||
+        (pinnedKey && aliasKey(a.name) === pinnedKey)
+      );
+      const bOwn = Boolean(
+        (activeSessionRef && b.sessionId === activeSessionRef.id) ||
+        (pinnedKey && aliasKey(b.name) === pinnedKey)
+      );
       if (aOwn !== bOwn) return aOwn ? -1 : 1;
-      return 0;
+
+      const aRank = placeRank.has(a.sessionId) ? placeRank.get(a.sessionId) : Number.POSITIVE_INFINITY;
+      const bRank = placeRank.has(b.sessionId) ? placeRank.get(b.sessionId) : Number.POSITIVE_INFINITY;
+      if (aRank !== bRank) return aRank - bRank;
+      return a.name.localeCompare(b.name);
     });
 
     const rows = ordered.map((track) => {
@@ -1301,17 +1359,21 @@
       const pointLabel = track.points.length === 1 ? "point" : "points";
       const finished = track.finished === true;
       const signalStale = finished ? false : signalStaleFor(track);
+      const own = Boolean(
+        (activeSessionRef && track.sessionId === activeSessionRef.id) ||
+        (pinnedKey && aliasKey(track.name) === pinnedKey)
+      );
 
       return {
         track,
         finished,
         signalStale,
-        own: Boolean(activeSessionRef && track.sessionId === activeSessionRef.id),
+        own,
         meta: `last timestamp: ${formatClock(updatedAtMs, true)} · start time: ${formatClock(track.startedAtMs, false)} · ${track.points.length} ${pointLabel}`
       };
     });
     const viewing = document.body.classList.contains("is-viewer");
-    const signature = `${viewing ? "view" : "ride"}|` + rows
+    const signature = `${viewing ? "view" : "ride"}|${placeOrder.join(",")}|` + rows
       .map((row) => `${row.track.sessionId}:${row.own}:${row.finished}:${row.track.endedAtMs || ""}:${row.signalStale}:${row.track.points.length}:${row.track.name}:${placeCups.get(row.track.sessionId) || ""}`)
       .join("|");
 
