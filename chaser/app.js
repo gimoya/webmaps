@@ -466,7 +466,7 @@
         }
       }
       await writePlacement([], []);
-    } catch (err) {
+      } catch (err) {
       console.error("Failed to clear tracking sessions:", err);
       await showNotice("Tracking sessions could not be cleared.");
     }
@@ -724,7 +724,7 @@
         const seen = new Set();
 
         snapshot.forEach((doc) => {
-          const data = doc.data();
+        const data = doc.data();
           if (!isValidSessionRecord(doc.id, data)) return;
 
           seen.add(doc.id);
@@ -736,11 +736,11 @@
         });
 
         renderTracksAndPanel();
-        renderConnection(true, "online");
-      }, (error) => {
+      renderConnection(true, "online");
+    }, (error) => {
         console.error("Firestore sessions subscription error:", error);
-        renderConnection(false, "offline");
-      });
+      renderConnection(false, "offline");
+    });
   }
 
   function dropPointsListener(track) {
@@ -1034,7 +1034,9 @@
     sources.forEach((source) => {
       source.points.forEach((point) => bounds.extend([point.lat, point.lon]));
     });
-    if (bounds.isValid()) frameGpx(bounds);
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [40, 40], animate: false });
+    }
     replayActive = true;
     document.body.classList.add("is-replaying");
     document.getElementById("viewer-replay").setAttribute("aria-pressed", "true");
