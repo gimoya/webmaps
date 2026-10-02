@@ -1,5 +1,5 @@
 (function () {
-  const REPLAY_SPEED = 120;
+  const REPLAY_DURATION_MS = 30 * 1000;
 
   // Lowest zoom the map allows.
   const ZOOM_MIN = 10;
@@ -24,6 +24,10 @@
   const SESSIONS_COLLECTION = "trackingSessions";
   const PLACEMENT_COLLECTION = "placement";
   const PLACEMENT_DOC = "current";
+  const ROUTES_COLLECTION = "routes";
+  const ROUTE_DOC = "current";
+  const EVENTS_COLLECTION = "events";
+  const EVENT_ID_MAX = 40;
   const PLACE_CUPS = ["🥇", "🥈", "🥉"];
 
   const userListEl = document.getElementById("user-list");
@@ -39,6 +43,15 @@
   const noticeMessage = document.getElementById("notice-dialog-message");
   const noticeConfirm = document.getElementById("notice-dialog-confirm");
   const noticeCancel = document.getElementById("notice-dialog-cancel");
+  const eventDialog = document.getElementById("event-dialog");
+  const eventListEl = document.getElementById("event-list");
+  const eventEmptyEl = document.getElementById("event-empty");
+  const eventAdminEl = document.getElementById("event-admin");
+  const eventNameEl = document.getElementById("event-name");
+  const eventCreateBtn = document.getElementById("event-create");
+  const eventPanelLine = document.getElementById("event-panel-line");
+  const eventPanelName = document.getElementById("event-panel-name");
+  const eventSwitchBtn = document.getElementById("event-switch");
   const entryDialog = document.getElementById("entry-dialog");
   const riderDialog = document.getElementById("rider-dialog");
   const riderForm = document.getElementById("rider-form");
@@ -51,14 +64,16 @@
   const entryRider = document.getElementById("entry-rider");
   const ENTRY_FEEDBACK_MS = 3000;
   let riderCloseTimer = null;
-  const routeList = document.getElementById("route-list");
   let noticeResolver = null;
-  let selectedRouteId = null;
-  let drawnRouteId = null;
   let routeLatLngs = null;
-  const routesById = new Map();
-  let routeListSignature = "";
+  let gpxLoadButton = null;
   const GPX_MAX_BYTES = 1024 * 1024 - 2048;
+  const eventsById = new Map();
+  let eventId = null;
+  let eventName = null;
+  let eventRef = null;
+  let eventsUnsubscribe = null;
+  let resolvingEvent = false;
 
   function hashTokens() {
     return window.location.hash.slice(1).split("#").filter(Boolean);
@@ -104,16 +119,31 @@
   }
 
   function modeFromHash() {
-    const raw = stripNamedSuffixes(withoutRider(window.location.hash.slice(1)), ["#admin", "#simulation"]);
-    if (raw === "viewing" || raw.endsWith("#viewing")) return "viewing";
-    if (raw === "tracking" || raw.endsWith("#tracking")) return "tracking";
+    const tokens = hashTokens();
+    if (tokens.includes("viewing")) return "viewing";
+    if (tokens.includes("tracking")) return "tracking";
     return null;
   }
 
-  function routeIdFromHash() {
-    const raw = stripHashSuffixes(withoutRider(window.location.hash.slice(1)));
-    if (!raw || raw === "infos" || raw === "admin" || raw === "simulation") return null;
-    return decodeURIComponent(raw);
+  function eventIdFromHash() {
+    const token = hashTokens().find((part) => (
+      part !== "infos" &&
+      part !== "admin" &&
+      part !== "simulation" &&
+      part !== "viewing" &&
+      part !== "tracking" &&
+      !part.startsWith("rider=")
+    ));
+    return token ? decodeURIComponent(token) : null;
+  }
+
+  function modeHashFragment() {
+    let fragment = eventId || eventIdFromHash() || "";
+    if (hashRider) fragment = fragment ? `${fragment}#rider=${encodeURIComponent(hashRider)}` : `rider=${encodeURIComponent(hashRider)}`;
+    if (pageMode) fragment = fragment ? `${fragment}#${pageMode}` : pageMode;
+    if (isSimulationMode()) fragment = fragment ? `${fragment}#simulation` : "simulation";
+    if (isAdminMode()) fragment = fragment ? `${fragment}#admin` : "admin";
+    return fragment;
   }
 
   function writePageUrl(hash) {
@@ -122,30 +152,29 @@
     params.set("lat", center.lat.toFixed(5));
     params.set("lng", center.lng.toFixed(5));
     params.set("z", String(map.getZoom()));
-    let fragment = hash == null ? window.location.hash.slice(1) : String(hash || "");
-    if (hash != null && fragment !== "infos") {
-      fragment = stripHashSuffixes(withoutRider(fragment));
-      if (hashRider) fragment = fragment ? `${fragment}#rider=${encodeURIComponent(hashRider)}` : `rider=${encodeURIComponent(hashRider)}`;
-      if (pageMode) fragment = fragment ? `${fragment}#${pageMode}` : pageMode;
-      if (isSimulationMode()) fragment = fragment ? `${fragment}#simulation` : "simulation";
-      if (isAdminMode()) fragment = fragment ? `${fragment}#admin` : "admin";
+    let fragment;
+    if (hash == null) {
+      fragment = window.location.hash.slice(1);
+      if (fragment === "infos") {
+        /* keep FAQ */
+      } else {
+        fragment = modeHashFragment();
+      }
+    } else if (String(hash) === "infos") {
+      fragment = "infos";
+    } else {
+      fragment = modeHashFragment();
     }
     const nextHash = fragment ? `#${fragment}` : "";
     history.replaceState(null, "", `${window.location.pathname}?${params}${nextHash}`);
-    routeInHash = routeIdFromHash();
   }
 
-  function writeRouteHash(id) {
-    writePageUrl(id || "");
-  }
-
-  let routeInHash = routeIdFromHash();
   let pageMode = modeFromHash();
   let hashRider = riderFromHash();
 
   function setPageMode(mode) {
     pageMode = mode;
-    writeRouteHash(routeIdFromHash());
+    writePageUrl("");
   }
 
   const togglePanelContent = () => {
@@ -156,14 +185,17 @@
   togglePanelContent();
   window.addEventListener("hashchange", () => {
     togglePanelContent();
-    const previousRoute = routeInHash;
+    if (window.location.hash === "#infos") return;
     pageMode = modeFromHash();
-    const tokens = hashTokens();
-    const onlyFlags = tokens.length > 0 && tokens.every((token) => token === "admin" || token === "simulation");
-    if (onlyFlags && previousRoute) writeRouteHash(previousRoute);
-    else {
-      hashRider = riderFromHash();
-      routeInHash = routeIdFromHash();
+    hashRider = riderFromHash();
+    const nextEvent = eventIdFromHash();
+    if (db && nextEvent !== eventId) {
+      resolveEventFromHash();
+      return;
+    }
+    if (!eventId) {
+      showEventPicker();
+      return;
     }
     if (pageMode === "viewing" && !activeSessionRef) {
       document.body.classList.add("is-viewer");
@@ -172,14 +204,11 @@
       entryDialog.hidden = true;
       openRiderBox();
     }
-    renderRouteList();
     syncAdminControls();
-    const id = routeIdFromHash();
-    if (id) selectRoute(id, { frame: !parseMapView() });
   });
   panelInfo.querySelector(".panel-info-close").addEventListener("click", (event) => {
     event.preventDefault();
-    writeRouteHash(selectedRouteId);
+    writePageUrl("");
     panelMain.hidden = false;
     panelInfo.hidden = true;
   });
@@ -207,17 +236,6 @@
 
   const gpxLayer = L.layerGroup().addTo(map);
   const tracksLayer = L.layerGroup().addTo(map);
-  renderRouteList();
-  routeList.addEventListener("click", (event) => {
-    const deleteBtn = event.target.closest(".route-delete");
-    if (deleteBtn) {
-      deleteRoute(deleteBtn.dataset.routeId);
-      return;
-    }
-    const item = event.target.closest("[data-route-id]");
-    if (!item) return;
-    selectRoute(item.dataset.routeId, { frame: true, force: true });
-  });
   const tracksBySessionId = new Map();
 
   let sessionsUnsubscribe = null;
@@ -235,15 +253,30 @@
   let urlSyncTimer = null;
   let db = null;
   let sessionsRef = null;
+  let placementCurrent = null;
+  let placeCups = new Map();
+  let replayActive = false;
+  let replayFrame = 0;
+  let replayLayer = null;
 
   addGpxLoadControl();
   addSessionCenterControl();
   watchGpsPermission();
   renderGpsStatus();
-  applyInitialMode();
   syncAdminControls();
   clearSessionsBtn.addEventListener("click", () => {
     clearAllTrackingSessions();
+  });
+  eventSwitchBtn.addEventListener("click", () => {
+    showEventPicker();
+  });
+  eventCreateBtn.addEventListener("click", () => {
+    createEventFromForm();
+  });
+  eventListEl.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-event-id]");
+    if (!button) return;
+    selectEvent(button.dataset.eventId);
   });
   wireEntryGate();
 
@@ -251,21 +284,211 @@
   if (!firebaseConfig) {
     renderConnection(false, "offline");
     console.warn("CHASER_FIREBASE_CONFIG missing. Realtime sync disabled.");
+    showEventPicker();
     return;
   }
 
   firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
-  sessionsRef = db.collection(SESSIONS_COLLECTION);
-
-  attachSessionsSubscription(sessionsRef);
-  attachRoutesSubscription(db);
-  attachPlacementSubscription(db);
+  attachEventsSubscription();
+  resolveEventFromHash();
   setInterval(() => {
+    if (!eventId) return;
     renderUserList(sortedTracks());
     refreshTracePopups();
   }, 5000);
   wireControls();
+
+  function eventSlug(name) {
+    return String(name || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, EVENT_ID_MAX);
+  }
+
+  function renderEventPanel() {
+    if (!eventId || !eventName) {
+      eventPanelLine.hidden = true;
+      eventPanelName.textContent = "";
+      return;
+    }
+    eventPanelLine.hidden = false;
+    eventPanelName.textContent = eventName;
+  }
+
+  function renderEventPickerList() {
+    const events = [...eventsById.values()].sort((a, b) => a.name.localeCompare(b.name));
+    eventListEl.replaceChildren();
+    events.forEach((event) => {
+      const item = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.eventId = event.id;
+      button.textContent = event.name;
+      button.title = event.id;
+      item.append(button);
+      eventListEl.append(item);
+    });
+    eventEmptyEl.hidden = events.length > 0;
+  }
+
+  function showEventPicker() {
+    entryDialog.hidden = true;
+    riderDialog.hidden = true;
+    eventAdminEl.hidden = !isAdminMode();
+    renderEventPickerList();
+    eventDialog.hidden = false;
+    syncAdminControls();
+  }
+
+  function hideEventPicker() {
+    eventDialog.hidden = true;
+  }
+
+  function attachEventsSubscription() {
+    eventsUnsubscribe = db.collection(EVENTS_COLLECTION).onSnapshot((snapshot) => {
+      eventsById.clear();
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (typeof data.name !== "string" || !data.name) return;
+        eventsById.set(doc.id, { id: doc.id, name: data.name });
+      });
+      renderEventPickerList();
+      if (eventId && !eventsById.has(eventId) && !resolvingEvent) {
+        teardownEventScope();
+        showEventPicker();
+      }
+    }, (error) => {
+      console.error("Firestore events subscription error:", error);
+      renderConnection(false, "offline");
+    });
+  }
+
+  async function resolveEventFromHash() {
+    if (!db || resolvingEvent) return;
+    resolvingEvent = true;
+    try {
+      const id = eventIdFromHash();
+      if (!id) {
+        if (eventId) teardownEventScope();
+        showEventPicker();
+        return;
+      }
+      if (id === eventId && eventRef) {
+        hideEventPicker();
+        syncAdminControls();
+        return;
+      }
+      const snap = await db.collection(EVENTS_COLLECTION).doc(id).get();
+      if (!snap.exists) {
+        if (eventId) teardownEventScope();
+        showEventPicker();
+        return;
+      }
+      await bindEvent(id, snap.data());
+      hideEventPicker();
+      applyInitialMode();
+    } finally {
+      resolvingEvent = false;
+    }
+  }
+
+  async function selectEvent(id) {
+    if (!db || !eventsById.has(id)) return;
+    const row = eventsById.get(id);
+    await bindEvent(id, { name: row.name });
+    hideEventPicker();
+    applyInitialMode();
+  }
+
+  async function createEventFromForm() {
+    if (!db || !isAdminMode()) return;
+    const name = String(eventNameEl.value || "").trim();
+    if (!name) {
+      await showNotice("Event name is missing.");
+      return;
+    }
+    if (name.length > 80) {
+      await showNotice("Event name is too long.");
+      return;
+    }
+    const id = eventSlug(name);
+    if (!id) {
+      await showNotice("Event name needs letters or numbers.");
+      return;
+    }
+    const ref = db.collection(EVENTS_COLLECTION).doc(id);
+    try {
+      const existing = await ref.get();
+      if (existing.exists) {
+        await showNotice("That event id already exists.");
+        return;
+      }
+      await ref.set({
+        name,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      eventNameEl.value = "";
+      await bindEvent(id, { name });
+      hideEventPicker();
+      applyInitialMode();
+    } catch (err) {
+      console.error("Failed to create event:", err);
+      await showNotice("Event could not be created.");
+    }
+  }
+
+  function teardownEventScope() {
+    clearWriter();
+    if (replayActive) stopReplay();
+    if (sessionsUnsubscribe) {
+      sessionsUnsubscribe();
+      sessionsUnsubscribe = null;
+    }
+    if (routesUnsubscribe) {
+      routesUnsubscribe();
+      routesUnsubscribe = null;
+    }
+    if (placementUnsubscribe) {
+      placementUnsubscribe();
+      placementUnsubscribe = null;
+    }
+    [...tracksBySessionId.keys()].forEach((sessionId) => removeTrack(sessionId));
+    clearCourse();
+    placementCurrent = null;
+    placeCups = new Map();
+    sessionsRef = null;
+    eventRef = null;
+    eventId = null;
+    eventName = null;
+    renderEventPanel();
+    renderTracksAndPanel();
+    syncAdminControls();
+  }
+
+  async function bindEvent(id, data) {
+    if (eventId === id && eventRef) {
+      writePageUrl("");
+      renderEventPanel();
+      syncAdminControls();
+      return;
+    }
+    if (eventId) teardownEventScope();
+    eventId = id;
+    eventName = typeof data.name === "string" ? data.name : id;
+    eventRef = db.collection(EVENTS_COLLECTION).doc(id);
+    sessionsRef = eventRef.collection(SESSIONS_COLLECTION);
+    writePageUrl("");
+    renderEventPanel();
+    attachSessionsSubscription(sessionsRef);
+    attachRoutesSubscription(eventRef);
+    attachPlacementSubscription(eventRef);
+    syncAdminControls();
+  }
 
   function wireEntryGate() {
     document.getElementById("entry-viewer").addEventListener("click", () => {
@@ -274,13 +497,25 @@
       setPageMode("viewing");
     });
     entryRider.addEventListener("click", () => {
+      if (!eventId) {
+        showEventPicker();
+        return;
+      }
       entryDialog.hidden = true;
       openRiderBox();
     });
     document.getElementById("viewer-ride").addEventListener("click", () => {
+      if (!eventId) {
+        showEventPicker();
+        return;
+      }
       openRiderBox();
     });
     document.getElementById("viewer-replay").addEventListener("click", () => {
+      if (!eventId) {
+        showEventPicker();
+        return;
+      }
       if (replayActive) stopReplay();
       else startReplay();
     });
@@ -299,8 +534,8 @@
         riderNameEl.focus();
         return;
       }
-      if (!sessionsRef) {
-        riderLog.textContent = "Firebase is not configured.";
+      if (!sessionsRef || !eventId) {
+        riderLog.textContent = eventId ? "Firebase is not configured." : "Pick an event first.";
         riderLog.hidden = false;
         return;
       }
@@ -431,7 +666,11 @@
   }
 
   function syncAdminControls() {
-    clearSessionsBtn.hidden = !isAdminMode();
+    const admin = isAdminMode();
+    const ready = Boolean(eventId);
+    clearSessionsBtn.hidden = !admin || !ready;
+    if (gpxLoadButton) gpxLoadButton.hidden = !admin || !ready;
+    if (eventAdminEl) eventAdminEl.hidden = !admin;
     simLogEl.hidden = !isSimulationMode();
   }
 
@@ -445,7 +684,7 @@
   }
 
   async function clearAllTrackingSessions() {
-    if (!db || !isAdminMode()) return;
+    if (!db || !eventRef || !isAdminMode()) return;
     const confirmed = await showNotice(
       "Clear all tracking sessions? Every trace will leave the map.",
       { confirmLabel: "Clear all", cancelLabel: "Cancel" }
@@ -454,7 +693,7 @@
 
     clearWriter();
     try {
-      const sessions = await db.collection(SESSIONS_COLLECTION).get();
+      const sessions = await eventRef.collection(SESSIONS_COLLECTION).get();
       for (const sessionDoc of sessions.docs) {
         const points = await sessionDoc.ref.collection("points").get();
         const refs = points.docs.map((doc) => doc.ref);
@@ -480,7 +719,7 @@
 
   async function beginAliasTracking(ref, name) {
     hashRider = name;
-    writeRouteHash(routeIdFromHash());
+    writePageUrl("");
     setRiderPanelTitle(name);
     riderNameEl.disabled = true;
     riderForm.querySelectorAll("button").forEach((button) => {
@@ -718,6 +957,7 @@
   }
 
   function attachSessionsSubscription(ref) {
+    if (sessionsUnsubscribe) sessionsUnsubscribe();
     sessionsUnsubscribe = ref
       .where("isActive", "==", true)
       .onSnapshot((snapshot) => {
@@ -817,9 +1057,6 @@
     return [...tracksBySessionId.values()].sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  let placementCurrent = null;
-  let placeCups = new Map();
-
   function stringList(value) {
     return Array.isArray(value) && value.every((item) => typeof item === "string") ? value : null;
   }
@@ -847,9 +1084,9 @@
     placeCups = marksFromOrder(placementCurrent && placementCurrent.order);
   }
 
-  function attachPlacementSubscription(firestore) {
+  function attachPlacementSubscription(scopeRef) {
     if (placementUnsubscribe) placementUnsubscribe();
-    placementUnsubscribe = firestore.collection(PLACEMENT_COLLECTION).doc(PLACEMENT_DOC).onSnapshot((doc) => {
+    placementUnsubscribe = scopeRef.collection(PLACEMENT_COLLECTION).doc(PLACEMENT_DOC).onSnapshot((doc) => {
       placementCurrent = doc.exists ? placementFromData(doc.data()) : null;
       applyLivePlacement();
       renderTracksAndPanel();
@@ -916,6 +1153,7 @@
   }
 
   async function writePlacement(order, locked) {
+    if (!eventRef) return;
     if (
       placementCurrent &&
       sameStringList(placementCurrent.order, order) &&
@@ -923,7 +1161,7 @@
     ) {
       return;
     }
-    await db.collection(PLACEMENT_COLLECTION).doc(PLACEMENT_DOC).set({
+    await eventRef.collection(PLACEMENT_COLLECTION).doc(PLACEMENT_DOC).set({
       order,
       locked,
       recordedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -951,10 +1189,6 @@
     tracks.forEach(renderTrack);
     renderUserList(tracks);
   }
-
-  let replayActive = false;
-  let replayFrame = 0;
-  let replayLayer = null;
 
   function hideLiveTraceLayers() {
     tracksBySessionId.forEach((track) => {
@@ -1030,6 +1264,12 @@
   function startReplay() {
     const sources = replaySources();
     if (!sources.length || replayActive) return;
+    let longestMs = 0;
+    sources.forEach((source) => {
+      const durationMs = source.points[source.points.length - 1].recordedAtMs - source.t0;
+      if (durationMs > longestMs) longestMs = durationMs;
+    });
+    const replaySpeed = longestMs / REPLAY_DURATION_MS;
     const bounds = L.latLngBounds([]);
     sources.forEach((source) => {
       source.points.forEach((point) => bounds.extend([point.lat, point.lon]));
@@ -1053,7 +1293,7 @@
 
     const frame = (now) => {
       if (!replayActive) return;
-      const elapsed = (now - started) * REPLAY_SPEED;
+      const elapsed = (now - started) * replaySpeed;
       let finished = true;
       let moved = false;
       actors.forEach((actor) => {
@@ -1609,175 +1849,34 @@
     renderTracksAndPanel();
   }
 
-  function capLetters(text, max) {
-    if (text.length <= max) return text;
-    return `${text.slice(0, max)}...`;
+  function clearCourse() {
+    gpxLayer.clearLayers();
+    routeLatLngs = null;
+    renderTracksAndPanel();
   }
 
-  function renderRouteList() {
-    const routes = [...routesById.values()].sort((a, b) => a.name.localeCompare(b.name));
-    const signature = [
-      isAdminMode() ? "admin" : "view",
-      ...routes.map((route) => `${route.id}\t${route.name}`)
-    ].join("\n");
-
-    if (signature !== routeListSignature) {
-      const scrollTop = routeList.scrollTop;
-      routeListSignature = signature;
-      routeList.replaceChildren();
-      if (!routes.length) {
-        const empty = document.createElement("li");
-        empty.className = "route-empty";
-        empty.textContent = "no routes yet - upload one";
-        routeList.append(empty);
-      } else {
-        routes.forEach((route) => {
-          const item = document.createElement("li");
-          item.className = "route-row";
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "route-item";
-          button.dataset.routeId = route.id;
-          button.textContent = capLetters(route.name, 25);
-          button.title = route.name;
-          item.append(button);
-          if (isAdminMode()) {
-            const del = document.createElement("button");
-            del.type = "button";
-            del.className = "route-delete";
-            del.dataset.routeId = route.id;
-            del.title = "Delete route";
-            del.textContent = "Del";
-            item.append(del);
-          }
-          routeList.append(item);
-        });
-      }
-      routeList.scrollTop = scrollTop;
-    }
-
-    routeList.querySelectorAll(".route-item").forEach((button) => {
-      button.classList.toggle("is-selected", button.dataset.routeId === selectedRouteId);
-    });
-  }
-
-  async function deleteRoute(id) {
-    const route = routesById.get(id);
-    if (!route || !db || !isAdminMode()) return;
-    const confirmed = await showNotice(`Delete route: ${route.name}?`, {
-      confirmLabel: "Delete",
-      cancelLabel: "Cancel"
-    });
-    if (!confirmed) return;
-
-    try {
-      await db.runTransaction(async (transaction) => {
-        const counterRef = db.collection("routes").doc("counter");
-        const counterSnap = await transaction.get(counterRef);
-        const routeRef = db.collection("routes").doc(id);
-        const routeSnap = await transaction.get(routeRef);
-        if (!routeSnap.exists) throw new Error("Route is already gone.");
-
-        let next = null;
-        if (counterSnap.exists) {
-          next = counterSnap.data().next;
-          if (!Number.isInteger(next) || next < 1) {
-            throw new Error("Route counter is invalid.");
-          }
-        }
-
-        const snaps = [];
-        if (next != null) {
-          for (let n = 1; n < next; n += 1) {
-            if (`route_${n}` === id) continue;
-            snaps.push(transaction.get(db.collection("routes").doc(`route_${n}`)));
-          }
-        }
-        const existing = await Promise.all(snaps);
-
-        transaction.delete(routeRef);
-        if (next == null) return;
-
-        let max = 0;
-        existing.forEach((snap) => {
-          if (!snap.exists) return;
-          const match = /^route_([1-9][0-9]*)$/.exec(snap.id);
-          if (!match) return;
-          const n = Number(match[1]);
-          if (n > max) max = n;
-        });
-        const newNext = max + 1;
-        if (newNext !== next) transaction.set(counterRef, { next: newNext });
-      });
-    } catch (err) {
-      console.error("Failed to delete route:", err);
-      await showNotice("Route could not be deleted.");
+  function applyRouteDoc(data, frame) {
+    if (!data || typeof data.gpx !== "string" || !data.gpx) {
+      clearCourse();
       return;
     }
-
-    if (selectedRouteId === id) {
-      gpxLayer.clearLayers();
-      selectedRouteId = null;
-      drawnRouteId = null;
-      routeLatLngs = null;
-      renderTracksAndPanel();
+    const parsed = parseGpx(data.gpx);
+    if (parsed.error) {
+      console.error("Stored GPX could not be parsed:", parsed.error);
+      clearCourse();
+      return;
     }
-    renderRouteList();
+    if (typeof data.name === "string" && data.name) parsed.name = data.name;
+    drawCourse(parsed, frame);
   }
 
-  function attachRoutesSubscription(firestore) {
-    let reportedMissingRouteId = "";
-    routesUnsubscribe = firestore.collection("routes").onSnapshot((snapshot) => {
-      routesById.clear();
-      snapshot.forEach((doc) => {
-        if (doc.id === "counter") return;
-        const data = doc.data();
-        if (typeof data.name !== "string" || !data.name) return;
-        routesById.set(doc.id, { id: doc.id, name: data.name });
-      });
-      renderRouteList();
-      const id = routeIdFromHash();
-      if (!id) return;
-      if (!routesById.has(id)) {
-        if (reportedMissingRouteId !== id) {
-          reportedMissingRouteId = id;
-          showNotice("That route is not in the list.");
-        }
-        return;
-      }
-      reportedMissingRouteId = "";
-      if (drawnRouteId !== id) selectRoute(id, { frame: !parseMapView() });
+  function attachRoutesSubscription(scopeRef) {
+    if (routesUnsubscribe) routesUnsubscribe();
+    routesUnsubscribe = scopeRef.collection(ROUTES_COLLECTION).doc(ROUTE_DOC).onSnapshot((doc) => {
+      applyRouteDoc(doc.exists ? doc.data() : null, !parseMapView() && !routeLatLngs);
     }, (error) => {
       console.error("Firestore routes subscription error:", error);
     });
-  }
-
-  async function selectRoute(id, options) {
-    const route = routesById.get(id);
-    if (!route || !db) return;
-    selectedRouteId = id;
-    writeRouteHash(id);
-    renderRouteList();
-    if (drawnRouteId === id && !options.force) return;
-
-    try {
-      const snap = await db.collection("routes").doc(id).get();
-      const gpx = snap.exists ? snap.data().gpx : "";
-      if (typeof gpx !== "string" || !gpx) {
-        await showNotice("GPX could not be loaded.");
-        return;
-      }
-      const parsed = parseGpx(gpx);
-      if (parsed.error) {
-        await showNotice(parsed.error);
-        return;
-      }
-      drawCourse(parsed, options.frame);
-      drawnRouteId = id;
-      } catch (err) {
-      console.error("Failed to load route GPX:", err);
-      await showNotice("GPX could not be loaded.");
-    }
   }
 
   function readGpxFile(file) {
@@ -1790,6 +1889,7 @@
   }
 
   async function uploadGpxFile(file) {
+    if (!isAdminMode() || !eventRef) return;
     if (!db) {
       await showNotice("Firebase is not configured.");
       return;
@@ -1825,23 +1925,11 @@
       return;
     }
 
-    const counterRef = db.collection("routes").doc("counter");
-    let routeId = "";
     try {
-      routeId = await db.runTransaction(async (transaction) => {
-        const snap = await transaction.get(counterRef);
-        const next = snap.exists ? snap.data().next : 1;
-        if (!Number.isInteger(next) || next < 1) {
-          throw new Error("Route counter is invalid.");
-        }
-        const id = `route_${next}`;
-        transaction.set(counterRef, { next: next + 1 });
-        transaction.set(db.collection("routes").doc(id), {
-          name: parsed.name,
-          gpx: gpxText,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        return id;
+      await eventRef.collection(ROUTES_COLLECTION).doc(ROUTE_DOC).set({
+        name: parsed.name,
+        gpx: gpxText,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     } catch (err) {
       console.error("Failed to store GPX:", err);
@@ -1849,28 +1937,28 @@
       return;
     }
 
-    routesById.set(routeId, { id: routeId, name: parsed.name });
     drawCourse(parsed, true);
-    drawnRouteId = routeId;
-    selectedRouteId = routeId;
-    writeRouteHash(routeId);
-    renderRouteList();
   }
 
   function addGpxLoadControl() {
     const button = addBarButton("gpx-load-control");
     const input = L.DomUtil.create("input", "", map.getContainer());
+    gpxLoadButton = button;
 
     button.classList.add("gpx-load-btn");
     button.title = "Load GPX Route";
     button.setAttribute("aria-label", "Load GPX");
+    button.hidden = !isAdminMode();
     button.innerHTML = '<svg class="gpx-load-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l5 5h-3v6h-4V8H7l5-5zm-7 14h14v2H5v-2z"></path></svg>';
     input.type = "file";
     input.accept = ".gpx,application/gpx+xml,application/xml,text/xml";
     input.hidden = true;
 
     L.DomEvent.on(button, "click", L.DomEvent.stop)
-      .on(button, "click", () => input.click());
+      .on(button, "click", () => {
+        if (!isAdminMode()) return;
+        input.click();
+      });
     input.addEventListener("change", () => {
       const file = input.files && input.files[0];
       input.value = "";

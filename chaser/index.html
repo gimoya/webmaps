@@ -33,14 +33,11 @@
           <header class="panel-header">
             <h1>GPS 📡 Chaser<sup><a href="#infos" class="info-link" title="FAQs">ⓘ</a></sup></h1>
             <h2>Simplistic Live Multi-User Map</h2>
+            <p id="event-panel-line" class="event-panel-line" hidden>
+              <span id="event-panel-name"></span>
+              <button id="event-switch" type="button" class="ghost">Switch event</button>
+            </p>
           </header>
-
-          <details class="panel-collapse" id="collapse-routes">
-            <summary class="panel-collapse-header">Routes</summary>
-            <div class="panel-collapse-body">
-              <ul id="route-list" class="route-list"></ul>
-            </div>
-          </details>
 
           <section class="panel-section panel-controls">
             <h3 id="rider-panel-title">Rider</h3>
@@ -71,20 +68,26 @@
             <a href="#" class="panel-info-close" title="Close">×</a>
           </div>
           <dl class="info-faq">
+
+            <dt>Start & stop riding</dt>
+            <dd>after klicking the 'Biker Icon' the button 'Start/Resume' begins or resumes your trace. Stop ends the ride and leaves the trace on the map. Caution (!): That name/alias cannot start again! Caution (!): If you want a ranking on a loaded route, you need to stop your ride to fix your placement!</dd>
+
             <dt>Logging</dt>
-            <dd>As long as you keep this page open, given that you permitted GPS Sensor usage, you location will be logged. A Refresh, close, or a locked screen stops logging and you will be asked to resum when you come back to page.</dd>
+            <dd>As long as you keep this page open and online and given, that you permitted GPS Sensor usage, you location will be logged! A refresh, close or a locked screen stops logging and you will be asked to resume when you come back to page.</dd>
 
             <dt>Name</dt>
-            <dd>Use your own unique name or alias. Caution (!): A name or alias someone of seomone else would mix into their trace!</dd>
+            <dd>Use your own unique name or alias. Caution (!): A name or alias that seomone else has already in use, then you would mix into their trace and don't have your own!</dd>
 
-            <dt>Start and stop</dt>
-            <dd>after klicking the 'Biker Icon' the button 'Start/Resume' begins or resumes your trace. Stop ends the ride and leaves the trace on the map. Caution (!): That name/alias cannot start again!</dd>
+            <dt>Events</dt>
+            <dd>Pick an event before riding or viewing. The event id is the first part of the URL hash. With #admin you can create events and upload the course GPX for that event.</dd>
+
+            <dt>Routes</dt>
+            <dd>With #admin, the map upload button stores a GPX on the selected event and overwrites that event's course.</dd>
 
             <dt>Points</dt>
             <dd>A point is stored about every 5 s if you moved at least 5 m. If you move slowly (less than 5 m in 5 s) or when you have the browser closed and dont write your locations, other viewers see 'Tracking paused'.</dd>
 
-            <dt>Routes</dt>
-            <dd>Open Routes and pick one. The upload button adds a GPX Route.</dd>
+
           </dl>
         </div>
       </div>
@@ -100,12 +103,26 @@
         <path fill="currentColor" d="M6 6h12v12H6z"/>
       </svg>
     </button>
-    <p class="viewer-replay-label" aria-hidden="true">Fast forward replay</p>
+    <p class="viewer-replay-label" aria-hidden="true">&#x23ED; replay</p>
     <button id="viewer-ride" class="viewer-ride" type="button" title="Start your Ride" aria-label="Start your Ride">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path fill="currentColor" d="M15.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM5 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5zm5.8-10 2.4-2.4.8.8c1.3 1.3 3 2.1 5.1 2.1V9c-1.5 0-2.7-.6-3.6-1.5l-1.9-1.9c-.5-.4-1-.6-1.6-.6s-1.1.2-1.4.6L7.8 8.4c-.4.4-.6.9-.6 1.4 0 .6.2 1.1.6 1.4L11 14v5h2v-6.2l-2.2-2.3zM19 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5z"/>
       </svg>
     </button>
+
+  <div id="event-dialog" class="notice-dialog" hidden>
+    <div class="notice-dialog-card" role="dialog" aria-modal="true" aria-labelledby="event-dialog-title">
+      <p id="event-dialog-title">Pick an event</p>
+      <ul id="event-list" class="event-list"></ul>
+      <p id="event-empty" class="event-empty" hidden>No events yet.</p>
+      <div id="event-admin" class="event-admin" hidden>
+        <input id="event-name" type="text" maxlength="80" placeholder="New event name" autocomplete="off">
+        <div class="notice-dialog-actions">
+          <button id="event-create" type="button">Create event</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div id="entry-dialog" class="notice-dialog" hidden>
     <div class="notice-dialog-card">

@@ -5,12 +5,13 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 ## What it does
 
 - Tracestrack topo basemap
-- Course overlay from a GPX the user uploads. The file is stored on the `routes` document. The chosen route id stays in the URL hash.
-- One live trace per alias. Case does not distinguish (`Kay` and `kay` are the same)
+- Events scope all live data. The event id is the first URL hash token (`#event-id#viewing`). Missing or unknown event forces a picker. `#admin` can create events.
+- Course overlay from a GPX that `#admin` uploads into the selected event (`events/{eventId}/routes/current`). Every client on that event draws it when it exists.
+- One live trace per alias per event. Case does not distinguish (`Kay` and `kay` are the same)
 - Last point shows the alias on a white stem, plus a dashed accuracy ring in the alias color. A finished ride drops the ring.
 - Alias labels shrink below zoom 14
 - Click the map to fade the panel. The ⓘ box brings it back
-- A fresh load asks Rider or Viewer. **Start Ride / Resume Tracing** starts or continues a trace that is not finished. **Stop tracking** stops this page's writer and finishes the ride. The trace stays on the map.
+- After an event is chosen, a fresh load asks Rider or Viewer. **Start Ride / Resume Tracing** starts or continues a trace that is not finished. **Stop tracking** stops this page's writer and finishes the ride. The trace stays on the map.
 
 ## Project files
 
@@ -32,7 +33,20 @@ If that object is missing, the map still loads. Route storage and live traces st
 
 ## Firestore data model
 
-Collection: `trackingSessions`
+Collection: `events`
+
+- Document id = slug from the event name (lowercase, hyphens, max 40).
+- `name` (display name)
+- `createdAt` (server timestamp)
+
+Everything live sits under an event:
+
+```text
+events/{eventId}/routes/current
+events/{eventId}/placement/current
+events/{eventId}/trackingSessions/{sessionId}
+events/{eventId}/trackingSessions/{sessionId}/points/{pointId}
+```
 
 Session fields:
 
@@ -40,9 +54,7 @@ Session fields:
 - `isActive` (boolean)
 - `startedAt` (server timestamp)
 - `endedAt` (server timestamp or `null`). **Stop tracking** sets it. The finished list line shows that time.
-- `finished` (boolean). `false` when the session is created. **Stop tracking** sets it `true`. The session stays `isActive`, so the trace stays on the map. The list shows `Tracking stopped/finished` and the end time. That alias cannot start or resume. `#admin` shows **Clear all traces**, which deletes every tracking session and its points and clears `placement/current`.
-
-Subcollection: `trackingSessions/{sessionId}/points`
+- `finished` (boolean). `false` when the session is created. **Stop tracking** sets it `true`. The session stays `isActive`, so the trace stays on the map. The list shows `Tracking stopped/finished` and the end time. That alias cannot start or resume in this event. `#admin` shows **Clear all traces**, which deletes every tracking session and its points in this event and clears that event's `placement/current`.
 
 Point fields:
 
@@ -51,28 +63,27 @@ Point fields:
 
 The client matches aliases with trim + lowercase. That does not add a field. Lookup loads active sessions and filters in the browser. The color is a hash of that same key, so both spellings share a color. The name drawn on the map is the casing stored on the document.
 
-Collection: `routes`
+Route document `events/{eventId}/routes/current`:
 
-- Document id `route_1`, `route_2`, `route_3`, … The hash is that id.
 - `name` (the uploaded file name, without `.gpx`)
 - `gpx` (the file text)
 - `createdAt` (server timestamp)
 
-`routes/counter` stores `{ next }`, the next number to assign. An upload reads it and writes the route in one transaction. The list skips that document. `#admin` shows a delete button on each route. That delete removes the route and sets `next` to one higher than the highest `route_N` still stored, or `1` when none remain. Deleting an older route leaves `next` where it is.
+`#admin` shows the map upload control while an event is selected. Upload overwrites that event's `routes/current`.
 
-One document is at most 1 MiB. Vertices closer than 10 m are dropped first, and the stored file is that GPX. The upload refuses it when the result would not fit beside `name` and `createdAt`. Opening a route reads that document's `gpx`.
+One route document is at most 1 MiB. Vertices closer than 10 m are dropped first, and the stored file is that GPX. The upload refuses it when the result would not fit beside `name` and `createdAt`.
 
 ## Trace lifecycle
 
-One alias, one active trace.
+One alias, one active trace per event.
 
-A fresh load with no mode hash asks Rider or Viewer. Viewer sets `#viewing`. The bike button, or a load that already has `#tracking`, opens the name box. **Start Ride / Resume Tracing** calls GPS in that click, then:
+A load with no event id (or an unknown id) opens the event picker. `#admin` can create an event there. After an event is bound, a load with no mode hash asks Rider or Viewer. Viewer sets `#eventId#viewing`. The bike button, or a load that already has `#tracking`, opens the name box. **Start Ride / Resume Tracing** calls GPS in that click, then:
 
-- No active trace for the typed alias: a new session is created and this page writes to it. The hash becomes `#tracking`.
+- No active trace for the typed alias: a new session is created and this page writes to it. The hash becomes `#eventId#tracking`.
 - Start and resume also write the alias as a `#rider=` token (URL-encoded). The name box is filled from that token.
 - An active trace exists and is not finished: writing continues on the oldest active session for that alias.
 - An active trace for that alias is finished: the name box shows `{alias} already finished the ride!` and does not write. The box then closes and the page stays a viewer.
-- This page is already writing: **Stop tracking** asks for a confirm, then sets `finished` and `endedAt` and stops this page's writer. The trace stays on the map. The list shows `Tracking stopped/finished` in green with the end time. The page becomes a viewer (`#viewing`).
+- This page is already writing: **Stop tracking** asks for a confirm, then sets `finished` and `endedAt` and stops this page's writer. The trace stays on the map. The list shows `Tracking stopped/finished` in green with the end time. The page becomes a viewer (`#eventId#viewing`).
 
 `#simulation` on the hash uses a generated fix instead of the device. It runs only while a GPX route is drawn. Otherwise the start is refused and a notice says the simulation stopped. A new ride begins at the route start. One speed is picked for the ride, evenly between 10 and 25 km/h, and each fix advances that far along the route. A resume on a fresh page starts at the route vertex nearest the last stored point. The fix still writes only for this page's active rider. The log under Active Riders shows meters, m/s, and `slow/no move skip`, `+30 m/s skip`, or `normal write`.
 
@@ -80,137 +91,128 @@ GPS loss, a dropped network, refresh, tab close, or locking the phone does not e
 
 ## Firestore rules
 
-Public unauthenticated reads. Writes are validated. Anyone with the project config can read tracks, append points to an active trace that is not finished, or mark one finished.
+Public unauthenticated reads. Writes are validated. Anyone with the project config can read tracks, append points to an active trace that is not finished, or mark one finished. Live paths are under `events/{eventId}`.
 
 ```txt
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /trackingSessions/{sessionId} {
+    match /events/{eventId} {
       allow read: if true;
 
-      allow create: if
-        request.resource.data.keys().hasOnly([
-          'name', 'isActive', 'startedAt', 'endedAt', 'finished'
-        ]) &&
+      allow create, update: if
+        request.resource.data.keys().hasOnly(['name', 'createdAt']) &&
         request.resource.data.name is string &&
         request.resource.data.name.size() >= 1 &&
-        request.resource.data.name.size() <= 30 &&
-        request.resource.data.isActive == true &&
-        request.resource.data.startedAt == request.time &&
-        request.resource.data.endedAt == null &&
-        request.resource.data.finished == false;
-
-      allow update: if
-        resource.data.isActive == true &&
-        resource.data.finished != true &&
-        (
-          (
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'finished', 'endedAt'
-            ]) &&
-            request.resource.data.finished == true &&
-            request.resource.data.endedAt == request.time
-          ) ||
-          (
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'isActive', 'endedAt'
-            ]) &&
-            request.resource.data.isActive == false &&
-            request.resource.data.endedAt == request.time
-          )
-        );
+        request.resource.data.name.size() <= 80 &&
+        request.resource.data.createdAt is timestamp;
 
       allow delete: if true;
 
-      match /points/{pointId} {
+      match /trackingSessions/{sessionId} {
         allow read: if true;
 
         allow create: if
           request.resource.data.keys().hasOnly([
-            'lat', 'lon', 'accuracy', 'recordedAt'
+            'name', 'isActive', 'startedAt', 'endedAt', 'finished'
           ]) &&
-          request.resource.data.lat is number &&
-          request.resource.data.lat >= -90 &&
-          request.resource.data.lat <= 90 &&
-          request.resource.data.lon is number &&
-          request.resource.data.lon >= -180 &&
-          request.resource.data.lon <= 180 &&
-          request.resource.data.accuracy is number &&
-          request.resource.data.accuracy >= 0 &&
-          request.resource.data.recordedAt == request.time &&
-          get(
-            /databases/$(database)/documents/trackingSessions/$(sessionId)
-          ).data.isActive == true &&
-          get(
-            /databases/$(database)/documents/trackingSessions/$(sessionId)
-          ).data.finished != true;
+          request.resource.data.name is string &&
+          request.resource.data.name.size() >= 1 &&
+          request.resource.data.name.size() <= 30 &&
+          request.resource.data.isActive == true &&
+          request.resource.data.startedAt is timestamp &&
+          (
+            request.resource.data.endedAt == null ||
+            request.resource.data.endedAt is timestamp
+          ) &&
+          request.resource.data.finished is bool;
 
-        allow update: if false;
+        allow update: if
+          resource.data.isActive == true &&
+          resource.data.finished != true &&
+          (
+            (
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'finished', 'endedAt'
+              ]) &&
+              request.resource.data.finished == true &&
+              request.resource.data.endedAt is timestamp
+            ) ||
+            (
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'isActive', 'endedAt'
+              ]) &&
+              request.resource.data.isActive == false &&
+              request.resource.data.endedAt is timestamp
+            )
+          );
+
+        allow delete: if true;
+
+        match /points/{pointId} {
+          allow read: if true;
+
+          allow create: if
+            request.resource.data.keys().hasOnly([
+              'lat', 'lon', 'accuracy', 'recordedAt'
+            ]) &&
+            request.resource.data.lat is number &&
+            request.resource.data.lat >= -90 &&
+            request.resource.data.lat <= 90 &&
+            request.resource.data.lon is number &&
+            request.resource.data.lon >= -180 &&
+            request.resource.data.lon <= 180 &&
+            request.resource.data.accuracy is number &&
+            request.resource.data.accuracy >= 0 &&
+            request.resource.data.recordedAt is timestamp &&
+            get(
+              /databases/$(database)/documents/events/$(eventId)/trackingSessions/$(sessionId)
+            ).data.isActive == true;
+
+          allow update: if false;
+          allow delete: if true;
+        }
+      }
+
+      match /routes/current {
+        allow read: if true;
+
+        allow create, update: if
+          request.resource.data.keys().hasOnly(['name', 'gpx', 'createdAt']) &&
+          request.resource.data.name is string &&
+          request.resource.data.name.size() >= 1 &&
+          request.resource.data.name.size() <= 200 &&
+          request.resource.data.gpx is string &&
+          request.resource.data.gpx.size() >= 1 &&
+          request.resource.data.gpx.size() <= 1000000 &&
+          request.resource.data.createdAt is timestamp;
+
         allow delete: if true;
       }
-    }
 
-    match /routes/counter {
-      allow read: if true;
+      match /placement/{placementId} {
+        allow read: if true;
 
-      allow create: if
-        request.resource.data.keys().hasOnly(['next']) &&
-        request.resource.data.next == 2;
+        allow create, update: if
+          placementId == 'current' &&
+          request.resource.data.keys().hasOnly(['order', 'locked', 'recordedAt']) &&
+          request.resource.data.order is list &&
+          request.resource.data.order.size() <= 100 &&
+          request.resource.data.order.join(',') is string &&
+          request.resource.data.locked is list &&
+          request.resource.data.locked.size() <= 100 &&
+          request.resource.data.locked.join(',') is string &&
+          request.resource.data.recordedAt is timestamp;
 
-      allow update: if
-        request.resource.data.keys().hasOnly(['next']) &&
-        request.resource.data.next is int &&
-        resource.data.next is int &&
-        request.resource.data.next >= 1 &&
-        (
-          request.resource.data.next == resource.data.next + 1 ||
-          request.resource.data.next < resource.data.next
-        );
-
-      allow delete: if false;
-    }
-
-    match /routes/{routeId} {
-      allow read: if true;
-
-      allow create: if
-        routeId.matches('^route_[1-9][0-9]*$') &&
-        request.resource.data.keys().hasOnly(['name', 'gpx', 'createdAt']) &&
-        request.resource.data.name is string &&
-        request.resource.data.name.size() >= 1 &&
-        request.resource.data.name.size() <= 200 &&
-        request.resource.data.gpx is string &&
-        request.resource.data.gpx.size() >= 1 &&
-        request.resource.data.gpx.size() <= 1000000 &&
-        request.resource.data.createdAt == request.time;
-
-      allow update: if false;
-      allow delete: if true;
-    }
-
-    match /placement/{placementId} {
-      allow read: if true;
-
-      allow create, update: if
-        placementId == 'current' &&
-        request.resource.data.keys().hasOnly(['order', 'locked', 'recordedAt']) &&
-        request.resource.data.order is list &&
-        request.resource.data.order.size() <= 100 &&
-        request.resource.data.order.join(',') is string &&
-        request.resource.data.locked is list &&
-        request.resource.data.locked.size() <= 100 &&
-        request.resource.data.locked.join(',') is string &&
-        request.resource.data.recordedAt == request.time;
-
-      allow delete: if false;
+        allow delete: if false;
+      }
     }
   }
 }
 ```
 
-Publish these in the Firebase console. The `placement` collection stays denied until this paste is published. Point writes do not need it.
+Publish these in the Firebase console. Event create, route overwrite, placement, and point writes all need this paste.
 
 ## Basemap
 
@@ -228,15 +230,16 @@ The page sends `strict-origin-when-cross-origin`, so the tile request includes t
 
 1. Serve the repo over localhost or HTTPS.
 2. Open `chaser/`.
-3. Choose Rider, or Viewer and then the bike button.
-4. Enter an alias and click **Start Ride / Resume Tracing**. Allow location.
-5. Open the page on another device to see the live trace.
-6. Click **Stop tracking** and confirm. This page stops writing and switches to viewer. The trace stays on the map with `Tracking stopped/finished` and the end time. That alias cannot start again.
+3. Pick an event (or `#admin` create one). Share links look like `#event-id#viewing`.
+4. Choose Rider, or Viewer and then the bike button.
+5. Enter an alias and click **Start Ride / Resume Tracing**. Allow location.
+6. Open the page on another device with the same event hash to see the live trace.
+7. Click **Stop tracking** and confirm. This page stops writing and switches to viewer. The trace stays on the map with `Tracking stopped/finished` and the end time. That alias cannot start again in this event.
 
 ## Runtime
 
 - GPS is `getCurrentPosition` with `enableHighAccuracy`. The first call runs in the button click, before any Firestore `await`, or mobile browsers drop the permission prompt.
-- A point is written every 5 seconds while this page is the writer. A fix closer than 5 m to the last stored point is skipped. A fix is also skipped when that distance divided by the time since that point is over 30 m/s. The next fix is checked against that same stored point. After a stored point, while a GPX route is drawn, this page overwrites `placement/current` when the order or locks changed: `order` is every session id, first to last, by meters still left along the line, and `locked` keeps stopped riders in the index they held. **Stop tracking** appends that rider to `locked` on the same document. Cups on the map and in Active Riders come from that order: a cup plus the alias for the first three, then `4.th # Alias` and so on. Reaching the end of the line does not lock a place. Finished rides drop their points listener after the first full load; the line stays in memory. Until the placement rules are published, the point still stores and the placement write is denied.
+- A point is written every 5 seconds while this page is the writer. A fix closer than 5 m to the last accepted point is skipped (`slow/no move skip`). A fix is also skipped when that distance divided by the time since that accepted point is over 30 m/s (`+30 m/s skip`). The writer keeps running; only that sample is dropped. The next attempt is still measured against the same last accepted point, so `dt` only grows until a write succeeds. A GPS jump that later snaps back near the last accepted point writes again. A real move that stays over 30 m/s keeps skipping until implied speed from that last accepted point is under 30 m/s; then one catch-up point is stored and the vertices in between are lost. After a stored point, while a GPX route is drawn, this page overwrites that event's `placement/current` when the order or locks changed: `order` is every session id, first to last, by meters still left along the line, and `locked` keeps stopped riders in the index they held. **Stop tracking** appends that rider to `locked` on the same document. Cups on the map and in Active Riders come from that order: a cup plus the alias for the first three, then `4.th # Alias` and so on. Reaching the end of the line does not lock a place. Finished rides drop their points listener after the first full load; the line stays in memory. Until the event placement rules are published, the point still stores and the placement write is denied.
 - The first fix on start or resume centers at zoom 17. Later points do not recenter. The top-left control recenters on this page's latest fix.
 - Portrait framing shifts the target up. Landscape shifts it left, clear of the panel.
 - Clicking a listed user with points centers on their last point.
