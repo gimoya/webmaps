@@ -52,6 +52,7 @@
   const eventPanelLine = document.getElementById("event-panel-line");
   const eventPanelName = document.getElementById("event-panel-name");
   const eventSwitchBtn = document.getElementById("event-switch");
+  const panelHeader = document.getElementById("panel-header");
   const entryDialog = document.getElementById("entry-dialog");
   const riderDialog = document.getElementById("rider-dialog");
   const riderForm = document.getElementById("rider-form");
@@ -66,7 +67,9 @@
   let riderCloseTimer = null;
   let noticeResolver = null;
   let routeLatLngs = null;
+  let pendingRouteFrame = false;
   let gpxLoadButton = null;
+  let gpxLoadControl = null;
   const GPX_MAX_BYTES = 1024 * 1024 - 2048;
   const eventsById = new Map();
   let eventId = null;
@@ -127,7 +130,6 @@
 
   function eventIdFromHash() {
     const token = hashTokens().find((part) => (
-      part !== "infos" &&
       part !== "admin" &&
       part !== "simulation" &&
       part !== "viewing" &&
@@ -146,25 +148,13 @@
     return fragment;
   }
 
-  function writePageUrl(hash) {
+  function writePageUrl() {
     const center = map.getCenter();
     const params = new URLSearchParams();
     params.set("lat", center.lat.toFixed(5));
     params.set("lng", center.lng.toFixed(5));
     params.set("z", String(map.getZoom()));
-    let fragment;
-    if (hash == null) {
-      fragment = window.location.hash.slice(1);
-      if (fragment === "infos") {
-        /* keep FAQ */
-      } else {
-        fragment = modeHashFragment();
-      }
-    } else if (String(hash) === "infos") {
-      fragment = "infos";
-    } else {
-      fragment = modeHashFragment();
-    }
+    const fragment = modeHashFragment();
     const nextHash = fragment ? `#${fragment}` : "";
     history.replaceState(null, "", `${window.location.pathname}?${params}${nextHash}`);
   }
@@ -174,18 +164,20 @@
 
   function setPageMode(mode) {
     pageMode = mode;
-    writePageUrl("");
+    writePageUrl();
   }
 
-  const togglePanelContent = () => {
-    const showInfo = window.location.hash === "#infos";
-    panelMain.hidden = showInfo;
-    panelInfo.hidden = !showInfo;
-  };
-  togglePanelContent();
+  function showInfoPanel() {
+    panelMain.hidden = true;
+    panelInfo.hidden = false;
+  }
+
+  function hideInfoPanel() {
+    panelMain.hidden = false;
+    panelInfo.hidden = true;
+  }
+
   window.addEventListener("hashchange", () => {
-    togglePanelContent();
-    if (window.location.hash === "#infos") return;
     pageMode = modeFromHash();
     hashRider = riderFromHash();
     const nextEvent = eventIdFromHash();
@@ -206,11 +198,11 @@
     }
     syncAdminControls();
   });
-  panelInfo.querySelector(".panel-info-close").addEventListener("click", (event) => {
-    event.preventDefault();
-    writePageUrl("");
-    panelMain.hidden = false;
-    panelInfo.hidden = true;
+  document.querySelector(".info-link").addEventListener("click", () => {
+    showInfoPanel();
+  });
+  panelInfo.querySelector(".panel-info-close").addEventListener("click", () => {
+    hideInfoPanel();
   });
 
   noticeConfirm.addEventListener("click", () => closeNotice(true));
@@ -270,6 +262,11 @@
   eventSwitchBtn.addEventListener("click", () => {
     showEventPicker();
   });
+  eventSwitchBtn.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    showEventPicker();
+  });
   eventCreateBtn.addEventListener("click", () => {
     createEventFromForm();
   });
@@ -314,10 +311,12 @@
     if (!eventId || !eventName) {
       eventPanelLine.hidden = true;
       eventPanelName.textContent = "";
+      panelHeader.classList.remove("has-event");
       return;
     }
     eventPanelLine.hidden = false;
     eventPanelName.textContent = eventName;
+    panelHeader.classList.add("has-event");
   }
 
   function renderEventPickerList() {
@@ -400,6 +399,7 @@
   async function selectEvent(id) {
     if (!db || !eventsById.has(id)) return;
     const row = eventsById.get(id);
+    pendingRouteFrame = true;
     await bindEvent(id, { name: row.name });
     hideEventPicker();
     applyInitialMode();
@@ -475,6 +475,12 @@
       writePageUrl("");
       renderEventPanel();
       syncAdminControls();
+      if (pendingRouteFrame) {
+        pendingRouteFrame = false;
+        if (routeLatLngs && routeLatLngs.length > 1) {
+          frameGpx(L.latLngBounds(routeLatLngs));
+        }
+      }
       return;
     }
     if (eventId) teardownEventScope();
@@ -669,7 +675,7 @@
     const admin = isAdminMode();
     const ready = Boolean(eventId);
     clearSessionsBtn.hidden = !admin || !ready;
-    if (gpxLoadButton) gpxLoadButton.hidden = !admin || !ready;
+    if (gpxLoadControl) gpxLoadControl.hidden = !admin;
     if (eventAdminEl) eventAdminEl.hidden = !admin;
     simLogEl.hidden = !isSimulationMode();
   }
@@ -1873,7 +1879,9 @@
   function attachRoutesSubscription(scopeRef) {
     if (routesUnsubscribe) routesUnsubscribe();
     routesUnsubscribe = scopeRef.collection(ROUTES_COLLECTION).doc(ROUTE_DOC).onSnapshot((doc) => {
-      applyRouteDoc(doc.exists ? doc.data() : null, !parseMapView() && !routeLatLngs);
+      const frame = pendingRouteFrame || (!parseMapView() && !routeLatLngs);
+      pendingRouteFrame = false;
+      applyRouteDoc(doc.exists ? doc.data() : null, frame);
     }, (error) => {
       console.error("Firestore routes subscription error:", error);
     });
@@ -1944,11 +1952,12 @@
     const button = addBarButton("gpx-load-control");
     const input = L.DomUtil.create("input", "", map.getContainer());
     gpxLoadButton = button;
+    gpxLoadControl = button.parentElement;
 
     button.classList.add("gpx-load-btn");
     button.title = "Load GPX Route";
     button.setAttribute("aria-label", "Load GPX");
-    button.hidden = !isAdminMode();
+    if (gpxLoadControl) gpxLoadControl.hidden = !isAdminMode();
     button.innerHTML = '<svg class="gpx-load-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l5 5h-3v6h-4V8H7l5-5zm-7 14h14v2H5v-2z"></path></svg>';
     input.type = "file";
     input.accept = ".gpx,application/gpx+xml,application/xml,text/xml";

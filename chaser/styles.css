@@ -211,6 +211,19 @@ body.panel-faded #panel-launcher {
   font-family: var(--font-family-title);
   font-size: 3rem;
   line-height: 1.1;
+  transition: font-size 0.2s ease;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.panel-header h1:hover {
+  color: var(--color-white);
+}
+
+.panel-header.has-event h1 {
+  margin-top: 0.15rem;
+  font-size: 1.55rem;
+  line-height: 1.15;
 }
 
 .panel-header h2 {
@@ -219,29 +232,34 @@ body.panel-faded #panel-launcher {
   color: var(--color-text-muted);
 }
 
-.event-panel-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem 0.6rem;
-  margin: 0.45rem 0 0;
+.panel-header.has-event h2 {
   font-size: 0.85rem;
+}
+
+.event-panel-line {
+  display: none;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.55rem;
+  margin: 0;
   color: var(--color-text);
 }
 
-.event-panel-line button {
-  font: inherit;
-  font-size: 0.75rem;
-  padding: 0.15rem 0.45rem;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background: var(--color-bg-panel-elevated);
-  color: var(--color-text);
-  cursor: pointer;
+.panel-header.has-event .event-panel-line,
+.event-panel-line:not([hidden]) {
+  display: flex;
 }
 
-.event-panel-line button:hover {
-  background: var(--color-ghost-hover);
+.event-panel-name {
+  font-family: "Trade Winds", cursive;
+  font-size: 2.5rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: #f3ef9a;
+  text-shadow:
+    0 0 0.35em rgba(0, 0, 0, 0.95),
+    0 0.08em 0.2em rgba(0, 0, 0, 0.9),
+    0 0.12em 0.45em rgba(0, 0, 0, 0.85);
 }
 
 .event-list {
@@ -285,17 +303,18 @@ body.panel-faded #panel-launcher {
   display: none;
 }
 
-a.info-link,
-a.info-link:link,
-a.info-link:visited {
-  font-size: 0.45em;
+.info-link {
+  font: inherit;
+  font-size: inherit;
   color: var(--color-text-muted);
-  text-decoration: none;
-  vertical-align: super;
+  background: none;
+  border: 0;
+  padding: 0;
   margin-left: 0.15em;
+  cursor: pointer;
 }
 
-a.info-link:hover { color: var(--color-accent); }
+.info-link:hover { color: var(--color-accent); }
 
 .panel-info-header {
   display: flex;
@@ -313,11 +332,14 @@ a.info-link:hover { color: var(--color-accent); }
 }
 
 .panel-info-close {
+  font: inherit;
   font-size: 1.6rem;
   line-height: 1;
   color: var(--color-text-muted);
-  text-decoration: none;
+  background: none;
+  border: 0;
   padding: 0.25rem;
+  cursor: pointer;
 }
 
 .panel-info-close:hover { color: var(--color-text); }
@@ -774,6 +796,10 @@ body.map-zoom-title .course-callout-title .course-callout-label {
   height: 16px;
   margin: 0;
   fill: currentColor;
+}
+
+.gpx-load-control[hidden] {
+  display: none !important;
 }
 
 .notice-dialog {

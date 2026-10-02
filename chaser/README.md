@@ -249,5 +249,5 @@ The page sends `strict-origin-when-cross-origin`, so the tile request includes t
 - The GPS row is `allowed` / `denied` / `unknown` and `running` / `stopped`. `running` means this page started the 5-second loop. It does not prove points are being stored. iPhone Safari often stays `unknown` until a fix or a denial.
 - Locking the phone freezes the page. No new points are stored. If the page is still there when you unlock, the writer continues. If the phone discarded it, open the name box and submit the alias again.
 - Completed traces stay in Firestore and are hidden from the live map.
-- Pan and zoom write `?lat=&lng=&z=` and keep the fragment, so `#infos` still opens the FAQ.
+- Pan and zoom write `?lat=&lng=&z=` and keep the mode fragment.
 - Installable from the manifest. `sw.js` is not registered, so its app-shell and tile cache do not run.
