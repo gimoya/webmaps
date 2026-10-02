@@ -5,8 +5,8 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 ## What it does
 
 - Tracestrack topo basemap
-- Events scope all live data. The event id is the first URL hash token (`#event-id#viewing`). Missing or unknown event forces a picker. `#admin` can create events.
-- Course overlay from a GPX that `#admin` uploads into the selected event (`events/{eventId}/routes/current`). Every client on that event draws it when it exists.
+- Events scope all live data. The event id is the first URL hash token (`#event-id#viewing`). Missing or unknown event forces a picker. Create needs a pool admin code (or master); ongoing admin uses `#admin=<code>` for that event.
+- Course overlay from a GPX that event admin uploads into the selected event (`events/{eventId}/routes/current`). Every client on that event draws it when it exists.
 - One live trace per alias per event. Case does not distinguish (`Kay` and `kay` are the same)
 - Last point shows the alias on a white stem, plus a dashed accuracy ring in the alias color. A finished ride drops the ring.
 - Alias labels shrink below zoom 14
@@ -38,6 +38,12 @@ Collection: `events`
 - Document id = slug from the event name (lowercase, hyphens, max 40).
 - `name` (display name)
 - `createdAt` (server timestamp)
+- `adminCode` (string). Set at create from a pool code or the master password. Required for later admin (GPX upload, clear traces) via `#admin=<adminCode>` on that event.
+
+Document: `adminConfig/current`
+
+- `masterPassword` (string). Always `admin_master_6071`. Always valid for create (does not burn a pool code) and as `#admin=admin_master_6071` on any event.
+- `unusedCodes` (array of strings). One-time seeded pool of unused 5-character codes. Create with a pool code removes that code from the array. When empty, reseed from the console using [`admin-pool-seed.json`](admin-pool-seed.json) (or a new batch).
 
 Everything live sits under an event:
 
@@ -54,7 +60,7 @@ Session fields:
 - `isActive` (boolean)
 - `startedAt` (server timestamp)
 - `endedAt` (server timestamp or `null`). **Stop tracking** sets it. The finished list line shows that time.
-- `finished` (boolean). `false` when the session is created. **Stop tracking** sets it `true`. The session stays `isActive`, so the trace stays on the map. The list shows `Tracking stopped/finished` and the end time. That alias cannot start or resume in this event. `#admin` shows **Clear all traces**, which deletes every tracking session and its points in this event and clears that event's `placement/current`.
+- `finished` (boolean). `false` when the session is created. **Stop tracking** sets it `true`. The session stays `isActive`, so the trace stays on the map. The list shows `Tracking stopped/finished` and the end time. That alias cannot start or resume in this event. With a matching `#admin=<code>`, **Clear all traces** deletes every tracking session and its points in this event and clears that event's `placement/current`.
 
 Point fields:
 
@@ -69,15 +75,24 @@ Route document `events/{eventId}/routes/current`:
 - `gpx` (the file text)
 - `createdAt` (server timestamp)
 
-`#admin` shows the map upload control while an event is selected. Upload overwrites that event's `routes/current`.
+Event admin (`#admin=<event adminCode>` or master) shows the map upload control while an event is selected. Upload overwrites that event's `routes/current`. Bare `#admin` only opens the create form; create still needs a valid pool or master code in the form.
 
 One route document is at most 1 MiB. Vertices closer than 10 m are dropped first, and the stored file is that GPX. The upload refuses it when the result would not fit beside `name` and `createdAt`.
+
+### Seed admin pool (developer)
+
+1. Open Firestore → add collection `adminConfig` → document id `current`.
+2. Fields:
+   - `masterPassword` (string): `admin_master_6071`
+   - `unusedCodes` (array): paste all strings from [`admin-pool-seed.json`](admin-pool-seed.json) `unusedCodes`.
+3. Publish the rules below (events now require `adminCode` on create).
+4. When the pool is empty, generate a new batch of 5-char codes (A–Z / 2–9, no I/O/0/1) and replace or append `unusedCodes` in the console. The app does not generate codes.
 
 ## Trace lifecycle
 
 One alias, one active trace per event.
 
-A load with no event id (or an unknown id) opens the event picker. `#admin` can create an event there. After an event is bound, a load with no mode hash asks Rider or Viewer. Viewer sets `#eventId#viewing`. The bike button, or a load that already has `#tracking`, opens the name box. **Start Ride / Resume Tracing** calls GPS in that click, then:
+A load with no event id (or an unknown id) opens the event picker. With `#admin` or `#admin=…` the create form appears; submit needs a valid unused pool code or the master password. After an event is bound, a load with no mode hash asks Rider or Viewer. Viewer sets `#eventId#viewing`. The bike button, or a load that already has `#tracking`, opens the name box. **Start Ride / Resume Tracing** calls GPS in that click, then:
 
 - No active trace for the typed alias: a new session is created and this page writes to it. The hash becomes `#eventId#tracking`.
 - Start and resume also write the alias as a `#rider=` token (URL-encoded). The name box is filled from that token.
@@ -98,15 +113,42 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /events/{eventId} {
+    match /adminConfig/{docId} {
       allow read: if true;
 
       allow create, update: if
-        request.resource.data.keys().hasOnly(['name', 'createdAt']) &&
+        docId == 'current' &&
+        request.resource.data.keys().hasOnly(['unusedCodes', 'masterPassword']) &&
+        request.resource.data.unusedCodes is list &&
+        request.resource.data.unusedCodes.size() <= 500 &&
+        request.resource.data.masterPassword is string &&
+        request.resource.data.masterPassword.size() >= 8 &&
+        request.resource.data.masterPassword.size() <= 80;
+
+      allow delete: if false;
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+
+      allow create: if
+        request.resource.data.keys().hasOnly(['name', 'createdAt', 'adminCode']) &&
         request.resource.data.name is string &&
         request.resource.data.name.size() >= 1 &&
         request.resource.data.name.size() <= 80 &&
-        request.resource.data.createdAt is timestamp;
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.adminCode is string &&
+        request.resource.data.adminCode.size() >= 5 &&
+        request.resource.data.adminCode.size() <= 40;
+
+      allow update: if
+        request.resource.data.keys().hasOnly(['name', 'createdAt', 'adminCode']) &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() >= 1 &&
+        request.resource.data.name.size() <= 80 &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.adminCode is string &&
+        request.resource.data.adminCode == resource.data.adminCode;
 
       allow delete: if true;
 
@@ -212,7 +254,7 @@ service cloud.firestore {
 }
 ```
 
-Publish these in the Firebase console. Event create, route overwrite, placement, and point writes all need this paste.
+Publish these in the Firebase console. Event create (with `adminCode`), adminConfig pool updates, route overwrite, placement, and point writes all need this paste.
 
 ## Basemap
 

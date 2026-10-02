@@ -18,7 +18,7 @@
   const SIM_ACCURACY_M = 8;
   const SIM_SPEED_MIN_KMH = 10;
   const SIM_SPEED_MAX_KMH = 25;
-  const TRACE_LINE_PAUSED = "Tracing paused!";
+  const TRACE_LINE_PAUSED = "..currently not tracking.";
   const TRACE_LINE_WRITING = "Tracing points every 5s";
   const TRACE_LINE_SLOW = "Slow/no rider movement";
   const SESSIONS_COLLECTION = "trackingSessions";
@@ -27,6 +27,9 @@
   const ROUTES_COLLECTION = "routes";
   const ROUTE_DOC = "current";
   const EVENTS_COLLECTION = "events";
+  const ADMIN_CONFIG_COLLECTION = "adminConfig";
+  const ADMIN_CONFIG_DOC = "current";
+  const MASTER_PASSWORD = "admin_master_6071";
   const EVENT_ID_MAX = 40;
   const PLACE_CUPS = ["🥇", "🥈", "🥉"];
 
@@ -48,6 +51,7 @@
   const eventEmptyEl = document.getElementById("event-empty");
   const eventAdminEl = document.getElementById("event-admin");
   const eventNameEl = document.getElementById("event-name");
+  const eventAdminCodeEl = document.getElementById("event-admin-code");
   const eventCreateBtn = document.getElementById("event-create");
   const eventPanelLine = document.getElementById("event-panel-line");
   const eventPanelName = document.getElementById("event-panel-name");
@@ -74,16 +78,37 @@
   const eventsById = new Map();
   let eventId = null;
   let eventName = null;
+  let eventAdminCode = null;
   let eventRef = null;
   let eventsUnsubscribe = null;
+  let adminConfigUnsubscribe = null;
+  let adminMasterPassword = MASTER_PASSWORD;
   let resolvingEvent = false;
 
   function hashTokens() {
     return window.location.hash.slice(1).split("#").filter(Boolean);
   }
 
-  function isAdminMode() {
-    return hashTokens().includes("admin");
+  function adminCodewordFromHash() {
+    const token = hashTokens().find((part) => part.startsWith("admin="));
+    if (!token) return "";
+    return String(decodeURIComponent(token.slice(6)) || "").trim();
+  }
+
+  function hasAdminEntry() {
+    const tokens = hashTokens();
+    return tokens.includes("admin") || tokens.some((part) => part.startsWith("admin="));
+  }
+
+  function isMasterAdmin() {
+    const code = adminCodewordFromHash();
+    return Boolean(code) && code === adminMasterPassword;
+  }
+
+  function isEventAdmin() {
+    if (isMasterAdmin()) return true;
+    const code = adminCodewordFromHash();
+    return Boolean(eventId && eventAdminCode && code && code === eventAdminCode);
   }
 
   function isSimulationMode() {
@@ -131,6 +156,7 @@
   function eventIdFromHash() {
     const token = hashTokens().find((part) => (
       part !== "admin" &&
+      !part.startsWith("admin=") &&
       part !== "simulation" &&
       part !== "viewing" &&
       part !== "tracking" &&
@@ -144,7 +170,10 @@
     if (hashRider) fragment = fragment ? `${fragment}#rider=${encodeURIComponent(hashRider)}` : `rider=${encodeURIComponent(hashRider)}`;
     if (pageMode) fragment = fragment ? `${fragment}#${pageMode}` : pageMode;
     if (isSimulationMode()) fragment = fragment ? `${fragment}#simulation` : "simulation";
-    if (isAdminMode()) fragment = fragment ? `${fragment}#admin` : "admin";
+    if (hashAdminCode) {
+      const adminToken = `admin=${encodeURIComponent(hashAdminCode)}`;
+      fragment = fragment ? `${fragment}#${adminToken}` : adminToken;
+    }
     return fragment;
   }
 
@@ -161,6 +190,7 @@
 
   let pageMode = modeFromHash();
   let hashRider = riderFromHash();
+  let hashAdminCode = adminCodewordFromHash();
 
   function setPageMode(mode) {
     pageMode = mode;
@@ -180,6 +210,10 @@
   window.addEventListener("hashchange", () => {
     pageMode = modeFromHash();
     hashRider = riderFromHash();
+    hashAdminCode = adminCodewordFromHash();
+    if (eventAdminCodeEl && hashAdminCode && !eventAdminCodeEl.value) {
+      eventAdminCodeEl.value = hashAdminCode;
+    }
     const nextEvent = eventIdFromHash();
     if (db && nextEvent !== eventId) {
       resolveEventFromHash();
@@ -287,7 +321,9 @@
 
   firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
+  attachAdminConfigSubscription();
   attachEventsSubscription();
+  if (hashAdminCode && eventAdminCodeEl) eventAdminCodeEl.value = hashAdminCode;
   resolveEventFromHash();
   setInterval(() => {
     if (!eventId) return;
@@ -338,7 +374,9 @@
   function showEventPicker() {
     entryDialog.hidden = true;
     riderDialog.hidden = true;
-    eventAdminEl.hidden = !isAdminMode();
+    if (eventAdminCodeEl && hashAdminCode && !eventAdminCodeEl.value) {
+      eventAdminCodeEl.value = hashAdminCode;
+    }
     renderEventPickerList();
     eventDialog.hidden = false;
     syncAdminControls();
@@ -348,19 +386,47 @@
     eventDialog.hidden = true;
   }
 
+  function attachAdminConfigSubscription() {
+    adminConfigUnsubscribe = db.collection(ADMIN_CONFIG_COLLECTION).doc(ADMIN_CONFIG_DOC).onSnapshot((doc) => {
+      if (!doc.exists) {
+        adminMasterPassword = MASTER_PASSWORD;
+        syncAdminControls();
+        return;
+      }
+      const data = doc.data();
+      if (typeof data.masterPassword === "string" && data.masterPassword) {
+        adminMasterPassword = data.masterPassword;
+      } else {
+        adminMasterPassword = MASTER_PASSWORD;
+      }
+      syncAdminControls();
+    }, (error) => {
+      console.error("Firestore adminConfig subscription error:", error);
+    });
+  }
+
   function attachEventsSubscription() {
     eventsUnsubscribe = db.collection(EVENTS_COLLECTION).onSnapshot((snapshot) => {
       eventsById.clear();
       snapshot.forEach((doc) => {
         const data = doc.data();
         if (typeof data.name !== "string" || !data.name) return;
-        eventsById.set(doc.id, { id: doc.id, name: data.name });
+        eventsById.set(doc.id, {
+          id: doc.id,
+          name: data.name,
+          adminCode: typeof data.adminCode === "string" ? data.adminCode : null
+        });
       });
       renderEventPickerList();
+      if (eventId && eventsById.has(eventId)) {
+        const row = eventsById.get(eventId);
+        eventAdminCode = row.adminCode;
+      }
       if (eventId && !eventsById.has(eventId) && !resolvingEvent) {
         teardownEventScope();
         showEventPicker();
       }
+      syncAdminControls();
     }, (error) => {
       console.error("Firestore events subscription error:", error);
       renderConnection(false, "offline");
@@ -400,14 +466,15 @@
     if (!db || !eventsById.has(id)) return;
     const row = eventsById.get(id);
     pendingRouteFrame = true;
-    await bindEvent(id, { name: row.name });
+    await bindEvent(id, { name: row.name, adminCode: row.adminCode });
     hideEventPicker();
     applyInitialMode();
   }
 
   async function createEventFromForm() {
-    if (!db || !isAdminMode()) return;
+    if (!db || !hasAdminEntry()) return;
     const name = String(eventNameEl.value || "").trim();
+    const code = String(eventAdminCodeEl.value || "").trim();
     if (!name) {
       await showNotice("Event name is missing.");
       return;
@@ -416,29 +483,66 @@
       await showNotice("Event name is too long.");
       return;
     }
+    if (!code) {
+      await showNotice("Admin code is missing.");
+      return;
+    }
     const id = eventSlug(name);
     if (!id) {
       await showNotice("Event name needs letters or numbers.");
       return;
     }
-    const ref = db.collection(EVENTS_COLLECTION).doc(id);
+    const eventDoc = db.collection(EVENTS_COLLECTION).doc(id);
+    const configRef = db.collection(ADMIN_CONFIG_COLLECTION).doc(ADMIN_CONFIG_DOC);
     try {
-      const existing = await ref.get();
+      const existing = await eventDoc.get();
       if (existing.exists) {
         await showNotice("That event id already exists.");
         return;
       }
-      await ref.set({
-        name,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+
+      const isMaster = code === adminMasterPassword;
+      if (isMaster) {
+        await eventDoc.set({
+          name,
+          adminCode: code,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } else {
+        await db.runTransaction(async (tx) => {
+          const configSnap = await tx.get(configRef);
+          if (!configSnap.exists) {
+            throw new Error("Admin code pool is missing.");
+          }
+          const data = configSnap.data();
+          const unused = Array.isArray(data.unusedCodes) ? data.unusedCodes.slice() : [];
+          const index = unused.indexOf(code);
+          if (index < 0) {
+            if (unused.length === 0) {
+              throw new Error("Admin code pool is empty.");
+            }
+            throw new Error("Admin code is not valid.");
+          }
+          unused.splice(index, 1);
+          tx.update(configRef, { unusedCodes: unused });
+          tx.set(eventDoc, {
+            name,
+            adminCode: code,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        });
+      }
+
       eventNameEl.value = "";
-      await bindEvent(id, { name });
+      eventAdminCodeEl.value = "";
+      hashAdminCode = code;
+      await bindEvent(id, { name, adminCode: code });
       hideEventPicker();
       applyInitialMode();
     } catch (err) {
       console.error("Failed to create event:", err);
-      await showNotice("Event could not be created.");
+      const message = err && err.message ? err.message : "Event could not be created.";
+      await showNotice(message);
     }
   }
 
@@ -465,6 +569,7 @@
     eventRef = null;
     eventId = null;
     eventName = null;
+    eventAdminCode = null;
     renderEventPanel();
     renderTracksAndPanel();
     syncAdminControls();
@@ -472,7 +577,8 @@
 
   async function bindEvent(id, data) {
     if (eventId === id && eventRef) {
-      writePageUrl("");
+      if (typeof data.adminCode === "string") eventAdminCode = data.adminCode;
+      writePageUrl();
       renderEventPanel();
       syncAdminControls();
       if (pendingRouteFrame) {
@@ -486,9 +592,18 @@
     if (eventId) teardownEventScope();
     eventId = id;
     eventName = typeof data.name === "string" ? data.name : id;
+    eventAdminCode = typeof data.adminCode === "string" ? data.adminCode : null;
+    if (eventAdminCode == null) {
+      const snap = await db.collection(EVENTS_COLLECTION).doc(id).get();
+      if (snap.exists) {
+        const row = snap.data();
+        if (typeof row.name === "string" && row.name) eventName = row.name;
+        if (typeof row.adminCode === "string") eventAdminCode = row.adminCode;
+      }
+    }
     eventRef = db.collection(EVENTS_COLLECTION).doc(id);
     sessionsRef = eventRef.collection(SESSIONS_COLLECTION);
-    writePageUrl("");
+    writePageUrl();
     renderEventPanel();
     attachSessionsSubscription(sessionsRef);
     attachRoutesSubscription(eventRef);
@@ -643,7 +758,7 @@
 
   function showStoppedNotice() {
     showViewerNotice((log) => {
-      log.textContent = "Tracing stopped! Switching to Viewer Mode.";
+      log.textContent = "Tracking stopped! Switching to Viewer Mode.";
     });
   }
 
@@ -672,11 +787,12 @@
   }
 
   function syncAdminControls() {
-    const admin = isAdminMode();
+    const eventAdmin = isEventAdmin();
+    const showCreate = hasAdminEntry();
     const ready = Boolean(eventId);
-    clearSessionsBtn.hidden = !admin || !ready;
-    if (gpxLoadControl) gpxLoadControl.hidden = !admin;
-    if (eventAdminEl) eventAdminEl.hidden = !admin;
+    clearSessionsBtn.hidden = !eventAdmin || !ready;
+    if (gpxLoadControl) gpxLoadControl.hidden = !eventAdmin;
+    if (eventAdminEl) eventAdminEl.hidden = !showCreate;
     simLogEl.hidden = !isSimulationMode();
   }
 
@@ -690,7 +806,7 @@
   }
 
   async function clearAllTrackingSessions() {
-    if (!db || !eventRef || !isAdminMode()) return;
+    if (!db || !eventRef || !isEventAdmin()) return;
     const confirmed = await showNotice(
       "Clear all tracking sessions? Every trace will leave the map.",
       { confirmLabel: "Clear all", cancelLabel: "Cancel" }
@@ -746,7 +862,7 @@
         beginWriting(sessionRef);
       } else {
         if (isSimulationMode()) placeSimulationOnRoute(activeDocs[0].id);
-        showRiderResult(name, "..is resuming his ride!");
+        showRiderResult(name, "..is resuming the ride!");
         beginWriting(activeDocs[0].ref);
       }
       clearTimeout(riderCloseTimer);
@@ -1897,7 +2013,7 @@
   }
 
   async function uploadGpxFile(file) {
-    if (!isAdminMode() || !eventRef) return;
+    if (!isEventAdmin() || !eventRef) return;
     if (!db) {
       await showNotice("Firebase is not configured.");
       return;
@@ -1905,7 +2021,7 @@
     let xmlText = "";
     try {
       xmlText = await readGpxFile(file);
-    } catch (err) {
+      } catch (err) {
       console.error("Failed to read GPX file:", err);
       await showNotice("GPX could not be read.");
       return;
@@ -1957,7 +2073,7 @@
     button.classList.add("gpx-load-btn");
     button.title = "Load GPX Route";
     button.setAttribute("aria-label", "Load GPX");
-    if (gpxLoadControl) gpxLoadControl.hidden = !isAdminMode();
+    if (gpxLoadControl) gpxLoadControl.hidden = !isEventAdmin();
     button.innerHTML = '<svg class="gpx-load-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l5 5h-3v6h-4V8H7l5-5zm-7 14h14v2H5v-2z"></path></svg>';
     input.type = "file";
     input.accept = ".gpx,application/gpx+xml,application/xml,text/xml";
@@ -1965,7 +2081,7 @@
 
     L.DomEvent.on(button, "click", L.DomEvent.stop)
       .on(button, "click", () => {
-        if (!isAdminMode()) return;
+        if (!isEventAdmin()) return;
         input.click();
       });
     input.addEventListener("change", () => {

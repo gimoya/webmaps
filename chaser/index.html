@@ -91,7 +91,7 @@
     <button id="panel-launcher" type="button" aria-label="Show panel">ⓘ</button>
   </div>
 
-    <button id="viewer-replay" class="viewer-ride viewer-replay" type="button" title="Replay traces" aria-label="Replay traces" aria-pressed="false">
+    <button id="viewer-replay" class="viewer-ride viewer-replay" type="button" title="Replay Traces" aria-label="Replay traces" aria-pressed="false">
       <svg class="replay-play" viewBox="0 0 24 24" aria-hidden="true">
         <path fill="currentColor" d="M8 5v14l11-7z"/>
       </svg>
@@ -100,7 +100,7 @@
       </svg>
     </button>
     <p class="viewer-replay-label" aria-hidden="true">&#x23ED; replay</p>
-    <button id="viewer-ride" class="viewer-ride" type="button" title="Start your Ride" aria-label="Start your Ride">
+    <button id="viewer-ride" class="viewer-ride" type="button" title="Start Ride" aria-label="Start Ride">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path fill="currentColor" d="M15.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM5 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5zm5.8-10 2.4-2.4.8.8c1.3 1.3 3 2.1 5.1 2.1V9c-1.5 0-2.7-.6-3.6-1.5l-1.9-1.9c-.5-.4-1-.6-1.6-.6s-1.1.2-1.4.6L7.8 8.4c-.4.4-.6.9-.6 1.4 0 .6.2 1.1.6 1.4L11 14v5h2v-6.2l-2.2-2.3zM19 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5z"/>
       </svg>
@@ -113,6 +113,7 @@
       <p id="event-empty" class="event-empty" hidden>No events yet.</p>
       <div id="event-admin" class="event-admin" hidden>
         <input id="event-name" type="text" maxlength="80" placeholder="New event name" autocomplete="off">
+        <input id="event-admin-code" type="text" maxlength="40" placeholder="Admin code" autocomplete="off" spellcheck="false">
         <div class="notice-dialog-actions">
           <button id="event-create" type="button">Create event</button>
         </div>
