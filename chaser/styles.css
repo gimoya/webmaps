@@ -304,6 +304,34 @@ body.panel-faded #panel-launcher {
   display: none;
 }
 
+.event-admin-code-field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.event-admin-code-title {
+  font-family: "IBM Plex Mono", "Fira Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(74, 222, 128, 0.85);
+}
+
+.event-admin-code-field input {
+  font-family: "IBM Plex Mono", "Fira Mono", monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  color: rgba(134, 239, 172, 1);
+  background: rgba(10, 24, 16, 0.95);
+  border: 1px solid rgba(34, 197, 94, 0.45);
+  caret-color: rgba(74, 222, 128, 1);
+}
+
+.event-admin-code-field input::placeholder {
+  color: rgba(74, 222, 128, 0.35);
+  letter-spacing: 0.2em;
+}
+
 .info-link {
   font: inherit;
   font-size: inherit;
@@ -493,6 +521,35 @@ body.panel-faded #panel-launcher {
   border-radius: 5px;
   padding: 0.45rem 0.55rem;
   background: var(--color-user-bg);
+}
+
+.user-item-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.user-item-head .user-item-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-item-del {
+  flex-shrink: 0;
+  font: inherit;
+  font-size: 0.68rem;
+  padding: 0.12rem 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg-panel-elevated);
+  color: var(--color-danger);
+  cursor: pointer;
+}
+
+.user-item-del:hover {
+  background: var(--color-danger);
+  color: var(--color-white);
+  border-color: var(--color-danger);
 }
 
 .user-item[data-session-id] {
@@ -920,6 +977,37 @@ body.is-replaying .viewer-replay-label {
 .viewer-replay[aria-pressed="true"]:hover {
   background: var(--color-ctrl-bg-hover);
   color: var(--color-ctrl-fg-active);
+}
+
+.admin-mode-badge {
+  position: fixed;
+  top: 138px;
+  left: 50%;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  transform: translateX(-50%);
+  border: 2px solid var(--color-ctrl-border);
+  border-radius: 50%;
+  background: rgba(248, 113, 113, 0.95);
+  box-shadow: 0 2px 10px var(--color-shadow);
+  font-size: 18px;
+  line-height: 1;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.admin-mode-badge[hidden] {
+  display: none;
+}
+
+body.is-replaying .admin-mode-badge {
+  display: none;
 }
 
 .viewer-ride svg {

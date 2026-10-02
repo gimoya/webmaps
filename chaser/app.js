@@ -53,6 +53,7 @@
   const eventNameEl = document.getElementById("event-name");
   const eventAdminCodeEl = document.getElementById("event-admin-code");
   const eventCreateBtn = document.getElementById("event-create");
+  const adminModeBadge = document.getElementById("admin-mode-badge");
   const eventPanelLine = document.getElementById("event-panel-line");
   const eventPanelName = document.getElementById("event-panel-name");
   const eventSwitchBtn = document.getElementById("event-switch");
@@ -223,6 +224,7 @@
       showEventPicker();
       return;
     }
+    hideEventPicker();
     if (pageMode === "viewing" && !activeSessionRef) {
       document.body.classList.add("is-viewer");
       entryDialog.hidden = true;
@@ -439,7 +441,12 @@
     try {
       const id = eventIdFromHash();
       if (!id) {
-        if (eventId) teardownEventScope();
+        if (eventId) {
+          writePageUrl();
+          hideEventPicker();
+          syncAdminControls();
+          return;
+        }
         showEventPicker();
         return;
       }
@@ -450,7 +457,12 @@
       }
       const snap = await db.collection(EVENTS_COLLECTION).doc(id).get();
       if (!snap.exists) {
-        if (eventId) teardownEventScope();
+        if (eventId) {
+          writePageUrl();
+          hideEventPicker();
+          syncAdminControls();
+          return;
+        }
         showEventPicker();
         return;
       }
@@ -793,6 +805,7 @@
     clearSessionsBtn.hidden = !eventAdmin || !ready;
     if (gpxLoadControl) gpxLoadControl.hidden = !eventAdmin;
     if (eventAdminEl) eventAdminEl.hidden = !showCreate;
+    if (adminModeBadge) adminModeBadge.hidden = !eventAdmin;
     simLogEl.hidden = !isSimulationMode();
   }
 
@@ -808,7 +821,7 @@
   async function clearAllTrackingSessions() {
     if (!db || !eventRef || !isEventAdmin()) return;
     const confirmed = await showNotice(
-      "Clear all tracking sessions? Every trace will leave the map.",
+      "Warning! Clear ALL traces for this event? Every rider session and its points are permanently deleted. Placement is reset.",
       { confirmLabel: "Clear all", cancelLabel: "Cancel" }
     );
     if (!confirmed) return;
@@ -830,6 +843,38 @@
       } catch (err) {
       console.error("Failed to clear tracking sessions:", err);
       await showNotice("Tracking sessions could not be cleared.");
+    }
+  }
+
+  async function deleteTrackingSession(sessionId) {
+    if (!db || !eventRef || !isEventAdmin() || !sessionId) return;
+    const track = tracksBySessionId.get(sessionId);
+    const label = track && track.name ? track.name : sessionId;
+    const confirmed = await showNotice(
+      `Warning! Delete trace "${label}"? Session and points are permanently removed.`,
+      { confirmLabel: "Delete", cancelLabel: "Cancel" }
+    );
+    if (!confirmed) return;
+
+    if (activeSessionRef && activeSessionRef.id === sessionId) clearWriter();
+    const sessionRef = eventRef.collection(SESSIONS_COLLECTION).doc(sessionId);
+    try {
+      const points = await sessionRef.collection("points").get();
+      const refs = points.docs.map((doc) => doc.ref);
+      refs.push(sessionRef);
+      for (let index = 0; index < refs.length; index += 500) {
+        const batch = db.batch();
+        refs.slice(index, index + 500).forEach((ref) => batch.delete(ref));
+        await batch.commit();
+      }
+      if (placementCurrent) {
+        const order = placementCurrent.order.filter((id) => id !== sessionId);
+        const locked = placementCurrent.locked.filter((id) => id !== sessionId);
+        await writePlacement(order, locked);
+      }
+    } catch (err) {
+      console.error("Failed to delete tracking session:", err);
+      await showNotice("Trace could not be deleted.");
     }
   }
 
@@ -999,6 +1044,13 @@
   }
 
   function centerOnListedUser(event) {
+    const delBtn = event.target.closest("[data-session-delete]");
+    if (delBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      deleteTrackingSession(delBtn.dataset.sessionDelete);
+      return;
+    }
     const item = event.target.closest(".user-item[data-session-id]");
     if (!item) return;
 
@@ -1737,7 +1789,8 @@
       };
     });
     const viewing = document.body.classList.contains("is-viewer");
-    const signature = `${viewing ? "view" : "ride"}|${placeOrder.join(",")}|` + rows
+    const admin = isEventAdmin();
+    const signature = `${viewing ? "view" : "ride"}|${admin ? "admin" : "user"}|${placeOrder.join(",")}|` + rows
       .map((row) => `${row.track.sessionId}:${row.own}:${row.finished}:${row.track.endedAtMs || ""}:${row.signalStale}:${row.track.points.length}:${row.track.name}:${placeCups.get(row.track.sessionId) || ""}`)
       .join("|");
 
@@ -1755,10 +1808,16 @@
         const name = mark
           ? `<span class="chaser-place">${escapeHtml(mark)}</span>${escapeHtml(row.track.name)}`
           : escapeHtml(row.track.name);
+        const del = admin
+          ? `<button type="button" class="user-item-del" data-session-delete="${escapeHtml(row.track.sessionId)}" title="Delete trace">Del</button>`
+          : "";
 
       return `
           <li class="user-item${row.own ? " is-tracking" : ""}" data-track-id="${escapeHtml(row.track.sessionId)}"${sessionAttribute} style="border-left-color:${row.track.color}">
-            <div class="user-item-name notice-alias" style="color:${row.track.color}">${name}</div>
+            <div class="user-item-head">
+              <div class="user-item-name notice-alias" style="color:${row.track.color}">${name}</div>
+              ${del}
+            </div>
             ${warning}
             <div class="user-item-meta">${row.meta}</div>
         </li>`;
