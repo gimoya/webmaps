@@ -129,7 +129,7 @@ A load with a known event id in the hash binds that event. Missing or unknown id
 
 Event admin tools (when `#admin=` matches the event or master): GPX upload control, **Clear all traces**, per-rider delete, **Lock race** / **Unlock race**. Toolbox badge opens `home.html?tab=admins` with `?from=`.
 
-`#simulation` on the hash uses a generated fix instead of the device. It runs only while a GPX route is drawn. Otherwise the start is refused and a notice says the simulation stopped. A new ride begins at the route start. One speed is picked for the ride, evenly between 10 and 25 km/h, and each fix advances that far along the route. A resume on a fresh page starts at the route vertex nearest the last stored point. The fix still writes only for this page's active rider. The log under Active Riders shows meters, m/s, and `slow/no move skip`, `+30 m/s skip`, or `normal write`.
+`#simulation` on the hash uses a generated fix instead of the device. Requires a valid `#admin=` for the bound event (or master). Without admin, **Start Ride** is refused with a notice. It also runs only while a GPX route is drawn; otherwise start is refused. A new ride begins at the route start. One speed is picked for the ride, evenly between 10 and 25 km/h, and each fix advances that far along the route. A resume on a fresh page starts at the route vertex nearest the last stored point. The fix still writes only for this page's active rider. The log under Active Riders shows meters, m/s, and `slow/no move skip`, `+30 m/s skip`, or `normal write`.
 
 GPS loss, a dropped network, refresh, tab close, or locking the phone does not end the Firestore trace. The writer on this page stops. Open the name box and submit the alias again to continue it.
 

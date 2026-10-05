@@ -161,8 +161,12 @@
     return true;
   }
 
-  function isSimulationMode() {
+  function hasSimulationHash() {
     return hashTokens().includes("simulation");
+  }
+
+  function isSimulationMode() {
+    return hasSimulationHash() && isEventAdmin();
   }
 
   function stripNamedSuffixes(raw, suffixes) {
@@ -219,7 +223,7 @@
     let fragment = eventId || eventIdFromHash() || "";
     if (hashRider) fragment = fragment ? `${fragment}#rider=${encodeURIComponent(hashRider)}` : `rider=${encodeURIComponent(hashRider)}`;
     if (pageMode) fragment = fragment ? `${fragment}#${pageMode}` : pageMode;
-    if (isSimulationMode()) fragment = fragment ? `${fragment}#simulation` : "simulation";
+    if (hasSimulationHash()) fragment = fragment ? `${fragment}#simulation` : "simulation";
     if (hashAdminCode) {
       const adminToken = `admin=${encodeURIComponent(hashAdminCode)}`;
       fragment = fragment ? `${fragment}#${adminToken}` : adminToken;
@@ -697,6 +701,7 @@
       openRiderBox();
     });
     document.getElementById("viewer-ride").addEventListener("click", () => {
+      if (activeSessionRef) return;
       if (!eventId) {
         showNotice("Open an event with its id in the URL hash.");
         return;
@@ -739,8 +744,12 @@
         showFinishedRide(name);
         return;
       }
+      if (hasSimulationHash() && !isEventAdmin()) {
+        showNotice("Simulation needs a valid admin code in the URL (#admin=…).");
+        return;
+      }
       if (isSimulationMode() && !(routeLatLngs && routeLatLngs.length > 1)) {
-        showNotice("No GPX route is drawn. Simulation stopped.");
+        showNotice("No GPX route is loaded - simulation can#t run!");
         return;
       }
       riderStart.classList.add("is-fading");
@@ -967,7 +976,7 @@
     const track = tracksBySessionId.get(sessionId);
     const label = track && track.name ? track.name : sessionId;
     const confirmed = await showNotice(
-      `Warning! Delete trace "${label}"? Session and points are permanently removed.`,
+      `Warning! Delete rider "${label}"? Session and points are permanently removed.`,
       { confirmLabel: "Delete", cancelLabel: "Cancel" }
     );
     if (!confirmed) return;
@@ -990,7 +999,7 @@
       }
     } catch (err) {
       console.error("Failed to delete tracking session:", err);
-      await showNotice("Trace could not be deleted.");
+      await showNotice("Rider could not be deleted.");
     }
   }
 
@@ -1235,6 +1244,7 @@
   }
 
   function clearWriter() {
+    const wasWriting = Boolean(activeSessionRef);
     activeSessionRef = null;
     acceptedFix = null;
     writerTraceLine = TRACE_LINE_PAUSED;
@@ -1243,10 +1253,21 @@
     latestOwnPosition = null;
     setWriterState(false);
     refreshTracePopups();
+    if (wasWriting) {
+      document.body.classList.add("is-viewer");
+      setPageMode("viewing");
+    }
   }
 
   function setWriterState(active) {
     gpsRunning = active;
+    document.body.classList.toggle("is-writing", active);
+    const rideBtn = document.getElementById("viewer-ride");
+    if (rideBtn) {
+      rideBtn.disabled = active;
+      rideBtn.title = active ? "Tracking…" : "Start Ride";
+      rideBtn.setAttribute("aria-label", active ? "Tracking in progress" : "Start Ride");
+    }
     renderGpsStatus();
     stopBtn.hidden = !active;
     updateCenterControl();
@@ -2002,7 +2023,7 @@
           ? `<span class="chaser-place">${escapeHtml(placeListLabel(rank))}</span>${escapeHtml(row.track.name)}`
           : escapeHtml(row.track.name);
         const del = admin
-          ? `<button type="button" class="user-item-del" data-session-delete="${escapeHtml(row.track.sessionId)}" title="Delete trace">Del</button>`
+          ? `<button type="button" class="user-item-del" data-session-delete="${escapeHtml(row.track.sessionId)}" title="Delete Rider">Del</button>`
           : "";
 
       return `
