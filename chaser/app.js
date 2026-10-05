@@ -525,10 +525,10 @@
     if (!db || !canOpenCreateBox()) return;
     const name = String(eventNameEl.value || "").trim();
     const code = String(eventAdminCodeEl.value || "").trim();
-    if (!name) {
+      if (!name) {
       await showNotice("Event name is missing.");
-      return;
-    }
+        return;
+      }
     if (name.length > 80) {
       await showNotice("Event name is too long.");
       return;
@@ -576,7 +576,7 @@
           } else if (unused.length === 0 && reserved.length === 0) {
             throw new Error("Admin code pool is empty.");
           } else {
-            throw new Error("Admin code is not valid.");
+            throw new Error("Admin code is not valid or already used.");
           }
           tx.update(configRef, { unusedCodes: unused, reservedCodes: reserved });
           tx.set(eventDoc, {
@@ -1887,7 +1887,7 @@
             <div class="user-item-head">
               <div class="user-item-name notice-alias" style="color:${row.track.color}">${name}</div>
               ${del}
-            </div>
+          </div>
             ${warning}
             <div class="user-item-meta">${row.meta}</div>
         </li>`;
