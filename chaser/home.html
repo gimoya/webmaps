@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chaser — Home</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Trade+Winds&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./chaser-title.css">
+  <link rel="stylesheet" href="./home.css">
+</head>
+<body>
+  <main>
+    <a id="home-back" class="back-link" href="./" hidden>← Back to Chaser</a>
+    <div class="chaser-app-title chaser-app-title--page">
+      <h1>Chaser</h1>
+      <img class="chaser-app-title-img" src="./rr_white.png" alt="">
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tab-users" aria-selected="true" aria-controls="panel-users">Riders &amp; viewers</button>
+      <button type="button" role="tab" id="tab-admins" aria-selected="false" aria-controls="panel-admins">Event admins</button>
+    </div>
+
+    <section id="panel-users" class="panel" role="tabpanel" aria-labelledby="tab-users">
+      <h2>Riders &amp; viewers</h2>
+      <ol>
+        <li>Open the event link you were given (hash starts with the event id), e.g. <code>#your-event#viewing</code>.</li>
+        <li>Choose <strong>Viewer</strong> to watch, or <strong>Rider</strong> / the bike button to ride.</li>
+        <li>Enter a unique name/alias → <strong>Start Ride / Resume</strong>. Allow GPS.</li>
+        <li>Keep the page open and unlocked while riding. Refresh or lock stops logging until you resume with the same alias.</li>
+        <li>Do not reuse someone else’s alias — you would write into their trace.</li>
+        <li>When finished: <strong>Stop tracking</strong>. That alias cannot start again on this event. Stop if you want your place locked on a ranked route.</li>
+        <li>Replay (viewer): use the play control under the bike button.</li>
+      </ol>
+    </section>
+
+    <section id="panel-admins" class="panel" role="tabpanel" aria-labelledby="tab-admins" hidden>
+      <h2>Event admins</h2>
+      <ol>
+        <li>Get a pool admin code from the developer (or use master if you have it).</li>
+        <li>Create: open <code>…/chaser/#admin=YOURCODE</code> → name + code → <strong>Create event</strong>.</li>
+        <li>Bookmark <code>#event-id#…#admin=YOURCODE</code> for that event.</li>
+        <li>On that bookmark: upload GPX, clear all traces, delete a rider.</li>
+        <li>Share with everyone else: <code>#event-id#viewing</code> (no <code>admin=</code>).</li>
+      </ol>
+    </section>
+
+    <section class="event-list-section" aria-labelledby="event-list-heading">
+      <h2 id="event-list-heading">Events</h2>
+      <ul id="event-list" class="event-list">
+        <li class="event-list-status">Loading…</li>
+      </ul>
+    </section>
+  </main>
+  <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-compat.js"></script>
+  <script>
+    window.CHASER_FIREBASE_CONFIG = {
+      apiKey: "AIzaSyDltxjsiYUSWb-ACSXbVwgle1QiTwWJDiI",
+      authDomain: "chaser-75e2e.firebaseapp.com",
+      projectId: "chaser-75e2e",
+      storageBucket: "chaser-75e2e.firebasestorage.app",
+      messagingSenderId: "764827136309",
+      appId: "1:764827136309:web:888b04389963a1fec75c7c"
+    };
+  </script>
+  <script>
+    (function () {
+      const back = document.getElementById("home-back");
+      const params = new URLSearchParams(window.location.search);
+      const raw = params.get("from");
+      if (raw && back) {
+        const url = new URL(raw, window.location.href);
+        if (url.origin === window.location.origin) {
+          back.href = `${url.pathname}${url.search}${url.hash}`;
+          back.hidden = false;
+        }
+      }
+
+      const tabUsers = document.getElementById("tab-users");
+      const tabAdmins = document.getElementById("tab-admins");
+      const panelUsers = document.getElementById("panel-users");
+      const panelAdmins = document.getElementById("panel-admins");
+
+      function show(which) {
+        const users = which === "users";
+        tabUsers.setAttribute("aria-selected", users ? "true" : "false");
+        tabAdmins.setAttribute("aria-selected", users ? "false" : "true");
+        panelUsers.hidden = !users;
+        panelAdmins.hidden = users;
+      }
+
+      tabUsers.addEventListener("click", () => show("users"));
+      tabAdmins.addEventListener("click", () => show("admins"));
+      if (params.get("tab") === "admins") show("admins");
+
+      const listEl = document.getElementById("event-list");
+
+      function escapeHtml(str) {
+        return String(str)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function renderEvents(rows) {
+        if (!rows.length) {
+          listEl.innerHTML = `<li class="event-list-status">No events yet.</li>`;
+          return;
+        }
+        listEl.innerHTML = rows.map((row) => {
+          const href = `./#${encodeURIComponent(row.id)}#viewing`;
+          return `<li>
+            <a class="event-list-link" href="${href}">
+              <span class="event-list-name">${escapeHtml(row.name)}</span>
+              <code class="event-list-id">#${escapeHtml(row.id)}</code>
+            </a>
+          </li>`;
+        }).join("");
+      }
+
+      firebase.initializeApp(window.CHASER_FIREBASE_CONFIG);
+      const db = firebase.firestore();
+      db.collection("events").onSnapshot((snapshot) => {
+        const rows = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          if (typeof data.name !== "string" || !data.name) return;
+          rows.push({ id: doc.id, name: data.name });
+        });
+        rows.sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+        renderEvents(rows);
+      }, () => {
+        listEl.innerHTML = `<li class="event-list-status">Could not load events.</li>`;
+      });
+    })();
+  </script>
+</body>
+</html>

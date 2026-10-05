@@ -206,24 +206,14 @@ body.panel-faded #panel-launcher {
   background: var(--color-text-muted);
 }
 
-.panel-header h1 {
+.panel-header .chaser-app-title {
   margin: 0;
-  font-family: var(--font-family-title);
-  font-size: 3rem;
-  line-height: 1.1;
   transition: font-size 0.2s ease;
-  cursor: pointer;
-  width: fit-content;
 }
 
-.panel-header h1:hover {
-  color: var(--color-white);
-}
-
-.panel-header.has-event h1 {
+.panel-header.has-event .chaser-app-title {
   margin-top: 0.15rem;
-  font-size: 1.55rem;
-  line-height: 1.15;
+  font-size: clamp(1.85rem, 5vw, 2.15rem);
 }
 
 .panel-header h2 {
@@ -252,7 +242,7 @@ body.panel-faded #panel-launcher {
 
 .event-panel-name {
   font-family: "Trade Winds", cursive;
-  font-size: 2.5rem;
+  font-size: 2.6rem;
   line-height: 1.15;
   margin-bottom:0.75rem;
   letter-spacing: 0.02em;
@@ -263,53 +253,18 @@ body.panel-faded #panel-launcher {
     0 0.12em 0.45em rgba(0, 0, 0, 0.85);
 }
 
-.event-list {
-  list-style: none;
-  margin: 0 0 0.75rem;
-  padding: 0;
-  max-height: 40vh;
-  overflow: auto;
-  display: grid;
-  gap: 0.35rem;
-}
-
-.event-list button {
-  width: 100%;
-  text-align: left;
-  font: inherit;
-  padding: 0.45rem 0.6rem;
-  border: 1px solid var(--color-border);
-  border-radius: 5px;
-  background: var(--color-user-bg);
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-.event-list button:hover {
-  border-color: var(--color-text-muted);
-}
-
-.event-empty {
-  color: var(--color-text-muted);
-  font-size: 0.9rem;
-}
-
-.event-admin {
+.create-event-form {
   margin-top: 0.5rem;
   display: grid;
   gap: 0.5rem;
 }
 
-.event-admin[hidden] {
-  display: none;
-}
-
-.event-admin-code-field {
+.create-event-code-field {
   display: grid;
   gap: 0.25rem;
 }
 
-.event-admin-code-title {
+.create-event-code-title {
   font-family: "IBM Plex Mono", "Fira Mono", monospace;
   font-size: 0.65rem;
   letter-spacing: 0.12em;
@@ -317,7 +272,7 @@ body.panel-faded #panel-launcher {
   color: rgba(74, 222, 128, 0.85);
 }
 
-.event-admin-code-field input {
+.create-event-code-field input {
   font-family: "IBM Plex Mono", "Fira Mono", monospace;
   font-size: 0.78rem;
   letter-spacing: 0.14em;
@@ -327,7 +282,7 @@ body.panel-faded #panel-launcher {
   caret-color: rgba(74, 222, 128, 1);
 }
 
-.event-admin-code-field input::placeholder {
+.create-event-code-field input::placeholder {
   color: rgba(74, 222, 128, 0.35);
   letter-spacing: 0.2em;
 }
@@ -344,52 +299,6 @@ body.panel-faded #panel-launcher {
 }
 
 .info-link:hover { color: var(--color-accent); }
-
-.panel-info-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.25rem 0 0.75rem;
-  margin-bottom: 0.5rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.panel-info-header h2 {
-  margin: 0;
-  font-family: var(--font-family-heading);
-  font-size: 1.1rem;
-}
-
-.panel-info-close {
-  font: inherit;
-  font-size: 1.6rem;
-  line-height: 1;
-  color: var(--color-text-muted);
-  background: none;
-  border: 0;
-  padding: 0.25rem;
-  cursor: pointer;
-}
-
-.panel-info-close:hover { color: var(--color-text); }
-
-.info-faq { margin: 0; }
-
-.info-faq dt {
-  font-family: var(--font-family-heading);
-  font-size: 0.95rem;
-  color: var(--color-success);
-  margin: 1rem 0 0.35rem;
-}
-
-.info-faq dt:first-child { margin-top: 0; }
-
-.info-faq dd {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--color-text-muted);
-  line-height: 1.5;
-}
 
 .panel-section {
   margin-top: 0.9rem;

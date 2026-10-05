@@ -1,0 +1,31 @@
+.chaser-app-title {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.35rem, 2vw, 0.75rem);
+  min-width: 0;
+  max-width: 100%;
+  font-size: clamp(1.85rem, 6vw + 0.5rem, 4.75rem);
+}
+
+.chaser-app-title h1 {
+  margin: 0;
+  font-family: "Bebas Neue", Arial, sans-serif;
+  font-size: 1em;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.chaser-app-title-img {
+  display: block;
+  height: 1.15em;
+  width: auto;
+  max-width: min(40vw, 5.5em);
+  object-fit: contain;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.chaser-app-title--page {
+  margin: 0 0 1rem;
+}

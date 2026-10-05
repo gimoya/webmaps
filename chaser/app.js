@@ -40,23 +40,18 @@
   const statusEl = document.getElementById("connection-status");
   const gpsStatusEl = document.getElementById("gps-status");
   const stopBtn = document.getElementById("stop-tracking");
-  const panelMain = document.getElementById("panel-main");
-  const panelInfo = document.getElementById("panel-info");
   const noticeDialog = document.getElementById("notice-dialog");
   const noticeMessage = document.getElementById("notice-dialog-message");
   const noticeConfirm = document.getElementById("notice-dialog-confirm");
   const noticeCancel = document.getElementById("notice-dialog-cancel");
-  const eventDialog = document.getElementById("event-dialog");
-  const eventListEl = document.getElementById("event-list");
-  const eventEmptyEl = document.getElementById("event-empty");
-  const eventAdminEl = document.getElementById("event-admin");
-  const eventNameEl = document.getElementById("event-name");
-  const eventAdminCodeEl = document.getElementById("event-admin-code");
-  const eventCreateBtn = document.getElementById("event-create");
+  const createEventDialog = document.getElementById("create-event-dialog");
+  const eventNameEl = document.getElementById("create-event-name");
+  const eventAdminCodeEl = document.getElementById("create-event-code");
+  const eventCreateBtn = document.getElementById("create-event-submit");
+  const createEventSkipBtn = document.getElementById("create-event-skip");
   const adminModeBadge = document.getElementById("admin-mode-badge");
   const eventPanelLine = document.getElementById("event-panel-line");
   const eventPanelName = document.getElementById("event-panel-name");
-  const eventSwitchBtn = document.getElementById("event-switch");
   const panelHeader = document.getElementById("panel-header");
   const entryDialog = document.getElementById("entry-dialog");
   const riderDialog = document.getElementById("rider-dialog");
@@ -84,6 +79,8 @@
   let eventsUnsubscribe = null;
   let adminConfigUnsubscribe = null;
   let adminMasterPassword = MASTER_PASSWORD;
+  let unusedAdminCodes = [];
+  let reservedAdminCodes = [];
   let resolvingEvent = false;
 
   function hashTokens() {
@@ -97,8 +94,7 @@
   }
 
   function hasAdminEntry() {
-    const tokens = hashTokens();
-    return tokens.includes("admin") || tokens.some((part) => part.startsWith("admin="));
+    return Boolean(adminCodewordFromHash());
   }
 
   function isMasterAdmin() {
@@ -106,10 +102,30 @@
     return Boolean(code) && code === adminMasterPassword;
   }
 
+  function isValidAdminToken(code) {
+    if (!code) return false;
+    if (code === adminMasterPassword) return true;
+    if (unusedAdminCodes.includes(code)) return true;
+    if (reservedAdminCodes.includes(code)) return true;
+    for (const row of eventsById.values()) {
+      if (row.adminCode === code) return true;
+    }
+    return false;
+  }
+
   function isEventAdmin() {
     if (isMasterAdmin()) return true;
     const code = adminCodewordFromHash();
     return Boolean(eventId && eventAdminCode && code && code === eventAdminCode);
+  }
+
+  /** Master always; pool/event codes only when not already admin on a bound event. */
+  function canOpenCreateBox() {
+    if (isMasterAdmin()) return true;
+    const code = adminCodewordFromHash();
+    if (!isValidAdminToken(code)) return false;
+    if (isEventAdmin()) return false;
+    return true;
   }
 
   function isSimulationMode() {
@@ -187,6 +203,12 @@
     const fragment = modeHashFragment();
     const nextHash = fragment ? `#${fragment}` : "";
     history.replaceState(null, "", `${window.location.pathname}?${params}${nextHash}`);
+    syncAdminUsageLink();
+  }
+
+  function syncAdminUsageLink() {
+    if (!adminModeBadge || adminModeBadge.hidden) return;
+    adminModeBadge.href = `./home.html?from=${encodeURIComponent(window.location.href)}&tab=admins`;
   }
 
   let pageMode = modeFromHash();
@@ -196,16 +218,6 @@
   function setPageMode(mode) {
     pageMode = mode;
     writePageUrl();
-  }
-
-  function showInfoPanel() {
-    panelMain.hidden = true;
-    panelInfo.hidden = false;
-  }
-
-  function hideInfoPanel() {
-    panelMain.hidden = false;
-    panelInfo.hidden = true;
   }
 
   window.addEventListener("hashchange", () => {
@@ -221,10 +233,10 @@
       return;
     }
     if (!eventId) {
-      showEventPicker();
+      openCreateEventBoxIfAdmin();
       return;
     }
-    hideEventPicker();
+    hideCreateEventBox();
     if (pageMode === "viewing" && !activeSessionRef) {
       document.body.classList.add("is-viewer");
       entryDialog.hidden = true;
@@ -235,10 +247,8 @@
     syncAdminControls();
   });
   document.querySelector(".info-link").addEventListener("click", () => {
-    showInfoPanel();
-  });
-  panelInfo.querySelector(".panel-info-close").addEventListener("click", () => {
-    hideInfoPanel();
+    writePageUrl();
+    window.location.assign(`./home.html?from=${encodeURIComponent(window.location.href)}`);
   });
 
   noticeConfirm.addEventListener("click", () => closeNotice(true));
@@ -246,6 +256,7 @@
   userListEl.addEventListener("click", centerOnListedUser);
 
   const initialView = parseMapView();
+  const hadUrlMapView = Boolean(initialView);
   const map = L.map("map", { zoomControl: true, minZoom: ZOOM_MIN }).setView(
     initialView ? [initialView.lat, initialView.lng] : [47.2672, 11.3928],
     initialView ? initialView.zoom : 12
@@ -253,7 +264,7 @@
   wirePanelFade();
   map.on("zoomend", syncLabelZoom);
   map.on("moveend", scheduleUrlSync);
-  writeMapUrl();
+  if (hadUrlMapView) writeMapUrl();
   syncLabelZoom();
   L.tileLayer("https://tile.tracestrack.com/topo__/{z}/{x}/{y}.png?key={apiKey}", {
     minZoom: 1,
@@ -295,21 +306,20 @@
   clearSessionsBtn.addEventListener("click", () => {
     clearAllTrackingSessions();
   });
-  eventSwitchBtn.addEventListener("click", () => {
-    showEventPicker();
-  });
-  eventSwitchBtn.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    showEventPicker();
-  });
+  if (adminModeBadge) {
+    adminModeBadge.addEventListener("click", (event) => {
+      event.preventDefault();
+      writePageUrl();
+      window.location.assign(
+        `./home.html?from=${encodeURIComponent(window.location.href)}&tab=admins`
+      );
+    });
+  }
   eventCreateBtn.addEventListener("click", () => {
     createEventFromForm();
   });
-  eventListEl.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-event-id]");
-    if (!button) return;
-    selectEvent(button.dataset.eventId);
+  createEventSkipBtn.addEventListener("click", () => {
+    hideCreateEventBox();
   });
   wireEntryGate();
 
@@ -317,7 +327,7 @@
   if (!firebaseConfig) {
     renderConnection(false, "offline");
     console.warn("CHASER_FIREBASE_CONFIG missing. Realtime sync disabled.");
-    showEventPicker();
+    openCreateEventBoxIfAdmin();
     return;
   }
 
@@ -357,41 +367,40 @@
     panelHeader.classList.add("has-event");
   }
 
-  function renderEventPickerList() {
-    const events = [...eventsById.values()].sort((a, b) => a.name.localeCompare(b.name));
-    eventListEl.replaceChildren();
-    events.forEach((event) => {
-      const item = document.createElement("li");
-      const button = document.createElement("button");
-      button.type = "button";
-      button.dataset.eventId = event.id;
-      button.textContent = event.name;
-      button.title = event.id;
-      item.append(button);
-      eventListEl.append(item);
-    });
-    eventEmptyEl.hidden = events.length > 0;
-  }
-
-  function showEventPicker() {
+  function openCreateEventBoxIfAdmin() {
+    if (!canOpenCreateBox()) {
+      hideCreateEventBox();
+      return;
+    }
     entryDialog.hidden = true;
     riderDialog.hidden = true;
     if (eventAdminCodeEl && hashAdminCode && !eventAdminCodeEl.value) {
       eventAdminCodeEl.value = hashAdminCode;
     }
-    renderEventPickerList();
-    eventDialog.hidden = false;
+    createEventDialog.hidden = false;
     syncAdminControls();
   }
 
-  function hideEventPicker() {
-    eventDialog.hidden = true;
+  function hideCreateEventBox() {
+    createEventDialog.hidden = true;
+  }
+
+  function refreshCreateBoxVisibility() {
+    if (canOpenCreateBox() && !eventId) {
+      const id = eventIdFromHash();
+      if (!id || !eventsById.has(id)) openCreateEventBoxIfAdmin();
+      return;
+    }
+    if (!canOpenCreateBox()) hideCreateEventBox();
   }
 
   function attachAdminConfigSubscription() {
     adminConfigUnsubscribe = db.collection(ADMIN_CONFIG_COLLECTION).doc(ADMIN_CONFIG_DOC).onSnapshot((doc) => {
       if (!doc.exists) {
         adminMasterPassword = MASTER_PASSWORD;
+        unusedAdminCodes = [];
+        reservedAdminCodes = [];
+        refreshCreateBoxVisibility();
         syncAdminControls();
         return;
       }
@@ -401,6 +410,13 @@
       } else {
         adminMasterPassword = MASTER_PASSWORD;
       }
+      unusedAdminCodes = Array.isArray(data.unusedCodes)
+        ? data.unusedCodes.filter((code) => typeof code === "string" && code)
+        : [];
+      reservedAdminCodes = Array.isArray(data.reservedCodes)
+        ? data.reservedCodes.filter((code) => typeof code === "string" && code)
+        : [];
+      refreshCreateBoxVisibility();
       syncAdminControls();
     }, (error) => {
       console.error("Firestore adminConfig subscription error:", error);
@@ -419,15 +435,15 @@
           adminCode: typeof data.adminCode === "string" ? data.adminCode : null
         });
       });
-      renderEventPickerList();
       if (eventId && eventsById.has(eventId)) {
         const row = eventsById.get(eventId);
         eventAdminCode = row.adminCode;
       }
       if (eventId && !eventsById.has(eventId) && !resolvingEvent) {
         teardownEventScope();
-        showEventPicker();
+        openCreateEventBoxIfAdmin();
       }
+      refreshCreateBoxVisibility();
       syncAdminControls();
     }, (error) => {
       console.error("Firestore events subscription error:", error);
@@ -443,15 +459,15 @@
       if (!id) {
         if (eventId) {
           writePageUrl();
-          hideEventPicker();
+          hideCreateEventBox();
           syncAdminControls();
           return;
         }
-        showEventPicker();
+        openCreateEventBoxIfAdmin();
         return;
       }
       if (id === eventId && eventRef) {
-        hideEventPicker();
+        hideCreateEventBox();
         syncAdminControls();
         return;
       }
@@ -459,32 +475,23 @@
       if (!snap.exists) {
         if (eventId) {
           writePageUrl();
-          hideEventPicker();
+          hideCreateEventBox();
           syncAdminControls();
           return;
         }
-        showEventPicker();
+        openCreateEventBoxIfAdmin();
         return;
       }
       await bindEvent(id, snap.data());
-      hideEventPicker();
+      hideCreateEventBox();
       applyInitialMode();
     } finally {
       resolvingEvent = false;
     }
   }
 
-  async function selectEvent(id) {
-    if (!db || !eventsById.has(id)) return;
-    const row = eventsById.get(id);
-    pendingRouteFrame = true;
-    await bindEvent(id, { name: row.name, adminCode: row.adminCode });
-    hideEventPicker();
-    applyInitialMode();
-  }
-
   async function createEventFromForm() {
-    if (!db || !hasAdminEntry()) return;
+    if (!db || !canOpenCreateBox()) return;
     const name = String(eventNameEl.value || "").trim();
     const code = String(eventAdminCodeEl.value || "").trim();
     if (!name) {
@@ -528,15 +535,19 @@
           }
           const data = configSnap.data();
           const unused = Array.isArray(data.unusedCodes) ? data.unusedCodes.slice() : [];
-          const index = unused.indexOf(code);
-          if (index < 0) {
-            if (unused.length === 0) {
-              throw new Error("Admin code pool is empty.");
-            }
+          const reserved = Array.isArray(data.reservedCodes) ? data.reservedCodes.slice() : [];
+          const unusedIndex = unused.indexOf(code);
+          const reservedIndex = reserved.indexOf(code);
+          if (unusedIndex >= 0) {
+            unused.splice(unusedIndex, 1);
+          } else if (reservedIndex >= 0) {
+            reserved.splice(reservedIndex, 1);
+          } else if (unused.length === 0 && reserved.length === 0) {
+            throw new Error("Admin code pool is empty.");
+          } else {
             throw new Error("Admin code is not valid.");
           }
-          unused.splice(index, 1);
-          tx.update(configRef, { unusedCodes: unused });
+          tx.update(configRef, { unusedCodes: unused, reservedCodes: reserved });
           tx.set(eventDoc, {
             name,
             adminCode: code,
@@ -549,7 +560,7 @@
       eventAdminCodeEl.value = "";
       hashAdminCode = code;
       await bindEvent(id, { name, adminCode: code });
-      hideEventPicker();
+      hideCreateEventBox();
       applyInitialMode();
     } catch (err) {
       console.error("Failed to create event:", err);
@@ -601,6 +612,7 @@
       }
       return;
     }
+    const switching = Boolean(eventId);
     if (eventId) teardownEventScope();
     eventId = id;
     eventName = typeof data.name === "string" ? data.name : id;
@@ -615,6 +627,7 @@
     }
     eventRef = db.collection(EVENTS_COLLECTION).doc(id);
     sessionsRef = eventRef.collection(SESSIONS_COLLECTION);
+    pendingRouteFrame = switching || !hadUrlMapView;
     writePageUrl();
     renderEventPanel();
     attachSessionsSubscription(sessionsRef);
@@ -631,7 +644,7 @@
     });
     entryRider.addEventListener("click", () => {
       if (!eventId) {
-        showEventPicker();
+        showNotice("Open an event with its id in the URL hash.");
         return;
       }
       entryDialog.hidden = true;
@@ -639,14 +652,14 @@
     });
     document.getElementById("viewer-ride").addEventListener("click", () => {
       if (!eventId) {
-        showEventPicker();
+        showNotice("Open an event with its id in the URL hash.");
         return;
       }
       openRiderBox();
     });
     document.getElementById("viewer-replay").addEventListener("click", () => {
       if (!eventId) {
-        showEventPicker();
+        showNotice("Open an event with its id in the URL hash.");
         return;
       }
       if (replayActive) stopReplay();
@@ -668,7 +681,7 @@
         return;
       }
       if (!sessionsRef || !eventId) {
-        riderLog.textContent = eventId ? "Firebase is not configured." : "Pick an event first.";
+        riderLog.textContent = eventId ? "Firebase is not configured." : "Open an event via the URL hash first.";
         riderLog.hidden = false;
         return;
       }
@@ -800,12 +813,13 @@
 
   function syncAdminControls() {
     const eventAdmin = isEventAdmin();
-    const showCreate = hasAdminEntry();
     const ready = Boolean(eventId);
     clearSessionsBtn.hidden = !eventAdmin || !ready;
     if (gpxLoadControl) gpxLoadControl.hidden = !eventAdmin;
-    if (eventAdminEl) eventAdminEl.hidden = !showCreate;
-    if (adminModeBadge) adminModeBadge.hidden = !eventAdmin;
+    if (adminModeBadge) {
+      adminModeBadge.hidden = !eventAdmin;
+      syncAdminUsageLink();
+    }
     simLogEl.hidden = !isSimulationMode();
   }
 
@@ -820,6 +834,10 @@
 
   async function clearAllTrackingSessions() {
     if (!db || !eventRef || !isEventAdmin()) return;
+    if (!isMasterAdmin()) {
+      const code = adminCodewordFromHash();
+      if (!code || code !== eventAdminCode) return;
+    }
     const confirmed = await showNotice(
       "Warning! Clear ALL traces for this event? Every rider session and its points are permanently deleted. Placement is reset.",
       { confirmLabel: "Clear all", cancelLabel: "Cancel" }
@@ -848,6 +866,10 @@
 
   async function deleteTrackingSession(sessionId) {
     if (!db || !eventRef || !isEventAdmin() || !sessionId) return;
+    if (!isMasterAdmin()) {
+      const code = adminCodewordFromHash();
+      if (!code || code !== eventAdminCode) return;
+    }
     const track = tracksBySessionId.get(sessionId);
     const label = track && track.name ? track.name : sessionId;
     const confirmed = await showNotice(
@@ -1243,9 +1265,26 @@
     return { order, locked, recordedAtMs: toMillis(data.recordedAt) };
   }
 
+  function placeOrdinal(index) {
+    const n = index + 1;
+    const mod100 = n % 100;
+    if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+    switch (n % 10) {
+      case 1: return `${n}st`;
+      case 2: return `${n}nd`;
+      case 3: return `${n}rd`;
+      default: return `${n}th`;
+    }
+  }
+
   function placeMark(index) {
     if (index < PLACE_CUPS.length) return PLACE_CUPS[index];
     return `${index + 1}.th #`;
+  }
+
+  function placeListLabel(index) {
+    const cup = index < PLACE_CUPS.length ? PLACE_CUPS[index] : "🏆";
+    return `${cup} ${placeOrdinal(index)}`;
   }
 
   function marksFromOrder(order) {
@@ -1785,7 +1824,7 @@
         finished,
         signalStale,
         own,
-        meta: `last timestamp: ${formatClock(updatedAtMs, true)} · start time: ${formatClock(track.startedAtMs, false)} · ${track.points.length} ${pointLabel}`
+        meta: `start time: ${formatClock(track.startedAtMs, false)} · last timestamp: ${formatClock(updatedAtMs, true)} · ${track.points.length} ${pointLabel}`
       };
     });
     const viewing = document.body.classList.contains("is-viewer");
@@ -1804,9 +1843,9 @@
           : row.signalStale && !viewing
             ? `<div class="user-item-stale">Tracking paused.</div>`
             : "";
-        const mark = placeCups.get(row.track.sessionId) || "";
-        const name = mark
-          ? `<span class="chaser-place">${escapeHtml(mark)}</span>${escapeHtml(row.track.name)}`
+        const rank = placeRank.get(row.track.sessionId);
+        const name = rank != null
+          ? `<span class="chaser-place">${escapeHtml(placeListLabel(rank))}</span>${escapeHtml(row.track.name)}`
           : escapeHtml(row.track.name);
         const del = admin
           ? `<button type="button" class="user-item-del" data-session-delete="${escapeHtml(row.track.sessionId)}" title="Delete trace">Del</button>`
@@ -2054,9 +2093,10 @@
   function attachRoutesSubscription(scopeRef) {
     if (routesUnsubscribe) routesUnsubscribe();
     routesUnsubscribe = scopeRef.collection(ROUTES_COLLECTION).doc(ROUTE_DOC).onSnapshot((doc) => {
-      const frame = pendingRouteFrame || (!parseMapView() && !routeLatLngs);
+      const frame = pendingRouteFrame;
       pendingRouteFrame = false;
       applyRouteDoc(doc.exists ? doc.data() : null, frame);
+      if (frame) writeMapUrl();
     }, (error) => {
       console.error("Firestore routes subscription error:", error);
     });
@@ -2072,7 +2112,11 @@
   }
 
   async function uploadGpxFile(file) {
-    if (!isEventAdmin() || !eventRef) return;
+    if (!isEventAdmin() || !eventRef || !eventId) return;
+    if (!isMasterAdmin()) {
+      const code = adminCodewordFromHash();
+      if (!code || code !== eventAdminCode) return;
+    }
     if (!db) {
       await showNotice("Firebase is not configured.");
       return;
