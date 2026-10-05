@@ -9,8 +9,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Trade+Winds&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./chaser-title.css">
   <link rel="stylesheet" href="./home.css">
+  <script>
+    if (sessionStorage.getItem("chaserPageFade") === "1") {
+      document.documentElement.classList.add("page-fade-pending");
+    }
+  </script>
 </head>
 <body>
+  <div id="page-fade" aria-hidden="true"></div>
   <main>
     <a id="home-back" class="back-link" href="./" hidden>← Back to Chaser</a>
     <div class="chaser-app-title chaser-app-title--page">
@@ -26,24 +32,25 @@
     <section id="panel-users" class="panel" role="tabpanel" aria-labelledby="tab-users">
       <h2>Riders &amp; viewers</h2>
       <ol>
-        <li>Open the event link you were given (hash starts with the event id), e.g. <code>#your-event#viewing</code>.</li>
-        <li>Choose <strong>Viewer</strong> to watch, or <strong>Rider</strong> / the bike button to ride.</li>
-        <li>Enter a unique name/alias → <strong>Start Ride / Resume</strong>. Allow GPS.</li>
-        <li>Keep the page open and unlocked while riding. Refresh or lock stops logging until you resume with the same alias.</li>
-        <li>Do not reuse someone else’s alias — you would write into their trace.</li>
-        <li>When finished: <strong>Stop tracking</strong>. That alias cannot start again on this event. Stop if you want your place locked on a ranked route.</li>
-        <li>Replay (viewer): use the play control under the bike button.</li>
+        <li>Open the event link you were given (if you look into the web address, you'll see that #hash starts with the event id), e.g. <code>../chaser/..#your-event</code>.</li>
+        <li>Choose <strong>Viewer</strong> to watch, or <strong>Rider</strong> (same as hitting the bike button later) to ride.</li>
+        <li>For tracking: Enter a unique name/alias → <strong>Start Ride / Resume</strong>. Allow GPS and keep internet connected.</li>
+        <li>While the page is open and unlocked track points are written. Refresh or lock stops logging until you resume - always (!) use the same alias.< Do not reuse someone else’s alias — you would write into their trace.</li>
+        <li>When finished: <strong>Stop tracking</strong>. Caution (!): That alias cannot start again on this event. Stop if you want your place locked on a ranked route.</li>
+        <li>Replay: use the replay control under the bike button to watch a fastfowrd replay of all riders trackings.</li>
       </ol>
     </section>
 
     <section id="panel-admins" class="panel" role="tabpanel" aria-labelledby="tab-admins" hidden>
       <h2>Event admins</h2>
       <ol>
-        <li>Get a pool admin code from the developer (or use master if you have it).</li>
-        <li>Create: open <code>…/chaser/#admin=YOURCODE</code> → name + code → <strong>Create event</strong>.</li>
-        <li>Bookmark <code>#event-id#…#admin=YOURCODE</code> for that event.</li>
-        <li>On that bookmark: upload GPX, clear all traces, delete a rider.</li>
-        <li>Share with everyone else: <code>#event-id#viewing</code> (no <code>admin=</code>).</li>
+        <li>Buy an admin code on <a href="https://ko-fi.com/s/4be9b1a7fc" target="_blank" rel="noopener">Ko-fi</a> (or get one from the developer).</li>
+        <li>After purchase, open the <a href="https://europe-west1-chaser-75e2e.cloudfunctions.net/claimCode" target="_blank" rel="noopener">claim page</a> (should auto-open, but you'll also have it in your confirmation message) and enter the email you used at checkout to reveal your 5-character token. Lost it later? Same claim link + email recovers it anytime. If you bought more than once, all codes for that email are listed (newest first).</li>
+        <li>Keep that token. You need it to <strong>create</strong> the event and later for <strong>admin</strong> (GPX upload, clear traces, delete riders).</li>
+        <li>Create: open <code>…/chaser/..#admin=YOURCODE</code>, then put name code to the form that opened up, to create and event. Once you have created an event using up one token, that code-token is bound to that event permanently!</li>
+        <li>You best bookmark the URL including your hash for the event <code>event-id</code> and the admin hash <code>#admin=YOURCODE</code>. NEVER EVER share the address with your admin code publicly!</li>
+        <li>On that bookmark: On the Chaser Page you can upload GPX, clear all traces, delete a rider.</li>
+        <li>The internet address you share with everyone else - riders and viewers should contain: <code>#event-id#viewing</code> or <code>#event-id#riding</code> but never ever the hash <code>admin=</code>.</li>
       </ol>
     </section>
 
@@ -68,6 +75,38 @@
   </script>
   <script>
     (function () {
+      const FADE_KEY = "chaserPageFade";
+      const overlay = document.getElementById("page-fade");
+
+      function finishEnterFade() {
+        if (sessionStorage.getItem(FADE_KEY) !== "1") {
+          document.documentElement.classList.remove("page-fade-pending");
+          return;
+        }
+        sessionStorage.removeItem(FADE_KEY);
+        requestAnimationFrame(() => {
+          document.documentElement.classList.remove("page-fade-pending");
+          if (overlay) overlay.classList.remove("is-covering");
+        });
+      }
+
+      function navigateWithFade(url) {
+        if (!overlay) {
+          window.location.assign(url);
+          return;
+        }
+        sessionStorage.setItem(FADE_KEY, "1");
+        const go = () => window.location.assign(url);
+        overlay.addEventListener("transitionend", function once(event) {
+          if (event.propertyName !== "opacity") return;
+          overlay.removeEventListener("transitionend", once);
+          go();
+        });
+        overlay.classList.add("is-covering");
+      }
+
+      finishEnterFade();
+
       const back = document.getElementById("home-back");
       const params = new URLSearchParams(window.location.search);
       const raw = params.get("from");
@@ -76,6 +115,10 @@
         if (url.origin === window.location.origin) {
           back.href = `${url.pathname}${url.search}${url.hash}`;
           back.hidden = false;
+          back.addEventListener("click", (event) => {
+            event.preventDefault();
+            navigateWithFade(back.href);
+          });
         }
       }
 
@@ -122,6 +165,13 @@
           </li>`;
         }).join("");
       }
+
+      listEl.addEventListener("click", (event) => {
+        const link = event.target.closest("a.event-list-link");
+        if (!link) return;
+        event.preventDefault();
+        navigateWithFade(link.href);
+      });
 
       firebase.initializeApp(window.CHASER_FIREBASE_CONFIG);
       const db = firebase.firestore();

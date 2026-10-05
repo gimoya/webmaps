@@ -1098,3 +1098,23 @@ path.trace-hit:focus {
     max-height: 48dvh;
   }
 }
+
+#page-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+#page-fade.is-covering {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+html.page-fade-pending #page-fade {
+  opacity: 1;
+  transition: none;
+}

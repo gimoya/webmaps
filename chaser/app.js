@@ -32,6 +32,37 @@
   const MASTER_PASSWORD = "admin_master_6071";
   const EVENT_ID_MAX = 40;
   const PLACE_CUPS = ["🥇", "🥈", "🥉"];
+  const PAGE_FADE_KEY = "chaserPageFade";
+  const pageFadeOverlay = document.getElementById("page-fade");
+
+  function finishEnterPageFade() {
+    if (sessionStorage.getItem(PAGE_FADE_KEY) !== "1") {
+      document.documentElement.classList.remove("page-fade-pending");
+      return;
+    }
+    sessionStorage.removeItem(PAGE_FADE_KEY);
+    requestAnimationFrame(() => {
+      document.documentElement.classList.remove("page-fade-pending");
+      if (pageFadeOverlay) pageFadeOverlay.classList.remove("is-covering");
+    });
+  }
+
+  function navigateWithPageFade(url) {
+    if (!pageFadeOverlay) {
+      window.location.assign(url);
+      return;
+    }
+    sessionStorage.setItem(PAGE_FADE_KEY, "1");
+    const go = () => window.location.assign(url);
+    pageFadeOverlay.addEventListener("transitionend", function once(event) {
+      if (event.propertyName !== "opacity") return;
+      pageFadeOverlay.removeEventListener("transitionend", once);
+      go();
+    });
+    pageFadeOverlay.classList.add("is-covering");
+  }
+
+  finishEnterPageFade();
 
   const userListEl = document.getElementById("user-list");
   const clearSessionsBtn = document.getElementById("clear-sessions");
@@ -248,7 +279,7 @@
   });
   document.querySelector(".info-link").addEventListener("click", () => {
     writePageUrl();
-    window.location.assign(`./home.html?from=${encodeURIComponent(window.location.href)}`);
+    navigateWithPageFade(`./home.html?from=${encodeURIComponent(window.location.href)}`);
   });
 
   noticeConfirm.addEventListener("click", () => closeNotice(true));
@@ -310,7 +341,7 @@
     adminModeBadge.addEventListener("click", (event) => {
       event.preventDefault();
       writePageUrl();
-      window.location.assign(
+      navigateWithPageFade(
         `./home.html?from=${encodeURIComponent(window.location.href)}&tab=admins`
       );
     });

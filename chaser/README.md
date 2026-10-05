@@ -21,6 +21,8 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 - `gpx.js` – GPX parse, 10 m thinning, namespaced write
 - `track-grade.js` – uphill / flat split for the course line
 - `home.html` / `home.css` / `chaser-title.css` – app homepage / practical guides (subtitle ⓘ; admin badge opens Event admins tab with `?from=` / `?tab=admins`)
+- `functions/` – Ko-fi webhook + claim page (Firebase; deploy from `chaser/`)
+- `firebase.json` / `.firebaserc` – Firebase project for those functions
 - `admin-pool-seed.json` – one-time seed for `adminConfig/current` unused codes
 - `manifest.json` – installable app
 - `sw.js` – app shell and topo tile cache. The page does not register it.
@@ -295,13 +297,14 @@ Sell a **Shop** product; webhook reserves pool code(s); claim page reveals them;
 
 1. Buyer purchases that shop product (`Shop Order` webhook).
 2. `kofiWebhook` verifies token, matches `direct_link_code`, moves `quantity` codes from `unusedCodes` → `reservedCodes`, writes `kofiFulfillments/{kofi_transaction_id}`.
-3. Buyer opens `claimCode?tx=<kofi_transaction_id>` (claim page only — no email).
+3. Buyer opens `claimCode` (Ko-fi shop redirect) → enters checkout email → sees code(s). Direct link `claimCode?tx=<id>` still works.
 4. Buyer opens Chaser `#admin=<code>` and creates an event → that code leaves `reservedCodes`.
 
 **Deploy (Blaze required)**
 
 ```bash
-cd functions && npm install
+# From chaser/ (firebase.json lives here)
+cd functions && npm install && cd ..
 firebase functions:secrets:set KOFI_VERIFY_TOKEN
 # functions/.env (gitignored):
 #   KOFI_SHOP_DIRECT_LINK_CODE=your_shop_item_code
@@ -313,7 +316,7 @@ Point Ko-fi (Settings → Advanced → Webhooks) at the `kofiWebhook` URL. Same 
 
 Manual giveaways: hand out a code still in `unusedCodes` only (not one already in `reservedCodes`).
 
-See [`functions/`](../functions/) and [`functions/.env.example`](../functions/.env.example).
+See [`functions/`](functions/) and [`functions/.env.example`](functions/.env.example).
 
 ## Basemap
 
