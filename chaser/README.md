@@ -10,7 +10,7 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 - One live trace per alias per event. Case does not distinguish (`Kay` and `kay` are the same)
 - Last point shows the alias on a white stem, plus a dashed accuracy ring in the alias color. A finished ride drops the ring.
 - Alias labels shrink below zoom 14
-- Click the map to fade the panel. The floating ⓘ launcher brings it back. The subtitle ⓘ opens `home.html` (riders first; Event Creation / admins via `?tab=admins`) with `?from=` back to the same map view. Navigation uses a short black page-fade (`sessionStorage` key `chaserPageFade`).
+- Click the map to fade the panel. The floating ⓘ launcher brings it back. The **GPS Chaser** title (+ logo) opens `home.html` (riders first; Event Creation / admins via `?tab=admins`) with `?from=` back to the same map view. Navigation uses a short black page-fade (`sessionStorage` key `chaserPageFade`).
 - After an event is chosen, a fresh load asks Rider or Viewer. **Start Ride / Resume Tracing** starts or continues a trace that is not finished. **Stop tracking** stops this page's writer and finishes the ride. The trace stays on the map.
 - Event admin can **Lock race** / **Unlock race** next to the event title (`raceLocked`). Locked: new aliases cannot start; unfinished aliases can still resume.
 - Viewer **replay** replays stored traces on the map (play control under the bike button).
@@ -365,7 +365,7 @@ The page sends `strict-origin-when-cross-origin`, so the tile request includes t
 6. Open the page on another device with the same event hash to see the live trace.
 7. Click **Stop tracking** and confirm. This page stops writing and switches to viewer. The trace stays on the map with `Tracking stopped/finished` and the end time. That alias cannot start again in this event.
 
-Homepage: subtitle ⓘ opens [`home.html`](home.html) (live event list → `#event-id#viewing`, plus Riders & viewers / Event Creation guides) in the same tab. Direct admins tab: `home.html?tab=admins` (query, not hash). **Back to Chaser** returns via `?from=` (same `?lat=&lng=&z=` + hash). With event admin active, the toolbox badge opens that tab the same way.
+Homepage: title/logo opens [`home.html`](home.html) (live event list → `#event-id#viewing`, plus Riders & viewers / Event Creation guides) in the same tab. Direct admins tab: `home.html?tab=admins` (query, not hash). **Back to Chaser** returns via `?from=` (same `?lat=&lng=&z=` + hash). With event admin active, the toolbox badge opens that tab the same way.
 
 Pool admin bookmark shape: `#event-id#viewing#admin=CODE`. Share riders `#event-id#viewing` without `admin=`.
 

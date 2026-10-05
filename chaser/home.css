@@ -14,6 +14,25 @@
 
 html {
   overflow-x: clip;
+  scrollbar-width: auto;
+  scrollbar-color: var(--border) var(--panel);
+}
+
+html::-webkit-scrollbar {
+  width: 12px;
+}
+
+html::-webkit-scrollbar-track {
+  background: var(--panel);
+}
+
+html::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
 }
 
 body {
@@ -31,7 +50,7 @@ body {
 }
 
 main {
-  max-width: 40rem;
+  max-width: 32rem;
   width: 100%;
   min-width: 0;
   margin: 0 auto;

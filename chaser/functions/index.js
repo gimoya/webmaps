@@ -155,7 +155,6 @@ function claimHtml({ codes, code, tx, error, showLookup, emailValue, matches, pu
        ${purchasedAt ? `<p class="muted">Purchased ${escapeHtml(purchasedAt)}</p>` : ""}
        ${list.map((c) => `<p class="code">${escapeHtml(c)}</p>
        <p><a href="${escapeHtml(chaserAdminUrl(c))}">Open Chaser with ${escapeHtml(c)}</a></p>`).join("")}
-       <p class="muted">Transaction <code>${escapeHtml(tx || "")}</code>.</p>
        <p class="muted"><a href="?">Look up another purchase by email</a></p>`;
   }
 
@@ -171,6 +170,7 @@ function claimHtml({ codes, code, tx, error, showLookup, emailValue, matches, pu
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Trade+Winds&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="${escapeHtml(base)}/home.css">
   <style>
+    main { max-width: 32rem; }
     h1 { margin: 0 0 1rem; font-family: var(--title); font-size: 2.5rem; letter-spacing: 0.02em; }
     .code {
       font-size: 1.75rem; letter-spacing: 0.12em; color: var(--accent);

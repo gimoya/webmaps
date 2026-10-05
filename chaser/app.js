@@ -279,10 +279,14 @@
     }
     syncAdminControls();
   });
-  document.querySelector(".info-link").addEventListener("click", () => {
-    writePageUrl();
-    navigateWithPageFade(`./home.html?from=${encodeURIComponent(window.location.href)}`);
-  });
+  const homeTitleLink = document.getElementById("home-title-link");
+  if (homeTitleLink) {
+    homeTitleLink.addEventListener("click", (event) => {
+      event.preventDefault();
+      writePageUrl();
+      navigateWithPageFade(`./home.html?from=${encodeURIComponent(window.location.href)}`);
+    });
+  }
 
   noticeConfirm.addEventListener("click", () => closeNotice(true));
   noticeCancel.addEventListener("click", () => closeNotice(false));
