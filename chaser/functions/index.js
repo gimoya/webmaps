@@ -107,7 +107,21 @@ function keepTokenNotice() {
   return `<p class="warn"><strong>Keep this 5-character token.</strong> You need it to <strong>create</strong> your event (<code>#admin=TOKEN</code>) and later for <strong>admin access</strong> on that event (GPX upload, clear traces, delete riders). Bookmark a URL that still includes <code>#admin=TOKEN</code>. Do not share the token publicly.</p>`;
 }
 
-function claimHtml({ codes, code, tx, error, showLookup, emailValue, matches }) {
+function formatPurchaseAt(ms) {
+  if (!ms || !Number.isFinite(ms)) return "";
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Vienna",
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  }).format(new Date(ms));
+}
+
+function claimHtml({ codes, code, tx, error, showLookup, emailValue, matches, purchasedAt }) {
   const list = Array.isArray(codes) && codes.length
     ? codes
     : (typeof code === "string" && code ? [code] : []);
@@ -127,10 +141,10 @@ function claimHtml({ codes, code, tx, error, showLookup, emailValue, matches }) 
     if (Array.isArray(matches) && matches.length) {
       body += keepTokenNotice();
       body += `<ul class="matches">` + matches.map((m) => `
-        <li>
-          <a href="${escapeHtml(m.url)}">${escapeHtml(m.url)}</a>
+        <li class="match">
+          ${m.purchasedAt ? `<p class="match-when">Purchased ${escapeHtml(m.purchasedAt)}</p>` : ""}
           ${m.codes.map((c) => `<p class="code">${escapeHtml(c)}</p>
-            <p><a href="${escapeHtml(chaserAdminUrl(c))}">Open Chaser with ${escapeHtml(c)}</a></p>`).join("")}
+            <p class="match-open"><a href="${escapeHtml(chaserAdminUrl(c))}">Open Chaser with ${escapeHtml(c)}</a></p>`).join("")}
         </li>`).join("") + `</ul>`;
     }
   } else if (error) {
@@ -138,6 +152,7 @@ function claimHtml({ codes, code, tx, error, showLookup, emailValue, matches }) 
       <p class="muted"><a href="?">Look up by email</a></p>`;
   } else {
     body = `${keepTokenNotice()}
+       ${purchasedAt ? `<p class="muted">Purchased ${escapeHtml(purchasedAt)}</p>` : ""}
        ${list.map((c) => `<p class="code">${escapeHtml(c)}</p>
        <p><a href="${escapeHtml(chaserAdminUrl(c))}">Open Chaser with ${escapeHtml(c)}</a></p>`).join("")}
        <p class="muted">Transaction <code>${escapeHtml(tx || "")}</code>.</p>
@@ -159,8 +174,8 @@ function claimHtml({ codes, code, tx, error, showLookup, emailValue, matches }) 
     h1 { margin: 0 0 1rem; font-family: var(--title); font-size: 2.5rem; letter-spacing: 0.02em; }
     .code {
       font-size: 1.75rem; letter-spacing: 0.12em; color: var(--accent);
-      background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
-      padding: 0.85rem 1rem; word-break: break-all;
+      background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border); border-radius: 6px;
+      padding: 0.45rem 0.7rem; margin: 0.35rem 0 0; word-break: break-all;
     }
     a { color: var(--accent); }
     .muted { color: var(--muted); font-size: 0.85rem; }
@@ -181,8 +196,14 @@ function claimHtml({ codes, code, tx, error, showLookup, emailValue, matches }) 
       font: inherit; padding: 0.55rem 0.75rem; border-radius: 5px; border: 0;
       background: var(--accent); color: var(--bg); cursor: pointer; font-weight: 600;
     }
-    .matches { list-style: none; margin: 1.25rem 0 0; padding: 0; display: grid; gap: 1.25rem; }
-    .matches a { word-break: break-all; font-size: 0.85rem; }
+    .matches { list-style: none; margin: 1.5rem 0 0; padding: 0; display: grid; gap: 1.5rem; }
+    .match {
+      margin: 0; padding: 0.65rem 0.75rem;
+      border: 1px solid var(--border); border-radius: 6px; background: var(--panel);
+    }
+    .match-when { margin: 0 0 0.15rem; color: var(--muted); font-size: 0.8rem; }
+    .match-open { margin: 0.2rem 0 0; }
+    .match-open a { word-break: break-all; font-size: 0.85rem; }
   </style>
 </head>
 <body>
@@ -337,12 +358,29 @@ exports.claimCode = onRequest(
     }
 
     if (!tx && emailNorm) {
-      let snap;
+      const byId = new Map();
+      const absorb = (snap) => {
+        if (!snap || snap.empty) return;
+        snap.docs.forEach((doc) => {
+          if (!byId.has(doc.id)) byId.set(doc.id, doc);
+        });
+      };
+
       try {
-        snap = await fulfillments()
+        absorb(await fulfillments()
           .where("emailNormalized", "==", emailNorm)
           .limit(25)
-          .get();
+          .get());
+        absorb(await fulfillments()
+          .where("email", "==", emailRaw)
+          .limit(25)
+          .get());
+        if (emailRaw !== emailNorm) {
+          absorb(await fulfillments()
+            .where("email", "==", emailNorm)
+            .limit(25)
+            .get());
+        }
       } catch (err) {
         logger.error("Email lookup failed", err);
         res.status(500).send(claimHtml({
@@ -353,22 +391,7 @@ exports.claimCode = onRequest(
         return;
       }
 
-      if (snap.empty) {
-        try {
-          snap = await fulfillments().where("email", "==", emailRaw).limit(25).get();
-        } catch (err) {
-          logger.error("Email fallback lookup failed", err);
-        }
-      }
-      if (snap.empty && emailRaw !== emailNorm) {
-        try {
-          snap = await fulfillments().where("email", "==", emailNorm).limit(25).get();
-        } catch (err) {
-          /* ignore */
-        }
-      }
-
-      if (!snap || snap.empty) {
+      if (!byId.size) {
         res.status(404).send(claimHtml({
           showLookup: true,
           emailValue: emailRaw,
@@ -377,7 +400,7 @@ exports.claimCode = onRequest(
         return;
       }
 
-      const rows = snap.docs.map((doc) => {
+      const rows = [...byId.values()].map((doc) => {
         const data = doc.data() || {};
         const created = data.createdAt && typeof data.createdAt.toMillis === "function"
           ? data.createdAt.toMillis()
@@ -389,7 +412,8 @@ exports.claimCode = onRequest(
       const matches = rows.map((row) => ({
         url: claimPageUrl(req, row.id),
         codes: codesFromData(row.data),
-        tx: row.id
+        tx: row.id,
+        purchasedAt: formatPurchaseAt(row.created)
       })).filter((m) => m.codes.length);
 
       if (!matches.length) {
@@ -411,7 +435,8 @@ exports.claimCode = onRequest(
         res.status(200).send(claimHtml({
           codes: only.codes,
           code: only.codes[0],
-          tx: only.tx
+          tx: only.tx,
+          purchasedAt: only.purchasedAt
         }));
         return;
       }
@@ -443,6 +468,14 @@ exports.claimCode = onRequest(
         claimedAt: FieldValue.serverTimestamp()
       });
     }
-    res.status(200).send(claimHtml({ codes, code: codes[0], tx }));
+    const createdMs = data.createdAt && typeof data.createdAt.toMillis === "function"
+      ? data.createdAt.toMillis()
+      : 0;
+    res.status(200).send(claimHtml({
+      codes,
+      code: codes[0],
+      tx,
+      purchasedAt: formatPurchaseAt(createdMs)
+    }));
   }
 );
