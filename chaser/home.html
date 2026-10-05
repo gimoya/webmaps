@@ -37,7 +37,7 @@
         <li>For tracking: Enter a unique name/alias → <strong>Start Ride / Resume</strong>. Allow GPS and keep internet connected.</li>
         <li>While the page is open and unlocked track points are written. Refresh or lock stops logging until you resume - always (!) use the same alias.< Do not reuse someone else’s alias — you would write into their trace.</li>
         <li>When finished: <strong>Stop tracking</strong>. Caution (!): That alias cannot start again on this event. Stop if you want your place locked on a ranked route.</li>
-        <li>Replay: use the replay control under the bike button to watch a fastfowrd replay of all rides.</li>
+        <li>Replay: under the bike button — play / pause / stop a fast-forward replay of all rides.</li>
       </ol>
     </section>
 
@@ -64,16 +64,7 @@
   </main>
   <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-compat.js"></script>
-  <script>
-    window.CHASER_FIREBASE_CONFIG = {
-      apiKey: "AIzaSyDltxjsiYUSWb-ACSXbVwgle1QiTwWJDiI",
-      authDomain: "chaser-75e2e.firebaseapp.com",
-      projectId: "chaser-75e2e",
-      storageBucket: "chaser-75e2e.firebasestorage.app",
-      messagingSenderId: "764827136309",
-      appId: "1:764827136309:web:888b04389963a1fec75c7c"
-    };
-  </script>
+  <script src="./firebase-config.js"></script>
   <script>
     (function () {
       const FADE_KEY = "chaserPageFade";

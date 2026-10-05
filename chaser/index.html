@@ -40,6 +40,7 @@
           <header class="panel-header" id="panel-header">
             <p id="event-panel-line" class="event-panel-line" hidden>
               <span id="event-panel-name" class="event-panel-name"></span>
+              <button id="race-lock-btn" type="button" class="race-lock-btn" hidden aria-pressed="false">Lock race</button>
             </p>
             <div class="chaser-app-title">
               <h1>GPS Chaser</h1>
@@ -75,15 +76,20 @@
     <button id="panel-launcher" type="button" aria-label="Show panel">ⓘ</button>
   </div>
 
-    <button id="viewer-replay" class="viewer-ride viewer-replay" type="button" title="Replay Traces" aria-label="Replay traces" aria-pressed="false">
+    <button id="viewer-replay" class="viewer-ride viewer-replay" type="button" title="Play replay" aria-label="Play replay" aria-pressed="false">
       <svg class="replay-play" viewBox="0 0 24 24" aria-hidden="true">
         <path fill="currentColor" d="M8 5v14l11-7z"/>
       </svg>
-      <svg class="replay-stop" viewBox="0 0 24 24" aria-hidden="true">
+      <svg class="replay-pause" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M6 5h4v14H6zm8 0h4v14h-4z"/>
+      </svg>
+    </button>
+    <button id="viewer-replay-stop" class="viewer-ride viewer-replay-stop" type="button" title="Stop replay" aria-label="Stop replay" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
         <path fill="currentColor" d="M6 6h12v12H6z"/>
       </svg>
     </button>
-    <p class="viewer-replay-label" aria-hidden="true">&#x23ED; replay</p>
+    <p class="viewer-replay-label" aria-hidden="true">replay</p>
     <a id="admin-mode-badge" class="admin-mode-badge" href="./home.html?tab=admins" title="You're in admin mode 🛠sta" hidden aria-label="Admin mode!">&#x1F6E0;&#xFE0F;</a>
     <button id="viewer-ride" class="viewer-ride" type="button" title="Start Ride" aria-label="Start Ride">
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -143,16 +149,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-compat.js"></script>
-  <script>
-    window.CHASER_FIREBASE_CONFIG = {
-      apiKey: "AIzaSyDltxjsiYUSWb-ACSXbVwgle1QiTwWJDiI",
-      authDomain: "chaser-75e2e.firebaseapp.com",
-      projectId: "chaser-75e2e",
-      storageBucket: "chaser-75e2e.firebasestorage.app",
-      messagingSenderId: "764827136309",
-      appId: "1:764827136309:web:888b04389963a1fec75c7c"
-    };
-  </script>
+  <script src="firebase-config.js"></script>
   <script src="track-grade.js"></script>
   <script src="gpx.js"></script>
   <script src="app.js"></script>

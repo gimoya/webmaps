@@ -83,6 +83,7 @@
   const adminModeBadge = document.getElementById("admin-mode-badge");
   const eventPanelLine = document.getElementById("event-panel-line");
   const eventPanelName = document.getElementById("event-panel-name");
+  const raceLockBtn = document.getElementById("race-lock-btn");
   const panelHeader = document.getElementById("panel-header");
   const entryDialog = document.getElementById("entry-dialog");
   const riderDialog = document.getElementById("rider-dialog");
@@ -106,6 +107,7 @@
   let eventId = null;
   let eventName = null;
   let eventAdminCode = null;
+  let eventRaceLocked = false;
   let eventRef = null;
   let eventsUnsubscribe = null;
   let adminConfigUnsubscribe = null;
@@ -326,8 +328,10 @@
   let placementCurrent = null;
   let placeCups = new Map();
   let replayActive = false;
+  let replayPaused = false;
   let replayFrame = 0;
   let replayLayer = null;
+  let replayRuntime = null;
 
   addGpxLoadControl();
   addSessionCenterControl();
@@ -463,12 +467,15 @@
         eventsById.set(doc.id, {
           id: doc.id,
           name: data.name,
-          adminCode: typeof data.adminCode === "string" ? data.adminCode : null
+          adminCode: typeof data.adminCode === "string" ? data.adminCode : null,
+          raceLocked: data.raceLocked === true
         });
       });
       if (eventId && eventsById.has(eventId)) {
         const row = eventsById.get(eventId);
         eventAdminCode = row.adminCode;
+        eventRaceLocked = row.raceLocked === true;
+        syncRaceLockButton();
       }
       if (eventId && !eventsById.has(eventId) && !resolvingEvent) {
         teardownEventScope();
@@ -624,6 +631,7 @@
     eventId = null;
     eventName = null;
     eventAdminCode = null;
+    eventRaceLocked = false;
     renderEventPanel();
     renderTracksAndPanel();
     syncAdminControls();
@@ -632,6 +640,7 @@
   async function bindEvent(id, data) {
     if (eventId === id && eventRef) {
       if (typeof data.adminCode === "string") eventAdminCode = data.adminCode;
+      if (typeof data.raceLocked === "boolean") eventRaceLocked = data.raceLocked;
       writePageUrl();
       renderEventPanel();
       syncAdminControls();
@@ -648,12 +657,14 @@
     eventId = id;
     eventName = typeof data.name === "string" ? data.name : id;
     eventAdminCode = typeof data.adminCode === "string" ? data.adminCode : null;
-    if (eventAdminCode == null) {
+    eventRaceLocked = data.raceLocked === true;
+    if (eventAdminCode == null || typeof data.raceLocked !== "boolean") {
       const snap = await db.collection(EVENTS_COLLECTION).doc(id).get();
       if (snap.exists) {
         const row = snap.data();
         if (typeof row.name === "string" && row.name) eventName = row.name;
         if (typeof row.adminCode === "string") eventAdminCode = row.adminCode;
+        eventRaceLocked = row.raceLocked === true;
       }
     }
     eventRef = db.collection(EVENTS_COLLECTION).doc(id);
@@ -693,8 +704,12 @@
         showNotice("Open an event with its id in the URL hash.");
         return;
       }
+      if (!replayActive) startReplay();
+      else if (replayPaused) resumeReplay();
+      else pauseReplay();
+    });
+    document.getElementById("viewer-replay-stop").addEventListener("click", () => {
       if (replayActive) stopReplay();
-      else startReplay();
     });
     document.getElementById("rider-cancel").addEventListener("click", () => {
       clearTimeout(riderCloseTimer);
@@ -786,6 +801,49 @@
     });
   }
 
+  function showRaceClosedNotice() {
+    showViewerNotice((log) => {
+      log.textContent = "This ride was already closed by admin - you can not start a new track here!";
+    });
+  }
+
+  function syncRaceLockButton() {
+    if (!raceLockBtn) return;
+    const show = isEventAdmin() && Boolean(eventId);
+    raceLockBtn.hidden = !show;
+    if (!show) return;
+    raceLockBtn.classList.toggle("is-locked", eventRaceLocked);
+    raceLockBtn.setAttribute("aria-pressed", eventRaceLocked ? "true" : "false");
+    raceLockBtn.textContent = eventRaceLocked ? "Unlock race" : "Lock race";
+    raceLockBtn.title = eventRaceLocked
+      ? "Allow new riders to start"
+      : "Close race — block new aliases";
+  }
+
+  async function toggleRaceLock() {
+    if (!db || !eventRef || !isEventAdmin()) return;
+    if (!isMasterAdmin()) {
+      const code = adminCodewordFromHash();
+      if (!code || code !== eventAdminCode) return;
+    }
+    const next = !eventRaceLocked;
+    const confirmed = await showNotice(
+      next
+        ? "Lock this race? New aliases cannot start a track. Existing unfinished riders can still resume."
+        : "Unlock this race? New aliases can start tracks again.",
+      { confirmLabel: next ? "Lock race" : "Unlock race", cancelLabel: "Cancel" }
+    );
+    if (!confirmed) return;
+    try {
+      await eventRef.update({ raceLocked: next });
+      eventRaceLocked = next;
+      syncRaceLockButton();
+    } catch (err) {
+      console.error("Failed to toggle race lock:", err);
+      await showNotice("Race lock could not be updated. Publish the latest Firestore rules (raceLocked on events).");
+    }
+  }
+
   function showRiderResult(name, after) {
     riderForm.style.minHeight = "";
     riderForm.classList.add("is-result");
@@ -852,6 +910,7 @@
       syncAdminUsageLink();
     }
     simLogEl.hidden = !isSimulationMode();
+    syncRaceLockButton();
   }
 
   function noteSim(meters, seconds, label) {
@@ -935,6 +994,7 @@
     stopBtn.addEventListener("click", () => {
       if (activeSessionRef) stopTracking();
     });
+    if (raceLockBtn) raceLockBtn.addEventListener("click", () => toggleRaceLock());
   }
 
   async function beginAliasTracking(ref, name) {
@@ -954,6 +1014,11 @@
         return;
       }
       if (!activeDocs.length) {
+        if (eventRaceLocked) {
+          locationRequest = null;
+          showRaceClosedNotice();
+          return;
+        }
         if (isSimulationMode()) beginNewSimulation();
         const sessionRef = await createAliasSession(ref, name);
         showRiderResult(name, "..is starting!");
@@ -1505,6 +1570,77 @@
     actor.marker.setIcon(icon);
   }
 
+  function syncReplayControls() {
+    const playBtn = document.getElementById("viewer-replay");
+    const stopBtn = document.getElementById("viewer-replay-stop");
+    const label = document.querySelector(".viewer-replay-label");
+    document.body.classList.toggle("is-replaying", replayActive);
+    document.body.classList.toggle("is-replay-paused", replayActive && replayPaused);
+    if (playBtn) {
+      playBtn.setAttribute("aria-pressed", replayActive && !replayPaused ? "true" : "false");
+      if (!replayActive) {
+        playBtn.title = "Play replay";
+        playBtn.setAttribute("aria-label", "Play replay");
+      } else if (replayPaused) {
+        playBtn.title = "Resume replay";
+        playBtn.setAttribute("aria-label", "Resume replay");
+      } else {
+        playBtn.title = "Pause replay";
+        playBtn.setAttribute("aria-label", "Pause replay");
+      }
+    }
+    if (stopBtn) stopBtn.hidden = !replayActive;
+    if (label) {
+      label.textContent = !replayActive ? "replay" : (replayPaused ? "paused" : "replay");
+    }
+  }
+
+  function replayElapsedMs(now) {
+    if (!replayRuntime) return 0;
+    if (replayPaused) return replayRuntime.baseElapsedMs;
+    return replayRuntime.baseElapsedMs + (now - replayRuntime.wallStart) * replayRuntime.speed;
+  }
+
+  function tickReplay(now) {
+    if (!replayActive || replayPaused || !replayRuntime) return;
+    const elapsed = replayElapsedMs(now);
+    const actors = replayRuntime.actors;
+    let finished = true;
+    let moved = false;
+    actors.forEach((actor) => {
+      const points = actor.source.points;
+      let count = actor.shown;
+      while (count < points.length && points[count].recordedAtMs - actor.source.t0 <= elapsed) {
+        count += 1;
+      }
+      if (count < points.length) finished = false;
+      if (count !== actor.shown) moved = true;
+      actor.shown = count;
+    });
+    if (!moved) {
+      if (finished) {
+        stopReplay();
+        return;
+      }
+      replayFrame = requestAnimationFrame(tickReplay);
+      return;
+    }
+    const cups = marksFromOrder(placementCurrent && placementCurrent.order);
+    actors.forEach((actor) => {
+      if (!actor.shown) return;
+      const cup = cups.get(actor.source.sessionId) || "";
+      if (actor.marker && actor.cup === cup && actor.painted === actor.shown) return;
+      actor.cup = cup;
+      actor.painted = actor.shown;
+      paintReplayActor(actor);
+    });
+    if (finished) {
+      stopReplay();
+      return;
+    }
+    replayFrame = requestAnimationFrame(tickReplay);
+  }
+
   function startReplay() {
     const sources = replaySources();
     if (!sources.length || replayActive) return;
@@ -1513,7 +1649,6 @@
       const durationMs = source.points[source.points.length - 1].recordedAtMs - source.t0;
       if (durationMs > longestMs) longestMs = durationMs;
     });
-    const replaySpeed = longestMs / REPLAY_DURATION_MS;
     const bounds = L.latLngBounds([]);
     sources.forEach((source) => {
       source.points.forEach((point) => bounds.extend([point.lat, point.lon]));
@@ -1522,67 +1657,51 @@
       map.fitBounds(bounds, { padding: [40, 40], animate: false });
     }
     replayActive = true;
-    document.body.classList.add("is-replaying");
-    document.getElementById("viewer-replay").setAttribute("aria-pressed", "true");
+    replayPaused = false;
     hideLiveTraceLayers();
     replayLayer = L.layerGroup().addTo(map);
-    const actors = sources.map((source) => ({
-      source,
-      shown: 0,
-      cup: "",
-      lines: L.layerGroup().addTo(replayLayer),
-      marker: null
-    }));
-    const started = performance.now();
-
-    const frame = (now) => {
-      if (!replayActive) return;
-      const elapsed = (now - started) * replaySpeed;
-      let finished = true;
-      let moved = false;
-      actors.forEach((actor) => {
-        const points = actor.source.points;
-        let count = actor.shown;
-        while (count < points.length && points[count].recordedAtMs - actor.source.t0 <= elapsed) {
-          count += 1;
-        }
-        if (count < points.length) finished = false;
-        if (count !== actor.shown) moved = true;
-        actor.shown = count;
-      });
-      if (!moved) {
-        if (finished) {
-          stopReplay();
-          return;
-        }
-        replayFrame = requestAnimationFrame(frame);
-        return;
-      }
-      const cups = marksFromOrder(placementCurrent && placementCurrent.order);
-      actors.forEach((actor) => {
-        if (!actor.shown) return;
-        const cup = cups.get(actor.source.sessionId) || "";
-        if (actor.marker && actor.cup === cup && actor.painted === actor.shown) return;
-        actor.cup = cup;
-        actor.painted = actor.shown;
-        paintReplayActor(actor);
-      });
-      if (finished) {
-        stopReplay();
-        return;
-      }
-      replayFrame = requestAnimationFrame(frame);
+    replayRuntime = {
+      speed: longestMs / REPLAY_DURATION_MS,
+      baseElapsedMs: 0,
+      wallStart: performance.now(),
+      actors: sources.map((source) => ({
+        source,
+        shown: 0,
+        cup: "",
+        lines: L.layerGroup().addTo(replayLayer),
+        marker: null
+      }))
     };
-    replayFrame = requestAnimationFrame(frame);
+    syncReplayControls();
+    replayFrame = requestAnimationFrame(tickReplay);
+  }
+
+  function pauseReplay() {
+    if (!replayActive || replayPaused || !replayRuntime) return;
+    const now = performance.now();
+    replayRuntime.baseElapsedMs += (now - replayRuntime.wallStart) * replayRuntime.speed;
+    replayPaused = true;
+    cancelAnimationFrame(replayFrame);
+    replayFrame = 0;
+    syncReplayControls();
+  }
+
+  function resumeReplay() {
+    if (!replayActive || !replayPaused || !replayRuntime) return;
+    replayPaused = false;
+    replayRuntime.wallStart = performance.now();
+    syncReplayControls();
+    replayFrame = requestAnimationFrame(tickReplay);
   }
 
   function stopReplay() {
     if (!replayActive) return;
     replayActive = false;
+    replayPaused = false;
     cancelAnimationFrame(replayFrame);
     replayFrame = 0;
-    document.body.classList.remove("is-replaying");
-    document.getElementById("viewer-replay").setAttribute("aria-pressed", "false");
+    replayRuntime = null;
+    syncReplayControls();
     if (replayLayer) {
       map.removeLayer(replayLayer);
       replayLayer = null;

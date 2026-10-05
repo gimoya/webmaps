@@ -5,33 +5,39 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 ## What it does
 
 - Tracestrack topo basemap
-- Events scope all live data. The event id is the first URL hash token (`#event-id#viewing`). Open events via that share URL. Admin is `#admin=<code>` only (not bare `#admin`). Master `admin_master_6071` can create and admin any event; a pool/event code admins only its event.
+- Events scope all live data. The event id is the first URL hash token (`#event-id#viewing`). Open events via that share URL or the live list on `home.html`. Admin is `#admin=<code>` only (not bare `#admin`). Master `admin_master_6071` can create and admin any event; a pool/event code admins only its event.
 - Course overlay from a GPX that event admin uploads into the selected event (`events/{eventId}/routes/current`). Every client on that event draws it when it exists.
 - One live trace per alias per event. Case does not distinguish (`Kay` and `kay` are the same)
 - Last point shows the alias on a white stem, plus a dashed accuracy ring in the alias color. A finished ride drops the ring.
 - Alias labels shrink below zoom 14
-- Click the map to fade the panel. The floating ⓘ launcher brings it back. The subtitle ⓘ opens `home.html` (riders first, then event admins) with `?from=` back to the same map view.
+- Click the map to fade the panel. The floating ⓘ launcher brings it back. The subtitle ⓘ opens `home.html` (riders first; Event Creation / admins via `?tab=admins`) with `?from=` back to the same map view. Navigation uses a short black page-fade (`sessionStorage` key `chaserPageFade`).
 - After an event is chosen, a fresh load asks Rider or Viewer. **Start Ride / Resume Tracing** starts or continues a trace that is not finished. **Stop tracking** stops this page's writer and finishes the ride. The trace stays on the map.
+- Event admin can **Lock race** / **Unlock race** next to the event title (`raceLocked`). Locked: new aliases cannot start; unfinished aliases can still resume.
+- Viewer **replay** replays stored traces on the map (play control under the bike button).
+- Paid admin codes: Ko-fi Shop → Cloud Functions webhook reserves a pool code → buyer claims via email (or `?tx=`) → create event with `#admin=CODE`.
 
 ## Project files
 
-- `index.html` – page, Firebase web config
-- `styles.css` – panel, dialog, marker, accuracy-ring pulse
-- `app.js` – map, Firestore, GPS writer
+- `index.html` – map page
+- `firebase-config.js` – shared `CHASER_FIREBASE_CONFIG` (included by `index.html` and `home.html`)
+- `styles.css` – panel, dialog, marker, accuracy-ring pulse, page-fade overlay
+- `app.js` – map, Firestore, GPS writer, admin tools, race lock
 - `gpx.js` – GPX parse, 10 m thinning, namespaced write
 - `track-grade.js` – uphill / flat split for the course line
-- `home.html` / `home.css` / `chaser-title.css` – app homepage / practical guides (subtitle ⓘ; admin badge opens Event admins tab with `?from=` / `?tab=admins`)
-- `functions/` – Ko-fi webhook + claim page (Firebase; deploy from `chaser/`)
-- `firebase.json` / `.firebaserc` – Firebase project for those functions
+- `home.html` / `home.css` / `chaser-title.css` – homepage: rider/admin guides, live event list, Ko-fi/claim links (`?from=`, `?tab=admins`)
+- `functions/` – `kofiWebhook` + `claimCode` (Node 22, europe-west1). Deploy **from `chaser/`** (`firebase.json` lives here)
+- `functions/.env.example` – param template; real `.env` is gitignored
+- `firebase.json` / `.firebaserc` – Firebase project `chaser-75e2e`
+- `.gitignore` – `functions/node_modules/`, `functions/.env`, firebase debug / `.firebase/`
 - `admin-pool-seed.json` – one-time seed for `adminConfig/current` unused codes
 - `manifest.json` – installable app
 - `sw.js` – app shell and topo tile cache. The page does not register it.
-- `icons/` – 📡 app icons
+- `icons/` – app icons
 - `gpx_tracks/` – sample course file, not loaded automatically
 
 ## Firebase
 
-`window.CHASER_FIREBASE_CONFIG` is set in `index.html` before `app.js`. The web API key is public. Firestore rules are the lock.
+`window.CHASER_FIREBASE_CONFIG` is set in [`firebase-config.js`](firebase-config.js) before `app.js` / home inline script. The web API key is public. Firestore rules are the lock.
 
 If that object is missing, the map still loads. Route storage and live traces stay offline.
 
@@ -43,6 +49,7 @@ Collection: `events`
 - `name` (display name)
 - `createdAt` (server timestamp)
 - `adminCode` (string). Set at create from a pool code or the master password. Required for later admin (GPX upload, clear traces) via `#admin=<adminCode>` on that event.
+- `raceLocked` (boolean, optional). When `true`, new aliases cannot start a track. Unfinished riders can still resume. Event admin toggles via **Lock race** / **Unlock race** next to the event title.
 
 Document: `adminConfig/current`
 
@@ -50,9 +57,17 @@ Document: `adminConfig/current`
 - `unusedCodes` (array of strings). Free pool of unused 5-character codes. Manual giveaways and unpaid creates burn from here. When empty, reseed from the console using [`admin-pool-seed.json`](admin-pool-seed.json) (or a new batch).
 - `reservedCodes` (array of strings). Codes reserved by a Ko-fi tip (moved out of `unusedCodes`). Still usable to **create** an event; create removes the code from this array and sets `event.adminCode`.
 
-Collection: `kofiFulfillments/{kofi_transaction_id}` (Cloud Functions only — clients cannot read or write)
+Collection: `kofiFulfillments/{kofi_transaction_id}` (Cloud Functions / Admin SDK only — clients cannot read or write)
 
-- `code`, `amount`, `currency`, `email` (if Ko-fi sent it; audit only), `createdAt`, `claimedAt`, …
+- `code` (string) – first reserved code
+- `codes` (array) – all codes for that order (`quantity` items)
+- `quantity` (number)
+- `shop_direct_link_code` (string)
+- `amount`, `currency` (strings from Ko-fi)
+- `email` (raw from Ko-fi, or `null` if omitted)
+- `emailNormalized` (lowercase trim, or `null`) – primary claim lookup key; always set on new Shop Orders when Ko-fi sends email
+- `createdAt`, `claimedAt`, `redeemedAt`, `eventId`, `message_id`, `from_name`
+- Deleting the collection does not restore old claims; the next webhook `set` recreates the collection. Pool moves (`unusedCodes` → `reservedCodes`) are already applied and are not rolled back.
 
 Everything live sits under an event:
 
@@ -106,11 +121,13 @@ One alias, one active trace per event.
 
 A load with a known event id in the hash binds that event. Missing or unknown id does not show a public event list — open the event via its share URL. Create needs `#admin=<code>` where code is an unused pool code or the master password (form + optional Skip). After an event is bound, a load with no mode hash asks Rider or Viewer. Viewer sets `#eventId#viewing`. The bike button, or a load that already has `#tracking`, opens the name box. **Start Ride / Resume Tracing** calls GPS in that click, then:
 
-- No active trace for the typed alias: a new session is created and this page writes to it. The hash becomes `#eventId#tracking`.
+- No active trace for the typed alias: if `event.raceLocked == true`, the UI refuses with `This ride was already closed by admin - you can not start a new track here!` (client-side only; rules still allow session create). Otherwise a new session is created and this page writes to it. The hash becomes `#eventId#tracking`.
 - Start and resume also write the alias as a `#rider=` token (URL-encoded). The name box is filled from that token.
-- An active trace exists and is not finished: writing continues on the oldest active session for that alias.
+- An active trace exists and is not finished: writing continues on the oldest active session for that alias (**allowed even when the race is locked**).
 - An active trace for that alias is finished: the name box shows `{alias} already finished the ride!` and does not write. The box then closes and the page stays a viewer.
 - This page is already writing: **Stop tracking** asks for a confirm, then sets `finished` and `endedAt` and stops this page's writer. The trace stays on the map. The list shows `Tracking stopped/finished` in green with the end time. The page becomes a viewer (`#eventId#viewing`).
+
+Event admin tools (when `#admin=` matches the event or master): GPX upload control, **Clear all traces**, per-rider delete, **Lock race** / **Unlock race**. Toolbox badge opens `home.html?tab=admins` with `?from=`.
 
 `#simulation` on the hash uses a generated fix instead of the device. It runs only while a GPX route is drawn. Otherwise the start is refused and a notice says the simulation stopped. A new ride begins at the route start. One speed is picked for the ride, evenly between 10 and 25 km/h, and each fix advances that far along the route. A resume on a fresh page starts at the route vertex nearest the last stored point. The fix still writes only for this page's active rider. The log under Active Riders shows meters, m/s, and `slow/no move skip`, `+30 m/s skip`, or `normal write`.
 
@@ -165,13 +182,17 @@ service cloud.firestore {
         request.resource.data.adminCode.size() <= 40;
 
       allow update: if
-        request.resource.data.keys().hasOnly(['name', 'createdAt', 'adminCode']) &&
+        request.resource.data.keys().hasOnly(['name', 'createdAt', 'adminCode', 'raceLocked']) &&
         request.resource.data.name is string &&
         request.resource.data.name.size() >= 1 &&
         request.resource.data.name.size() <= 80 &&
         request.resource.data.createdAt is timestamp &&
         request.resource.data.adminCode is string &&
-        request.resource.data.adminCode == resource.data.adminCode;
+        request.resource.data.adminCode == resource.data.adminCode &&
+        (
+          !('raceLocked' in request.resource.data) ||
+          request.resource.data.raceLocked is bool
+        );
 
       allow delete: if true;
 
@@ -277,42 +298,46 @@ service cloud.firestore {
 }
 ```
 
-Publish these in the Firebase console. Event create (with `adminCode`), adminConfig pool updates, route overwrite, placement, and point writes all need this paste. `kofiFulfillments` is Admin SDK only (Cloud Functions).
+Publish these in the Firebase console whenever the paste above changes (e.g. `raceLocked` on event update). Event create (with `adminCode`), adminConfig pool updates, route overwrite, placement, race lock, and point writes all need this paste. `kofiFulfillments` is Admin SDK only (Cloud Functions).
 
 ## Ko-fi admin codes (v1)
 
-Sell a **Shop** product; webhook reserves pool code(s); claim page reveals them; event create binds a code.
+Sell a **Shop** product (not Donation); webhook reserves pool code(s); claim page reveals them; event create burns a reserved/unused code.
 
 **Fee note:** Ko-fi Shop is **5%** platform fee on the free plan (plus Stripe/PayPal). That’s expected for this path.
 
 **Ko-fi setup**
 
-1. Create a Shop item (digital / “code” product). Price is yours.
-2. Copy the item’s **direct link code** (from the shop item URL / webhook `shop_items[].direct_link_code` on a test order).
+1. Create a Shop item (digital / “code” product). Price is yours. Current shop link code in production: see `functions/.env` → `KOFI_SHOP_DIRECT_LINK_CODE` (example shop URL shape `https://ko-fi.com/s/<code>`).
+2. Copy the item’s **direct link code** (from the shop item URL / webhook `shop_items[].direct_link_code` on a test order). Bare code only in `.env`, not the full URL.
 3. Put it in `functions/.env` as `KOFI_SHOP_DIRECT_LINK_CODE=...`
-4. In the product description, tell buyers: after purchase open  
-   `https://…/claimCode?tx=` + `txid` from the Ko-fi receipt.
+4. Set shop **redirect / thank-you** URL to the live `claimCode` function (email lookup form). Optional deep link: `…/claimCode?tx=<kofi_transaction_id>` — note Ko-fi **Delivery Ref** is not always the same as webhook `kofi_transaction_id`.
+5. Point Ko-fi webhooks at the live `kofiWebhook` URL. Verification token → Firebase secret `KOFI_VERIFY_TOKEN` (must match Ko-fi).
 
 **Flow**
 
-1. Buyer purchases that shop product (`Shop Order` webhook).
-2. `kofiWebhook` verifies token, matches `direct_link_code`, moves `quantity` codes from `unusedCodes` → `reservedCodes`, writes `kofiFulfillments/{kofi_transaction_id}`.
-3. Buyer opens `claimCode` (Ko-fi shop redirect) → enters checkout email → sees code(s). Direct link `claimCode?tx=<id>` still works.
-4. Buyer opens Chaser `#admin=<code>` and creates an event → that code leaves `reservedCodes`.
+1. Buyer purchases that shop product (`type === "Shop Order"` webhook only; other types ignored).
+2. `kofiWebhook` verifies token, matches `direct_link_code`, moves `quantity` codes from `unusedCodes` → `reservedCodes`, writes `kofiFulfillments/{kofi_transaction_id}` with `email` + `emailNormalized`.
+3. Buyer opens `claimCode` → enters **checkout email** → sees code(s). Lookup merges `emailNormalized` and raw `email` queries (dedupe by tx id), newest first, up to 25. Multiple purchases → listed as separate blocks with purchase time (Europe/Vienna). Single hit → direct code view. `?tx=` still works.
+4. Buyer keeps the 5-char token for **create** and later **admin/GPX**. Opens Chaser `#admin=<code>` and creates an event → that code leaves `reservedCodes` (or `unusedCodes`).
+5. Lost token: same claim page + checkout email recovers all fulfillments for that email (when email was stored).
+
+**Claim page styling:** HTML is served by the function; it links `${CHASER_PUBLIC_BASE}/home.css` plus Google fonts. Static host must serve `home.css` at that base or the page looks unstyled.
 
 **Deploy (Blaze required)**
 
 ```bash
-# From chaser/ (firebase.json lives here)
+# Always from chaser/ (firebase.json + .firebaserc live here — not repo root)
 cd functions && npm install && cd ..
 firebase functions:secrets:set KOFI_VERIFY_TOKEN
 # functions/.env (gitignored):
 #   KOFI_SHOP_DIRECT_LINK_CODE=your_shop_item_code
 #   CHASER_PUBLIC_BASE=https://YOUR_HOST/path/to/chaser
 firebase deploy --only functions
+# or only one: firebase deploy --only functions:claimCode
 ```
 
-Point Ko-fi (Settings → Advanced → Webhooks) at the `kofiWebhook` URL. Same verification token → `KOFI_VERIFY_TOKEN`.
+After deploy, copy the printed Function URLs into Ko-fi (webhook + shop redirect). Cloud Run-style `*.a.run.app` URLs and `cloudfunctions.net` aliases both work if they hit the same functions.
 
 Manual giveaways: hand out a code still in `unusedCodes` only (not one already in `reservedCodes`).
 
@@ -332,17 +357,30 @@ The page sends `strict-origin-when-cross-origin`, so the tile request includes t
 
 ## Usage
 
-1. Serve the repo over localhost or HTTPS.
-2. Open `chaser/`.
-3. Open an event via its hash (`#event-id#viewing`), or create with `#admin=<code>` (pool code or `admin_master_6071`). There is no public event list.
+1. Serve `chaser/` over localhost or HTTPS (static host; functions are separate).
+2. Open `chaser/` or `chaser/home.html`.
+3. Open an event via hash (`#event-id#viewing`), from the home **Events** list, or create with `#admin=<code>` (pool/reserved code or `admin_master_6071`).
 4. Choose Rider, or Viewer and then the bike button.
 5. Enter an alias and click **Start Ride / Resume Tracing**. Allow location.
 6. Open the page on another device with the same event hash to see the live trace.
 7. Click **Stop tracking** and confirm. This page stops writing and switches to viewer. The trace stays on the map with `Tracking stopped/finished` and the end time. That alias cannot start again in this event.
 
-Homepage: subtitle ⓘ opens [`home.html`](home.html) (live event list → `#event-id#viewing`, plus Riders & viewers / Event admins guides) in the same tab. **Back to Chaser** returns via `?from=` (same `?lat=&lng=&z=` + hash). With event admin active, the toolbox badge opens the Event admins tab the same way (`?tab=admins`).
+Homepage: subtitle ⓘ opens [`home.html`](home.html) (live event list → `#event-id#viewing`, plus Riders & viewers / Event Creation guides) in the same tab. Direct admins tab: `home.html?tab=admins` (query, not hash). **Back to Chaser** returns via `?from=` (same `?lat=&lng=&z=` + hash). With event admin active, the toolbox badge opens that tab the same way.
 
 Pool admin bookmark shape: `#event-id#viewing#admin=CODE`. Share riders `#event-id#viewing` without `admin=`.
+
+## Maintainer checklist
+
+| Task | Where |
+|------|--------|
+| Web app / home copy | Static deploy of `chaser/` (e.g. tiroltrailhead `/webmaps/chaser`) |
+| Firestore rules | Console paste from this README (must include `raceLocked` on event update) |
+| Seed / refill pool | `adminConfig/current` + `admin-pool-seed.json` |
+| Ko-fi webhook + claim | `firebase deploy --only functions` from **`chaser/`** |
+| Secrets / params | `KOFI_VERIFY_TOKEN` secret; `functions/.env` → shop code + `CHASER_PUBLIC_BASE` |
+| Claim page look | Depends on hosted `home.css` at `CHASER_PUBLIC_BASE` |
+| New admin codes for sale | Ensure `unusedCodes` has stock before Shop Orders |
+| Race lock broken | Rules not updated, or client not refreshed |
 
 ## Runtime
 

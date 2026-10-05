@@ -253,6 +253,35 @@ body.panel-faded #panel-launcher {
     0 0.12em 0.45em rgba(0, 0, 0, 0.85);
 }
 
+.race-lock-btn {
+  align-self: center;
+  font: inherit;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  padding: 0.28rem 0.55rem;
+  margin: 0 0 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  background: var(--color-bg-panel);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.race-lock-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.race-lock-btn.is-locked {
+  border-color: var(--color-danger);
+  color: var(--color-bg);
+  background: var(--color-danger);
+}
+
+.race-lock-btn[hidden] {
+  display: none;
+}
+
 .create-event-form {
   margin-top: 0.5rem;
   display: grid;
@@ -836,6 +865,17 @@ body.is-replaying #viewer-ride {
   justify-content: center;
 }
 
+.viewer-replay-stop {
+  top: 138px;
+  align-items: center;
+  justify-content: center;
+}
+
+.viewer-replay-stop[hidden],
+body.is-viewer .viewer-replay-stop[hidden] {
+  display: none;
+}
+
 .viewer-replay-label {
   display: none;
   position: fixed;
@@ -867,15 +907,15 @@ body.is-replaying .viewer-replay-label {
   color: var(--color-ctrl-fg-active);
 }
 
-.viewer-replay .replay-stop {
+.viewer-replay .replay-pause {
   display: none;
 }
 
-.viewer-replay[aria-pressed="true"] .replay-play {
+body.is-replaying:not(.is-replay-paused) .viewer-replay .replay-play {
   display: none;
 }
 
-.viewer-replay[aria-pressed="true"] .replay-stop {
+body.is-replaying:not(.is-replay-paused) .viewer-replay .replay-pause {
   display: block;
 }
 
