@@ -842,7 +842,7 @@
       await eventRef.update({ raceLocked: next });
       eventRaceLocked = next;
       syncRaceLockButton();
-    } catch (err) {
+      } catch (err) {
       console.error("Failed to toggle race lock:", err);
       await showNotice("Race lock could not be updated. Publish the latest Firestore rules (raceLocked on events).");
     }
