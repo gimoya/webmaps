@@ -301,6 +301,29 @@
 	word-break: break-word;
 }
 
+/* Mobile: Digitize info + tools open left; portrait sits lower toward stack bottom */
+@media (max-width: 768px) {
+	.legacy-routesnap-info,
+	.legacy-routesnap-panel {
+		top: auto;
+		bottom: 0;
+	}
+
+	.legacy-routesnap-info::before {
+		top: auto;
+		bottom: 0;
+		height: 100%;
+	}
+}
+
+@media (max-width: 768px) and (orientation: portrait) {
+	.legacy-routesnap-info,
+	.legacy-routesnap-panel {
+		/* Digitize sits above GPX + 3D — drop panel toward lower-right corner */
+		bottom: -100px;
+	}
+}
+
 .legacy-routesnap-wp-label {
 	background: transparent !important;
 	border: none !important;

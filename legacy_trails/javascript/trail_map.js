@@ -1248,6 +1248,10 @@ function legacyBindGpxKofiReminder(popup) {
 
 function legacyDismissWelcomePanel(overlay) {
 	if (!overlay) return;
+	var active = document.activeElement;
+	if (active && overlay.contains(active) && typeof active.blur === 'function') {
+		active.blur();
+	}
 	_legacyWelcomeDismissed = true;
 	overlay.classList.add('is-hidden');
 	overlay.setAttribute('aria-hidden', 'true');

@@ -874,11 +874,29 @@ html.legacy-3d-active .leaflet-control-attribution {
     pointer-events: none !important;
 }
 
-/* Hide 2D map chrome (zoom / GPS / basemap) in 3D; keep cube + center */
+/* Hide 2D map chrome (zoom / GPS / basemap / Digitize / GPX) in 3D; keep cube + center.
+   display:none (not visibility) so the remaining controls stack with no empty gaps. */
 html.legacy-3d-active .leaflet-top.leaflet-right > .leaflet-control:not(.legacy-3d-toggle):not(.legacy-center-view),
 html.legacy-3d-loading .leaflet-top.leaflet-right > .leaflet-control:not(.legacy-3d-toggle):not(.legacy-center-view) {
-    visibility: hidden !important;
-    pointer-events: none !important;
+    display: none !important;
+}
+
+/* 3D: cube + center fall onto the same lower-right stack as Mapbox zoom/tilt/compass */
+html.legacy-3d-active #map .leaflet-top.leaflet-right,
+html.legacy-3d-loading #map .leaflet-top.leaflet-right {
+    top: auto !important;
+    bottom: 0 !important;
+    right: 0;
+    /* 8px = Mapbox group margin; ~118px clears nav (×3) + attrib strip */
+    margin: 0 8px 118px 0 !important;
+    z-index: 1000;
+}
+
+html.legacy-3d-active #map .leaflet-top.leaflet-right > .leaflet-control,
+html.legacy-3d-loading #map .leaflet-top.leaflet-right > .leaflet-control {
+    margin-top: 8px !important;
+    margin-right: 0 !important;
+    margin-bottom: 0 !important;
 }
 
 /* Ko-fi floating button: ~25% smaller, nudged up */
@@ -980,6 +998,27 @@ html.legacy-3d-loading .leaflet-top.leaflet-right > .leaflet-control:not(.legacy
 
 .leaflet-control-zoom {
     margin-top: 18vh !important;
+}
+
+/* Mobile: whole 2D control stack → lower right (thumb zone).
+   Keep container class .leaflet-top.leaflet-right so 3D hide rules still match. */
+@media (max-width: 768px) {
+    #map .leaflet-top.leaflet-right {
+        top: auto !important;
+        bottom: 28px;
+        right: 0;
+        margin: 0;
+        z-index: 1000;
+    }
+
+    #map .leaflet-control-zoom {
+        margin-top: 0 !important;
+    }
+
+    /* Sit above elevation chart when a trail is selected */
+    #map:has(.legacy-elevation-frame) .leaflet-top.leaflet-right {
+        bottom: min(52vw, 220px);
+    }
 }
 
 .leaflet-bottom.leaflet-right .leaflet-control-attribution {
