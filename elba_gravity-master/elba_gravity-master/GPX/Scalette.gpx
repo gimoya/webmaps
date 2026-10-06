@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<gpx version="1.1" creator="Locus Map, Android"
+ xmlns="http://www.topografix.com/GPX/1/1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd"
+ xmlns:gpx_style="http://www.topografix.com/GPX/gpx_style/0/2"
+ xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3"
+ xmlns:gpxtrkx="http://www.garmin.com/xmlschemas/TrackStatsExtension/v1"
+ xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v2"
+ xmlns:locus="http://www.locusmap.eu">
+	<metadata>
+		<desc>File with points/tracks from Locus Map/3.20.0</desc>
+	</metadata>
+<trk>
+<name>Scalette</name>
+<desc><![CDATA[<p><strong>Scalette </strong><span class="IT-Click">IT</span> | <span class="EN-Click">EN</span></p>
+		<div class="IT">tempo di percorrenza 1h - difficoltà difficile - consigliato a biker con ottime capacità di guida ( il trail è famoso per i suoi passaggi molto tecnici e per le scalette di roccia dalle quali prende il nome. Esposto sulla costa nord dell' isola e con vista perenne sul mare, conduce direttamente nella splendida baia di Bagnaia, dove potrete rilassarvi e dissertarvi sulla spiaggia in riva al mare).</div>
+		<div class="EN">1 h duration - difficult - recommended for bikers with excellent driving skills (The trail is famous for its very technical passages and the rock ranges from which it takes its name. On the north coast of the island and with a perennial view of the sea, it leads directly into the beautiful bay of Bagnaia, where you can relax and discard On the beach by the sea).]]></desc>
+	<extensions>
+		<gpx_style:line>
+			<gpx_style:color>#960000FF</gpx_style:color>
+			<gpx_style:width>4.0</gpx_style:width>
+		</gpx_style:line>
+	</extensions>
+<trkseg>
+<trkpt lat="42.814792" lon="10.393470">
+	<ele>343.38</ele>
+</trkpt>
+<trkpt lat="42.814879" lon="10.393120">
+	<ele>342.76</ele>
+</trkpt>
+<trkpt lat="42.815323" lon="10.392188">
+	<ele>336.56</ele>
+</trkpt>
+<trkpt lat="42.815404" lon="10.391758">
+	<ele>326.28</ele>
+</trkpt>
+<trkpt lat="42.815267" lon="10.391032">
+	<ele>314.46</ele>
+</trkpt>
+<trkpt lat="42.815024" lon="10.390793">
+	<ele>318.11</ele>
+</trkpt>
+<trkpt lat="42.814596" lon="10.390812">
+	<ele>332.92</ele>
+</trkpt>
+<trkpt lat="42.814643" lon="10.390389">
+	<ele>324.39</ele>
+</trkpt>
+<trkpt lat="42.814546" lon="10.389994">
+	<ele>325.50</ele>
+</trkpt>
+<trkpt lat="42.814571" lon="10.389423">
+	<ele>321.08</ele>
+</trkpt>
+<trkpt lat="42.814757" lon="10.388978">
+	<ele>308.49</ele>
+</trkpt>
+<trkpt lat="42.814623" lon="10.388236">
+	<ele>311.40</ele>
+</trkpt>
+<trkpt lat="42.814629" lon="10.387676">
+	<ele>309.93</ele>
+</trkpt>
+<trkpt lat="42.815211" lon="10.387195">
+	<ele>297.48</ele>
+</trkpt>
+<trkpt lat="42.815031" lon="10.386095">
+	<ele>301.56</ele>
+</trkpt>
+<trkpt lat="42.815120" lon="10.385329">
+	<ele>295.87</ele>
+</trkpt>
+<trkpt lat="42.815333" lon="10.385010">
+	<ele>292.00</ele>
+</trkpt>
+<trkpt lat="42.815696" lon="10.384932">
+	<ele>282.52</ele>
+</trkpt>
+<trkpt lat="42.816022" lon="10.384630">
+	<ele>275.32</ele>
+</trkpt>
+<trkpt lat="42.816129" lon="10.383240">
+	<ele>266.37</ele>
+</trkpt>
+<trkpt lat="42.816514" lon="10.382560">
+	<ele>254.19</ele>
+</trkpt>
+<trkpt lat="42.816618" lon="10.382138">
+	<ele>250.96</ele>
+</trkpt>
+<trkpt lat="42.816607" lon="10.381830">
+	<ele>249.60</ele>
+</trkpt>
+<trkpt lat="42.816747" lon="10.381639">
+	<ele>248.15</ele>
+</trkpt>
+<trkpt lat="42.816863" lon="10.380853">
+	<ele>249.11</ele>
+</trkpt>
+<trkpt lat="42.817258" lon="10.380248">
+	<ele>233.73</ele>
+</trkpt>
+<trkpt lat="42.817423" lon="10.379702">
+	<ele>224.17</ele>
+</trkpt>
+<trkpt lat="42.817376" lon="10.377873">
+	<ele>196.11</ele>
+</trkpt>
+<trkpt lat="42.817238" lon="10.377482">
+	<ele>191.22</ele>
+</trkpt>
+<trkpt lat="42.817049" lon="10.377468">
+	<ele>188.55</ele>
+</trkpt>
+<trkpt lat="42.816970" lon="10.377279">
+	<ele>185.47</ele>
+</trkpt>
+<trkpt lat="42.816752" lon="10.377631">
+	<ele>183.43</ele>
+</trkpt>
+<trkpt lat="42.816612" lon="10.376893">
+	<ele>170.20</ele>
+</trkpt>
+<trkpt lat="42.816587" lon="10.376164">
+	<ele>162.46</ele>
+</trkpt>
+<trkpt lat="42.816306" lon="10.375635">
+	<ele>151.89</ele>
+</trkpt>
+<trkpt lat="42.816335" lon="10.375545">
+	<ele>151.52</ele>
+</trkpt>
+<trkpt lat="42.816446" lon="10.375554">
+	<ele>152.22</ele>
+</trkpt>
+<trkpt lat="42.816455" lon="10.375361">
+	<ele>149.22</ele>
+</trkpt>
+<trkpt lat="42.816540" lon="10.375399">
+	<ele>149.74</ele>
+</trkpt>
+<trkpt lat="42.816396" lon="10.375062">
+	<ele>144.55</ele>
+</trkpt>
+<trkpt lat="42.816462" lon="10.374988">
+	<ele>141.63</ele>
+</trkpt>
+<trkpt lat="42.816524" lon="10.375078">
+	<ele>142.65</ele>
+</trkpt>
+<trkpt lat="42.816542" lon="10.374976">
+	<ele>139.85</ele>
+</trkpt>
+<trkpt lat="42.816311" lon="10.373813">
+	<ele>113.31</ele>
+</trkpt>
+<trkpt lat="42.816039" lon="10.373106">
+	<ele>104.90</ele>
+</trkpt>
+<trkpt lat="42.816050" lon="10.373044">
+	<ele>104.17</ele>
+</trkpt>
+</trkseg>
+</trk>
+</gpx>

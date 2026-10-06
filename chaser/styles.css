@@ -930,7 +930,9 @@ body.is-replaying #viewer-ride {
   justify-content: center;
 }
 
-.viewer-replay-stop[hidden] {
+.viewer-replay-stop[hidden],
+body.is-viewer .viewer-replay-stop[hidden],
+body.is-writing .viewer-replay-stop[hidden] {
   display: none;
 }
 

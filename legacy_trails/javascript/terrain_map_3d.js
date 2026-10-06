@@ -10,6 +10,9 @@
 	var TRAILS_URL = 'data/my_trails_z.geojson';
 	var MAPBOX_TOKEN = 'pk.eyJ1IjoiZ2ltb3lhIiwiYSI6IkZrTld6NmcifQ.eY6Ymt2kVLvPQ6A2Dt9zAQ';
 	var CLICK_TIP = 'Für Trail-Infos in die 2D-Ansicht wechseln.';
+	/** Trail name labels: only at/above this zoom, within radius of map center. */
+	var LABEL_MIN_ZOOM = 13;
+	var LABEL_RADIUS_M = 3000;
 	/** Inn valley bird's-eye (gpx.studio #zoom/lat/lon/bearing/pitch). */
 	var OVERVIEW_CAMERA = {
 		center: [11.4098, 47.2168],
@@ -37,6 +40,18 @@
 		var dx = a[0] - b[0];
 		var dy = a[1] - b[1];
 		return Math.sqrt(dx * dx + dy * dy);
+	}
+
+	function haversineM(lon1, lat1, lon2, lat2) {
+		var R = 6371000;
+		var toRad = Math.PI / 180;
+		var dLat = (lat2 - lat1) * toRad;
+		var dLon = (lon2 - lon1) * toRad;
+		var a =
+			Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+			Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) *
+			Math.sin(dLon / 2) * Math.sin(dLon / 2);
+		return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
 	}
 
 	/** Existing vertex nearest to halfway along 2D trail length. */
@@ -111,7 +126,8 @@
 		this._trailsPromise = null;
 		this._trailsData = null;
 		this._labelData = null;
-		this._labelMarkers = null;
+		this._labelMarkersByName = Object.create(null);
+		this._labelSyncBound = false;
 		this._trailBoundsByName = null;
 		this._userGpxData = EMPTY_FC;
 		this._flashTimer = null;
@@ -151,20 +167,112 @@
 	};
 
 	TerrainMap3D.prototype._clearLabelMarkers = function () {
-		var markers = this._labelMarkers || [];
-		for (var i = 0; i < markers.length; i++) {
-			markers[i].remove();
+		var byName = this._labelMarkersByName || Object.create(null);
+		for (var name in byName) {
+			if (!Object.prototype.hasOwnProperty.call(byName, name)) continue;
+			byName[name].remove();
 		}
-		this._labelMarkers = [];
+		this._labelMarkersByName = Object.create(null);
 	};
 
-	TerrainMap3D.prototype._syncLabelMarkerZoom = function () {
+	TerrainMap3D.prototype._createLabelMarker = function (feature) {
+		var self = this;
+		var name = feature.properties && feature.properties.name;
+		if (!name || !this.map) return null;
+
+		var el = document.createElement('div');
+		el.className = 'legacy-3d-trail-label';
+		el.setAttribute('role', 'button');
+		el.setAttribute('tabindex', '0');
+		el.setAttribute('title', name);
+		el.innerHTML =
+			'<div class="legacy-3d-trail-label-box">' +
+				'<div class="legacy-3d-trail-label-inner"></div>' +
+			'</div>' +
+			'<span class="legacy-3d-trail-label-pin" aria-hidden="true"></span>';
+		el.querySelector('.legacy-3d-trail-label-inner').textContent = name;
+
+		el.addEventListener('click', function (ev) {
+			ev.preventDefault();
+			ev.stopPropagation();
+			self.flyToTrailByName(name);
+			self.flashHighlight(name);
+		});
+		el.addEventListener('keydown', function (ev) {
+			if (ev.key !== 'Enter' && ev.key !== ' ') return;
+			ev.preventDefault();
+			ev.stopPropagation();
+			self.flyToTrailByName(name);
+			self.flashHighlight(name);
+		});
+
+		return new mapboxgl.Marker({
+			element: el,
+			anchor: 'bottom',
+			offset: [0, 0],
+			pitchAlignment: 'viewport',
+			rotationAlignment: 'viewport'
+		})
+			.setLngLat(feature.geometry.coordinates)
+			.addTo(this.map);
+	};
+
+	/**
+	 * Keep only nearby in-view labels (zoom ≥ LABEL_MIN_ZOOM, ≤ LABEL_RADIUS_M from center).
+	 * Diff add/remove — never keep off-screen markers alive.
+	 */
+	TerrainMap3D.prototype._syncVisibleLabelMarkers = function () {
 		if (!this.map) return;
-		var show = this.map.getZoom() >= 13;
-		var markers = this._labelMarkers || [];
-		for (var i = 0; i < markers.length; i++) {
-			markers[i].getElement().style.display = show ? '' : 'none';
+		if (!this.visible || this.map.getZoom() < LABEL_MIN_ZOOM) {
+			this._clearLabelMarkers();
+			return;
 		}
+
+		var features = (this._labelData && this._labelData.features) || [];
+		var center = this.map.getCenter();
+		var bounds = this.map.getBounds();
+		var want = Object.create(null);
+
+		for (var i = 0; i < features.length; i++) {
+			var f = features[i];
+			var name = f.properties && f.properties.name;
+			var coords = f.geometry && f.geometry.coordinates;
+			if (!name || !coords) continue;
+			var lng = coords[0];
+			var lat = coords[1];
+			if (!bounds.contains([lng, lat])) continue;
+			if (haversineM(center.lng, center.lat, lng, lat) > LABEL_RADIUS_M) continue;
+			want[name] = f;
+		}
+
+		var byName = this._labelMarkersByName || Object.create(null);
+		for (var existing in byName) {
+			if (!Object.prototype.hasOwnProperty.call(byName, existing)) continue;
+			if (!want[existing]) {
+				byName[existing].remove();
+				delete byName[existing];
+			}
+		}
+		for (var needed in want) {
+			if (!Object.prototype.hasOwnProperty.call(want, needed)) continue;
+			if (byName[needed]) continue;
+			var marker = this._createLabelMarker(want[needed]);
+			if (marker) byName[needed] = marker;
+		}
+		this._labelMarkersByName = byName;
+	};
+
+	TerrainMap3D.prototype._bindLabelMarkerSync = function () {
+		var self = this;
+		if (this._labelSyncBound || !this.map) return;
+		this._labelSyncBound = true;
+		this.map.on('moveend', function () {
+			self._syncVisibleLabelMarkers();
+		});
+		this.map.on('zoomend', function () {
+			self._syncVisibleLabelMarkers();
+		});
+		this._syncVisibleLabelMarkers();
 	};
 
 	TerrainMap3D.prototype.flyToTrailByName = function (trailName, options) {
@@ -179,67 +287,6 @@
 			pitch: this.map.getPitch(),
 			bearing: this.map.getBearing()
 		});
-	};
-
-	TerrainMap3D.prototype._buildLabelMarkers = function () {
-		var self = this;
-		this._clearLabelMarkers();
-		if (!this.map) return;
-
-		var features = (this._labelData && this._labelData.features) || [];
-		for (var i = 0; i < features.length; i++) {
-			var f = features[i];
-			var name = f.properties && f.properties.name;
-			if (!name) continue;
-
-			var el = document.createElement('div');
-			el.className = 'legacy-3d-trail-label';
-			el.setAttribute('role', 'button');
-			el.setAttribute('tabindex', '0');
-			el.setAttribute('title', name);
-			el.innerHTML =
-				'<div class="legacy-3d-trail-label-box">' +
-					'<div class="legacy-3d-trail-label-inner"></div>' +
-				'</div>' +
-				'<span class="legacy-3d-trail-label-pin" aria-hidden="true"></span>';
-			el.querySelector('.legacy-3d-trail-label-inner').textContent = name;
-
-			(function (trailName) {
-				el.addEventListener('click', function (ev) {
-					ev.preventDefault();
-					ev.stopPropagation();
-					self.flyToTrailByName(trailName);
-					self.flashHighlight(trailName);
-				});
-				el.addEventListener('keydown', function (ev) {
-					if (ev.key !== 'Enter' && ev.key !== ' ') return;
-					ev.preventDefault();
-					ev.stopPropagation();
-					self.flyToTrailByName(trailName);
-					self.flashHighlight(trailName);
-				});
-			})(name);
-
-			var marker = new mapboxgl.Marker({
-				element: el,
-				anchor: 'bottom',
-				offset: [0, 0],
-				pitchAlignment: 'viewport',
-				rotationAlignment: 'viewport'
-			})
-				.setLngLat(f.geometry.coordinates)
-				.addTo(this.map);
-
-			this._labelMarkers.push(marker);
-		}
-
-		this._syncLabelMarkerZoom();
-		if (!this._labelZoomBound) {
-			this._labelZoomBound = true;
-			this.map.on('zoom', function () {
-				self._syncLabelMarkerZoom();
-			});
-		}
 	};
 
 	TerrainMap3D.prototype._bindTrailClicks = function () {
@@ -510,7 +557,7 @@
 						}
 					});
 
-					self._buildLabelMarkers();
+					self._bindLabelMarkerSync();
 					self._bindTrailClicks();
 					self._bindViewportResize();
 					self.ready = true;
@@ -659,6 +706,7 @@
 				self.visible = true;
 				document.documentElement.classList.remove('legacy-3d-loading');
 				document.documentElement.classList.add('legacy-3d-active');
+				self._syncVisibleLabelMarkers();
 				if (selectedTrailName) self.flashHighlight(selectedTrailName);
 			})
 			.catch(function (err) {
@@ -673,6 +721,7 @@
 			this.syncToLeaflet(leafletMap);
 		}
 		this._clearFlash();
+		this._clearLabelMarkers();
 		if (this._popup) {
 			this._popup.remove();
 			this._popup = null;

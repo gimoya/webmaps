@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://earth.google.com/kml/2.0">
+  <Document>
+    <name>Gravity Bike Park Tracks</name>
+      <Placemark>
+        <name>Scalette</name>
+        <description><![CDATA[
+		<p><strong>Scalette </strong><span class="Text-Click" id="IT-Click">IT</span> | <span class="Text-Click" id="EN-Click">EN</span></p>
+		<div id="IT">tempo di percorrenza 1h - difficoltà difficile - consigliato a biker con ottime capacità di guida ( il trail è famoso per i suoi passaggi molto tecnici e per le scalette di roccia dalle quali prende il nome. Esposto sulla costa nord dell' isola e con vista perenne sul mare, conduce direttamente nella splendida baia di Bagnaia, dove potrete rilassarvi e dissertarvi sulla spiaggia in riva al mare).</div>
+		<div id="EN">1 h duration - difficult - recommended for bikers with excellent driving skills (The trail is famous for its very technical passages and the rock ranges from which it takes its name. On the north coast of the island and with a perennial view of the sea, it leads directly into the beautiful bay of Bagnaia, where you can relax and discard On the beach by the sea).</div>
+		]]></description>
+        <LineString>
+			<coordinates>
+				10.39347,42.814792
+				10.39312,42.814879
+				10.392188,42.815323
+				10.391758,42.815404
+				10.391032,42.815267
+				10.390793,42.815024
+				10.390812,42.814596
+				10.390389,42.814643
+				10.389994,42.814546
+				10.389423,42.814571
+				10.388978,42.814757
+				10.388236,42.814623
+				10.387676,42.814629
+				10.387195,42.815211
+				10.386095,42.815031
+				10.385329,42.81512
+				10.38501,42.815333
+				10.384932,42.815696
+				10.38463,42.816022
+				10.38324,42.816129
+				10.38256,42.816514
+				10.382138,42.816618
+				10.38183,42.816607
+				10.381639,42.816747
+				10.380853,42.816863
+				10.380248,42.817258
+				10.379702,42.817423
+				10.377873,42.817376
+				10.377482,42.817238
+				10.377468,42.817049
+				10.377279,42.81697
+				10.377631,42.816752
+				10.376893,42.816612
+				10.376164,42.816587
+				10.375635,42.816306
+				10.375545,42.816335
+				10.375554,42.816446
+				10.375361,42.816455
+				10.375399,42.81654
+				10.375062,42.816396
+				10.374988,42.816462
+				10.375078,42.816524
+				10.374976,42.816542
+				10.373813,42.816311
+				10.373106,42.816039
+				10.373044,42.81605
+			</coordinates>
+        </LineString>
+      </Placemark>
+  </Document>
+</kml>

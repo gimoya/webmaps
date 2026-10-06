@@ -1,34 +1,3 @@
-/* PW protection 
-function trim(str) {
-	return str.replace(/^\s+|\s+$/g, '');  
-}
-
-var pw_prompt = prompt('Passwort eingeben um auf die Seite **Legacy Trails Tirol** zu gelangen..',' ');
-var pw = 'coffee';
-// if prompt is cancelled the pw_prompt var will be null!
-if (pw_prompt == null) {
-	alert('Kein Passwort wurde angegeben! Die Seite wird nicht geladen...');
-	if (bowser.msie) {
-		document.execCommand('Stop');
-	} else {
-		window.stop();s
-	}
-	window.location='tilt.html';
-}
-if (trim(pw_prompt) == pw ) {
-	alert('Passwort ok!');
-} else {
-	alert('Falsches Passwort! Die Seite wird nicht geladen..');
-	if (bowser.msie) {
-		document.execCommand('Stop');
-	} else {
-		window.stop();
-	}
-	window.location='tilt.html';
-}
-*/
-
-
 /** Strip trailing "(123)" IDs from trail names for all UI display. */
 function legacyCleanTrailName(name) {
 	if (typeof name !== 'string') return name;
@@ -56,7 +25,15 @@ var _legacyUrlSyncTimer = null;
 var _legacyUrlSyncSuppressed = false;
 /** Default zoom when URL has no lat/lng/z; center comes from trails bounds. */
 var LEGACY_DEFAULT_START_ZOOM = 11;
-var LEGACY_TRAILS_VERSION = '2.1.0';
+var LEGACY_TRAILS_VERSION = '2.2.0';
+/** Self-hosted BRouter (…/brouter). Override: ?brouter=http://127.0.0.1:17777/brouter */
+var LEGACY_BROUTER_URL = (function () {
+	try {
+		var q = new URLSearchParams(window.location.search).get('brouter');
+		if (q) return q;
+	} catch (e) { /* ignore */ }
+	return 'https://route.tiroltrailhead.com/brouter';
+})();
 
 function legacyDefaultStartViewFromTrails() {
 	if (!trails_json) return null;
@@ -165,7 +142,7 @@ var map_topoLayer = L.tileLayer(map_topoUrl, Object.assign({}, LEGACY_TILE_OPTS,
 }));
 
 /*** Setting Default Base Map ***/
-map_satelliteLayer.addTo(map);	
+map_topoLayer.addTo(map);
 
 /*** Map Selection and Zoom Controls ***/
 
@@ -208,19 +185,10 @@ if (centerView.getContainer) {
 	centerView.getContainer().classList.add('legacy-center-view');
 }
 
-/* Base Map Toggle — starts on satellite (Luftbild) */
+/* Base Map Toggle — starts on topo (Hiking) */
 var toggle = L.easyButton({
   position: 'topright',
   states: [{
-	stateName: 'basemap-satellite',
-	icon: '<span class="custom-control">T</span>',
-	title: 'Hintergrundkarte Topo',
-	onClick: function(control) {
-	  map.removeLayer(map_satelliteLayer);
-	  map.addLayer(map_topoLayer);
-	  control.state('basemap-topo');
-	}
-  }, {
 	stateName: 'basemap-topo',
 	icon: '<span class="custom-control">S</span>',
 	title: 'Hintergrundkarte Luftbild',
@@ -228,6 +196,15 @@ var toggle = L.easyButton({
 	  map.removeLayer(map_topoLayer);
 	  map.addLayer(map_satelliteLayer);
 	  control.state('basemap-satellite');
+	}
+  }, {
+	stateName: 'basemap-satellite',
+	icon: '<span class="custom-control">T</span>',
+	title: 'Hintergrundkarte Topo',
+	onClick: function(control) {
+	  map.removeLayer(map_satelliteLayer);
+	  map.addLayer(map_topoLayer);
+	  control.state('basemap-topo');
 	}
   }]
 });
@@ -243,6 +220,66 @@ L.control.locate({
     },
 	position: 'topright'
 }).addTo(map);
+
+/*** Digitize: waypoints → BRouter snap → GPX download ***/
+
+function legacyRouteSnapDownloadGpx(latLngs, profileKey, fileName) {
+	var base = String(fileName || 'legacy_trails_route').trim() || 'legacy_trails_route';
+	if (/\.gpx$/i.test(base)) base = base.slice(0, -4);
+	base = base.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '').replace(/\s+/g, '_');
+	if (!base) base = 'legacy_trails_route';
+	var coords = [];
+	for (var i = 0; i < latLngs.length; i++) {
+		var p = latLngs[i];
+		if (p.ele != null && isFinite(p.ele)) coords.push([p.lng, p.lat, p.ele]);
+		else coords.push([p.lng, p.lat]);
+	}
+	var feature = {
+		type: 'Feature',
+		properties: {
+			name: base,
+			profile: profileKey || 'mtb'
+		},
+		geometry: { type: 'LineString', coordinates: coords }
+	};
+	var bb = new Blob([togpx(feature)], { type: 'application/gpx+xml' });
+	var url = URL.createObjectURL(bb);
+	var a = document.createElement('a');
+	a.href = url;
+	a.download = base + '.gpx';
+	document.body.appendChild(a);
+	a.click();
+	document.body.removeChild(a);
+	setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+}
+
+var legacyRouteSnap = L.control.routeSnap({
+	position: 'topright',
+	routeUrl: LEGACY_BROUTER_URL,
+	profileKey: 'mtb'
+}).addTo(map);
+
+map.on('routesnap:save', function (e) {
+	legacyRouteSnapDownloadGpx(e.latLngs, e.profileKey, e.fileName);
+	legacyShowMapToast('GPX gespeichert');
+});
+
+map.on('routesnap:error', function (e) {
+	legacyShowMapToast((e && e.message) ? e.message : 'Routing fehlgeschlagen');
+});
+
+map.on('routesnap:activate', function () {
+	legacyDismissChromeOnUserAction();
+	if (window.LegacyTerrain3D && window.LegacyTerrain3D.visible) {
+		window.legacyExitTerrain3D();
+		legacyShowMapToast('Digitize nur in 2D');
+	}
+	legacySetDigitizeTrailPickBlocked(true);
+});
+
+map.on('routesnap:deactivate', function () {
+	legacySetDigitizeTrailPickBlocked(false);
+});
 
 /*** Load / display local GPX (temporary 2D overlay) ***/
 
@@ -640,6 +677,7 @@ function legacyApplyTrailFilters() {
 		}
 		legacySyncTerrain3DTrail();
 	}
+	legacySyncTrailPickInteractivity();
 	updateTrailsInView();
 }
 
@@ -654,22 +692,67 @@ function legacySetEndpointMarkersVisible(trailLayer, visible) {
 				opacity: 1,
 				fillOpacity: 1
 			});
-			if (marker._path) {
-				marker._path.style.pointerEvents = '';
-			}
 		} else {
 			marker.setStyle({
 				opacity: 0,
 				fillOpacity: 0
 			});
-			if (marker._path) {
-				marker._path.style.pointerEvents = 'none';
-			}
 			if (marker.closeTooltip) {
 				marker.closeTooltip();
 			}
 		}
 	}
+}
+
+/** While Digitize is on, trail click-layer + start/end pts must not steal map clicks. */
+var legacyDigitizeTrailPickBlocked = false;
+
+function legacySetDigitizeTrailPickBlocked(blocked) {
+	legacyDigitizeTrailPickBlocked = !!blocked;
+	if (blocked) {
+		if (selected !== null && trails_json) {
+			selected.setText(null);
+			selected = null;
+			map.closePopup();
+			if (typeof el !== 'undefined') {
+				el.clear();
+				map.removeControl(el);
+			}
+			legacySyncTerrain3DTrail();
+			legacyApplyTrailFilters();
+			return;
+		}
+	}
+	legacySyncTrailPickInteractivity();
+}
+
+function legacySyncTrailPickInteractivity() {
+	var block = legacyDigitizeTrailPickBlocked;
+	if (trails_click_layer) {
+		trails_click_layer.eachLayer(function (layer) {
+			var allow = !block && layer._legacyFilterVisible !== false;
+			layer.options.interactive = allow;
+			if (layer._path) {
+				layer._path.style.pointerEvents = allow ? '' : 'none';
+			}
+		});
+	}
+	if (!trails_json) return;
+	trails_json.eachLayer(function (layer) {
+		var markers = [layer._startMarker, layer._endMarker];
+		for (var i = 0; i < markers.length; i++) {
+			var marker = markers[i];
+			if (!marker) continue;
+			var allow = !block && marker._legacyFilterVisible !== false;
+			marker.options.interactive = allow;
+			if (marker._path) {
+				marker._path.style.pointerEvents = allow ? '' : 'none';
+			}
+			if (!allow && marker.closeTooltip) {
+				marker.closeTooltip();
+			}
+		}
+	});
 }
 
 function legacyBindLegendFilters() {
@@ -832,11 +915,8 @@ function styleClickLayer(feature) {	// style for click layer
 }
 
 /*** Map and Json Layer Event Listeners and Helper Functions ***/
-			
-var lyr;
-var ftr;
-var trails_json;
 
+var trails_json;
 var selected = null;
 
 function dehighlight (layer) { 	// will be used inside select function
@@ -901,8 +981,10 @@ function legacyFocusTrailByName(trailName) {
 }
 
 function doClickStuff(e) {
-    lyr = e.target;
-    ftr = e.target.feature;
+    if (legacyRouteSnap && legacyRouteSnap.isActive()) return;
+
+    var lyr = e.target;
+    var ftr = e.target.feature;
 
     legacyDismissChromeOnUserAction();
     
@@ -922,7 +1004,7 @@ function doClickStuff(e) {
         map.addControl(el);
         legacyMountElevationFrame(el);
         
-        /*** make all non-selected trails opaque, after resetting styles (ftr selected before)***/ 
+        /*** make all non-selected trails opaque, after resetting styles ***/ 
         trails_json.eachLayer(function(layer){ 
             if (layer._legacyFilterVisible === false) {
                 layer.setStyle({ opacity: 0, fillOpacity: 0 });
@@ -944,10 +1026,11 @@ function doClickStuff(e) {
     }
 }
 
-/* Start/End pts in different pane ontop of trails */ 
-
+/* Start/End pts above trails; Digitize waypoints above those */
 map.createPane('ptsPane');
 map.getPane('ptsPane').style.zIndex = 600;
+map.createPane('digitizePane');
+map.getPane('digitizePane').style.zIndex = 650;
 
 
 /*** Session welcome overlay ***/
@@ -1265,18 +1348,21 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 	trails_click_layer.eachLayer(function(layer) {
 		layer.on({
 			'mouseover': function (e) {
+				if (legacyDigitizeTrailPickBlocked) return;
 				if (e.target._legacyFilterVisible === false) return;
 				if (selected === null || (selected && selected.feature.properties.name !== e.target.feature.properties.name)) {
 					highlight(e.target);
 				}
 			},
 			'mouseout': function (e) {
+				if (legacyDigitizeTrailPickBlocked) return;
 				if (e.target._legacyFilterVisible === false) return;
 				if (selected === null || (selected && selected.feature.properties.name !== e.target.feature.properties.name)) {
 					dehighlight(e.target);
 				}
 			},
 			'click': function (e) {
+				if (legacyDigitizeTrailPickBlocked) return;
 				if (e.target._legacyFilterVisible === false) return;
 				doClickStuff(e);
 			}
@@ -1413,6 +1499,7 @@ for (i = 0; i < POIs.features.length; i++) {
 /*** Map Event Listeners ***/
 
 map.on("click", function(e){
+	if (legacyRouteSnap && legacyRouteSnap.isActive()) return;
 	/*** Remove Elevation Profile when map is clicked ***/
 	if (typeof el !== 'undefined') {
 		el.clear();

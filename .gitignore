@@ -1,0 +1,3 @@
+# Local BRouter install + .rd5 segment tiles (large binaries).
+# Only ignore repo-root /brouter/ — NOT legacy_trails/deploy/brouter/ (ops drafts).
+/brouter/

@@ -816,7 +816,7 @@
 
   function showRaceClosedNotice() {
     showViewerNotice((log) => {
-      log.textContent = "This ride was already closed by admin - you can not start a new track here!";
+      log.textContent = "Ride is locked by admin - you are too early / too late to start a ride!";
     });
   }
 
@@ -827,7 +827,7 @@
     if (!show) return;
     raceLockBtn.classList.toggle("is-locked", eventRaceLocked);
     raceLockBtn.setAttribute("aria-pressed", eventRaceLocked ? "true" : "false");
-    raceLockBtn.textContent = eventRaceLocked ? "Unlock race" : "Lock race";
+    raceLockBtn.textContent = eventRaceLocked ? "Unlock ride" : "Lock ride";
     raceLockBtn.title = eventRaceLocked
       ? "Allow new riders to start"
       : "Close race — block new aliases";

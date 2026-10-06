@@ -95,4 +95,5 @@ ${points}
   root.GPX_NS = GPX_NS;
   root.parseGpx = parseGpx;
   root.gpxDocument = gpxDocument;
+  root.thinTrackPoints = thinTrackPoints;
 })(window);

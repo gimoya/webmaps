@@ -1,0 +1,575 @@
+<html>
+<head>
+
+<title>ELBA GRAVITY PARK</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	
+	<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/leaflet.css">
+	<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+	<link rel="stylesheet" href="//unpkg.com/leaflet-easybutton@2.0.0/src/easy-button.css">
+	<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">	
+	<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css">
+	
+	<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/leaflet.js"></script>
+	<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+	<script type="text/javascript" src='//api.mapbox.com/mapbox.js/plugins/leaflet-omnivore/v0.2.0/leaflet-omnivore.min.js'></script>
+	<script type="text/javascript" src="//lightwidget.com/widgets/lightwidget.js"></script>
+	<script type="text/javascript" src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+	<script type="text/javascript" src="//unpkg.com/leaflet-easybutton@2.0.0/src/easy-button.js"></script>
+	<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+	
+	<!-- Disables due to non-https site at the moment.. only works with save origin..-->
+	<!-- Locate Control
+	<link rel="stylesheet" href="Styles/L.Control.Locate.min.css" />
+	<script src="Scripts/L.Control.Locate.min.js" charset="utf-8"></script>
+	Locate Control -->
+	
+	<!-- GOOGLE FONTS -->	
+	<link href='//fonts.googleapis.com/css?family=Bangers|Fugaz+One|Hanalei|Ranga|Ultra|Exo:Bold|Fredoka+One|Sigmar+One|Bungee+Inline|Creepster|Ewert|Fruktur|Monoton|Rubik:900' rel='stylesheet' type='text/css'>	
+	<!-- GOOGLE FONTS -->		
+	
+    <style type="text/css">
+	    
+	html, body {
+		font-size: 100%;
+		height: 100%;
+		padding: 0;
+		margin: 0;
+	}
+	    
+	#map {
+		position: absolute;
+		width: 100%;
+		height: 100%;
+	}	    
+	    
+	.awesome-marker i {
+	    font-size: 18px;
+	    margin-top: 10px;
+	}
+	    
+	.custom-control {
+		font-family: Exo;
+	}
+	
+	/* 
+	hack to fix fa-marker position in geo-location control
+	*/
+	span.fa-map-marker.fa {
+		margin-top: 5px;
+	}
+	
+
+	
+	/*
+	exceptation for control links.. not working?
+	*/
+	.leaflet-bar a {
+	    color: darkslategrey;
+	}
+	    
+	#infopanel-bottom {		
+		position: absolute;
+		display: none;
+		width: 100%;
+		bottom: 0px;
+		right: 0px;
+		z-index: 999; 	
+		background-color: rgba(255,255,255,1);	
+		color: #999;
+	}
+
+	/* 
+	prevent infopanel from covering controls on top of page, if on small screen 
+	*/
+	
+	@media only screen and (max-width:400px) {
+	
+		#infopanel-bottom {		
+			max-height: 70%;
+			overflow-y: scroll;
+		}
+		#title {
+			font-size: 1.5em;
+		}	
+		#poi-info {
+			font-size: 1.1em;
+		}
+		
+		#tracks {
+			font-size: 1.1em;
+		}		
+	}
+	
+	.info-row {
+		width: 100%;
+		padding: 10 0 0 10px;
+	}  
+	    
+	#title, #poi-info, #tracks {
+		font-family: 'Corbel';
+	}
+
+	#title {
+		font-size: 2.5em;
+	}
+	
+	#poi-info {
+		font-size: 2em;
+	}
+	
+	#tracks {
+		font-size: 1.5em;
+	}
+
+   #IT, #EN {
+		max-height: 7em;
+		overflow-y: scroll;
+	}
+	
+   #IT {
+	  display: block;
+	}
+
+	#EN {
+	  display: none;
+	}
+
+	/* 
+	custom link styling:
+	*/
+	
+	a, .Text-Click {
+	   cursor: hand; 
+	   transition: color .4s;
+	}
+	
+	a, .Text-Click, .Text-Click:visited { 
+		color: #ccba38; 
+	}
+
+	a:hover, .Text-Click:hover  { color: #7FDBFF; }
+	
+	a:active, .Text-Click:active  {
+		transition: color .3s;
+		color: #007BE6;
+	}	
+	
+	/* 
+	CSS for inline close element which will hide it's parent div if clicked..
+	*/
+	.close-btn {
+		color: white;
+		font-family: Corbel;
+		float: right;
+		padding: 5px 10px;
+		background: #ccc;
+		cursor: hand;
+		position: absolute;
+		right: 0;
+		top:0;
+		
+	}
+	.close-btn:hover {
+		background: #aaa;
+	}
+	
+	/*
+	Photo Gallery Stuff
+	*/
+	#gallery {
+		display: none;
+		z-index:9999;
+		max-width: 400px;
+		width: fit-content;
+		height: fit-content;
+		margin: auto;
+		padding: 2%;
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		background: rgba(10,10,10,0.8);
+	}
+	
+	/* 
+	prevent Gallery container overlapping controls on the sides, when display is
+	narrower than 500px. Max width of container is 400px, so at 500, this is 80%,
+	everything on a screen narrower than that will be set 80% by this rule
+	
+	@media only screen and (max-width:500px) {
+		#gallery {
+			max-width: 80%;
+		}
+	}
+	*/
+	</style>
+</head> 		
+	
+<body>
+	<div id="gallery">
+		<div class="close-btn" title="Click to close" onclick="$(this).parent().fadeOut('slow');">X</div>
+		<div id="widget"></div>
+	</div>
+	<div id="infopanel-bottom">
+		<div class="close-btn" title="Click to close" onclick="$(this).parent().fadeOut('slow');">X</div>
+		<div id="trail-container">
+			<div class="info-row" id="title"></div>		
+			<div class="info-row" id="trail-info"></div>
+			<div class="info-row">
+				<div class="Text-Click" id="photo-gallery-click" onclick='$("#gallery").css("display", "block")'>Instagram Gallery</div>
+			</div>	
+			<div class="info-row" id="tracks"><a id="gpx" title="Download GPX-File" href="" download>GPX</a> | <a id="kml" title="Download KML-File" href="" download>KML</a></div>		
+		</div>
+		<div class="info-row" id="poi-info"></div>
+		<div class="info-row" id="spacer-bottom" style="height:1em;"></div>
+	</div>
+	
+	<div id="map"></div>
+	
+	<script language="javascript">
+		
+		var map = L.map('map', {
+		  center: [42.808660, 10.393714],
+		  zoom: 13,
+		  maxZoom: 17,
+		  minZoom: 11,
+		  zoomControl: false,
+		  attributionControl: false
+		});
+		
+		new L.control.attribution({position: 'bottomright'}).addTo(map);
+		new L.Control.Zoom({ position: 'topright' }).addTo(map);
+		
+		/* 
+		Control disabled due to http protocol at the moment.. only https allowed
+		
+		L.control.locate({
+			strings: {
+				title: "Show me where I am, yo!"
+			}
+
+		}).addTo(map);		
+		*/
+
+		var toggle = L.easyButton({
+		  position: 'topright',
+		  states: [{
+			stateName: 'basemap-outdoor',
+			icon: '<span class="custom-control">T</span>',
+			title: 'change basemap back to satellite',		
+			onClick: function(control) {
+			  map.removeLayer(mapbox_outdoorLayer);
+			  map.addLayer(mapbox_satelliteLayer);
+			  control.state('basemap-satellite');
+			}
+		  }, {
+			stateName: 'basemap-satellite',
+			icon: '<span class="custom-control">S</span>',
+			title: 'change basemap to outdoor/terrain',
+			onClick: function(control) {
+			  map.removeLayer(mapbox_satelliteLayer);
+			  map.addLayer(mapbox_outdoorLayer);
+			  control.state('basemap-outdoor');
+			},
+		  }]
+		});	
+
+		toggle.addTo(map);
+
+		var mapbox_Attr = 'Tiles &copy; <a href="https://www.mapbox.com">mapbox</a> | Design &copy; <a href="//tiroltrailhead.com/guiding">Tirol Trailhead</a>';  
+		var mapbox_satelliteUrl = 'https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v10/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1IjoiZ2ltb3lhIiwiYSI6IkZrTld6NmcifQ.eY6Ymt2kVLvPQ6A2Dt9zAQ';
+		var mapbox_outdoorUrl = 'https://api.mapbox.com/styles/v1/mapbox/outdoors-v10/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1IjoiZ2ltb3lhIiwiYSI6IkZrTld6NmcifQ.eY6Ymt2kVLvPQ6A2Dt9zAQ';
+
+		var mapbox_satelliteLayer = L.tileLayer(mapbox_satelliteUrl, {
+		  attribution: mapbox_Attr 
+		});
+
+		var mapbox_outdoorLayer = L.tileLayer(mapbox_outdoorUrl, {
+		  attribution: mapbox_Attr 
+		});		
+
+		mapbox_outdoorLayer.addTo(map);		
+		
+		var trailColors = {
+			"Miniere": "#6dc066",
+			"Strega": "#ffd700", 
+			"Mezza Strega": "#ff0000",
+			"Scalette": "#66cccc",
+			"Vignola": "#8a2be2",
+			"Cavo": "#0099cc",
+			"Serra": "#ffb6c1",
+			"Buca Del Bandito": "#000000"
+		};
+		
+		function trailClick(e, font) {
+			$("#poi-info").css('display', 'none');
+			// this will show #trail-container again, if its display was set to none after clicked #poi-info
+			$("#trail-container").css('display', 'block'); 	
+			$("#title").css('font-family', font)
+				.css('color', trailColors[e.layer.feature.properties.name])
+				.html(e.layer.feature.properties.name)
+			$("#trail-info").html(e.layer.feature.properties.description);
+			// $("#instagram-link").html('<a href="https://instagram.com/explore/tags/ElbaGravity_' + e.layer.feature.properties.name.replace(/\s+/g, '') + '" target="_blank">Instagram</a>');				
+			// These elements are coded into the KMLs!
+			$("#IT-Click").on('click', function() {
+				$("#EN").css("display", "none");
+				$("#IT").css("display", "block");
+			});	
+			$("#EN-Click").on('click', function() {
+				$("#IT").css("display", "none");
+				$("#EN").css("display", "block");
+			});				
+			$("#tracks").css('display', 'block');
+			$("#infopanel-bottom").fadeIn("slow");			
+			map.fitBounds(e.layer.getBounds());
+		}
+
+		// add Lines from KML Files
+		var CavoKML = omnivore.kml('KML/Cavo.kml')
+			.on('click', function(e) {
+				trailClick(e, "Bangers");
+				$("#widget").html('<iframe src="//lightwidget.com/widgets/6d167f1931505782a4628f3b1d29d22f.html" scrolling="no" allowtransparency="true" class="lightwidget-widget" style="width: 100%; border: 0; overflow: hidden;"></iframe>');
+				$("#gpx").prop('href', 'GPX/Cavo.gpx');
+				$("#kml").prop('href', 'KML/Cavo.kml');
+			});
+		
+		var SerraKML = omnivore.kml('KML/Serra.kml')
+			.on('click', function(e) {
+				trailClick(e, "Fruktur");
+				$("#widget").html('<iframe src="//lightwidget.com/widgets/e535e22ef1aa5ccd857aa7219956df32.html" scrolling="no" allowtransparency="true" class="lightwidget-widget" style="width: 100%; border: 0; overflow: hidden;"></iframe>');
+				$("#gpx").prop('href', 'GPX/Serra.gpx');
+				$("#kml").prop('href', 'KML/Serra.kml');
+			});
+
+		var BucaDelBanditoKML = omnivore.kml('KML/BucaDelBandito.kml')
+			.on('click', function(e) {
+				trailClick(e, "Creepster");
+				$("#widget").html('<iframe src="//lightwidget.com/widgets/994b9682508659809d63287e94e522d6.html" scrolling="no" allowtransparency="true" class="lightwidget-7widget" style="width: 100%; border: 0; overflow: hidden;"></iframe>');
+				$("#gpx").prop('href', 'GPX/BucaDelBandito.gpx');
+				$("#kml").prop('href', 'KML/BucaDelBandito.kml');
+			});
+
+		var MiniereKML = omnivore.kml('KML/Miniere.kml')
+			.on('click', function(e) {
+				trailClick(e, "Ultra");
+				$("#widget").html('<iframe src="//lightwidget.com/widgets/7cfa1a27909850c1a5eb5d022fef31c9.html" scrolling="no" allowtransparency="true" class="lightwidget-widget" style="width: 100%; border: 0; overflow: hidden;"></iframe>');
+				$("#gpx").prop('href', 'GPX/Miniere.gpx');
+				$("#kml").prop('href', 'KML/Miniere.kml');
+			});		
+
+		var MezzaStregaKML = omnivore.kml('KML/MezzaStrega.kml')
+			.on('click', function(e) {
+				trailClick(e, "Ewert");
+				$("#widget").html('<iframe src="//lightwidget.com/widgets/cc84f0d9d7b9595885992cd3a18d0d38.html" scrolling="no" allowtransparency="true" class="lightwidget-widget" style="width: 100%; border: 0; overflow: hidden;"></iframe>');
+				$("#gpx").prop('href', 'GPX/MezzaStrega.gpx');
+				$("#kml").prop('href', 'KML/MezzaStrega.kml');
+			});
+
+		var StregaKML = omnivore.kml('KML/Strega.kml', null)
+			.on('click', function(e) {
+				trailClick(e, "Fugaz One");
+				$("#widget").html('<iframe src="//lightwidget.com/widgets/bb59eb0d5ecc520e99203b6560267003.html" scrolling="no" allowtransparency="true" class="lightwidget-widget" style="width: 100%; border: 0; overflow: hidden;"></iframe>');
+				$("#gpx").prop('href', 'GPX/Strega.gpx');
+				$("#kml").prop('href', 'KML/Strega.kml');
+			});
+
+		var ScaletteKML = omnivore.kml('KML/Scalette.kml')
+			.on('click', function(e) {
+				trailClick(e, "Hanalei");
+				$("#widget").html('<iframe src="//lightwidget.com/widgets/7920ebe9426c5b4aa4235de3f5eab748.html" scrolling="no" allowtransparency="true" class="lightwidget-widget" style="width: 100%; border: 0; overflow: hidden;"></iframe>');
+				$("#gpx").prop('href', 'GPX/Scalette.gpx');
+				$("#kml").prop('href', 'KML/Scalette.kml');
+			});
+
+		var VignolaKML = omnivore.kml('KML/Vignola.kml')
+			.on('click', function(e) {
+				trailClick(e, "Bungee Inline");
+				$("#widget").html('<iframe src="//lightwidget.com/widgets/1b8944eef7c85a2c8552a30a8d1da7e8.html" scrolling="no" allowtransparency="true" class="lightwidget-widget" style="height: 100%; height-max: 500px; border: 0; overflow: hidden;"></iframe>');
+				$("#gpx").prop('href', 'GPX/Vignola.gpx');
+				$("#kml").prop('href', 'KML/Vignola.kml');
+			});
+		
+		/*
+		For highlighting features see:
+		http://stackoverflow.com/questions/32971673/how-do-you-make-a-highlighted-outline-appear-in-leaflet-js-on-mouseover-and-by-h
+		*/	
+
+		var style = {
+			'default': {
+				'weight': 5,
+				'opacity': 0.7
+			},
+			'highlight': {
+				'opacity': 0.9
+			}
+		};
+
+		// Variable for storing highlighted layer
+		var highlight;
+
+		function setHighlight (layer) {
+		  // Check if something's highlighted, if so unset highlight
+		  if (highlight) {
+			unsetHighlight(highlight);
+		  }
+		  // Set highlight style on layer and store to variable
+		  layer.setStyle(style.highlight);
+		  highlight = layer;
+		}
+
+		function unsetHighlight (layer) {
+		  // Set default style and clear variable
+		  layer.setStyle(style.default);
+		  highlight = null;
+		}
+
+		var groupKML = new L.LayerGroup([
+			CavoKML,
+			SerraKML,
+			MiniereKML,
+			BucaDelBanditoKML,	
+			MezzaStregaKML,
+			ScaletteKML,
+			StregaKML,
+			VignolaKML
+		]);
+		
+		map.createPane('ptsPane');
+		map.getPane('ptsPane').style.zIndex = 599
+		
+		map.createPane('outlinePane');
+		map.getPane('outlinePane').style.zIndex = 300;
+		
+		// Iterate over groupKML and make end and start markers, then attach event listeners..
+		// and outline white in pane under Overlay pane (z-Index = 400)..
+		groupKML.eachLayer(function (layer) {	
+
+			layer.on('ready', function() { 
+			
+				new L.geoJson(layer.toGeoJSON(), {pane: 'outlinePane'})
+					.setStyle({'color': 'white', 'weight': 7, 'opacity': 0.7})
+					.addTo(map);
+					
+				var name = layer.getLayers(0)[0].feature.properties.name;
+				var latlngs = layer.getLayers(0)[0]._latlngs;
+				
+				layer.setStyle({
+					'weight': 5,
+					'opacity': 0.7,
+					'color': trailColors[name]
+				});					
+				
+				layer.on('mouseover', function (e) {
+					setHighlight(layer);
+				});
+
+				layer.on('mouseout', function (e) {
+					unsetHighlight(layer);
+				});
+				
+				layer.addTo(map);
+				
+				new L.circleMarker(latlngs[0], {
+						color: 'darkslategrey',
+						fillColor: 'lightgreen',	
+						fillOpacity: 1,				
+						radius: 8,		
+						pane: 'ptsPane'
+					})
+					.bindTooltip(name + ' - Start', {
+						permanent: false, 
+						direction: 'right'
+					})
+					.addTo(map);
+					
+				new L.circleMarker(latlngs[latlngs.length - 1], {
+						color: 'darkslategrey',
+						fillColor: 'pink',
+						fillOpacity: 1,
+						radius: 8,
+						pane: 'ptsPane'
+					})	
+					.bindTooltip(name + ' - End', {
+						permanent: false, 
+						direction: 'right'
+					})
+					.addTo(map)	
+								
+			});			
+		});	
+		
+		/*
+		Points of interest
+		*/
+		
+		// used icons for markers:
+		L.AwesomeMarkers.Icon.prototype.options.prefix = 'fa';
+		  
+		var bikeLoadingIcon = L.AwesomeMarkers.icon({
+			    icon: 'fa-truck',
+			    markerColor: 'cadetblue',
+			    iconColor: 'yellow'
+			  })			
+
+		function showTelDario(e) {
+			$('#poi-info').html('Shuttle Call <a href="tel:+39 320 264 9391">+39 320 264 9391</a>');
+			$('#poi-info').css('display', 'block');
+			// this will hide #title and #tracks in #trail-container, which otherwise would always stick above #poi-info		
+			$('#trail-container').css('display','none');
+			$('#infopanel-bottom').fadeIn('slow');
+			// console.log(latLngToLayerPoint(e.latlng));
+		}
+		
+		var bikeLoadingPts = [
+			[42.810156, 10.363514],
+			[42.799289, 10.357636],
+			[42.860381, 10.420435],
+			[42.843782, 10.400274],
+			[42.770250, 10.390604],
+			[42.815970, 10.428423]
+		];
+		
+		var loadingPtsLabels = ['Bagnaia', 'Magazzini', 'Cavo', 'SP 33 - Vignola Exit', 'Porto Azzurro', 'Rio Marina'];
+
+		
+		for (i = 0; i < bikeLoadingPts.length; i++) { 
+			new L.marker(bikeLoadingPts[i], {icon: bikeLoadingIcon})
+				.bindTooltip(loadingPtsLabels[i], 
+					{
+						permanent: false, 
+						direction: 'right'
+					}
+				)
+				.on('click', showTelDario)
+				.addTo(map);
+		}
+		
+		// Bike Rent marker and functionally disabled, October 2018..
+		/* 		
+		var bikeRentIcon = L.AwesomeMarkers.icon({
+			    icon: 'fa-bicycle',
+			    markerColor: 'blue',
+			    iconColor: 'yellow'
+			  });	
+			  
+		function openShopURL(e) {
+			$("#poi-info").html('Visit <a href="http://www.elbagravitybikerent.it/" target="_blank";>Elba Gravity Bike Shop/Rent</a>');
+			$("#poi-info").css('display', 'block');
+			// this will hide #title and #tracks in #trail-container, which otherwise would always stick above #poi-info	
+			$("#trail-container").css('display','none');
+			$("#infopanel-bottom").fadeIn("slow");
+			// console.log(latLngToLayerPoint(e.latlng));			
+		}
+
+		new L.marker([42.81376, 10.3989717], {icon: bikeRentIcon})
+			.on('click', openShopURL)
+			.addTo(map);
+		*/	
+		
+	</script>
+</body>	
+</html>

@@ -1,0 +1,42 @@
+# BRouter — systemd unit (VPS)
+#
+# Install:
+#   sudo cp brouter.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now brouter
+#
+# Expects:
+#   /opt/brouter/          — brouter-*-all.jar, profiles2/, customprofiles/, segments4/
+#   openjdk-17 JRE at /usr/bin/java
+
+[Unit]
+Description=BRouter HTTP routing engine
+After=network.target
+Documentation=https://github.com/abrensch/brouter
+
+[Service]
+Type=simple
+User=brouter
+Group=brouter
+WorkingDirectory=/opt/brouter
+# Listens on :17777 (all interfaces inside host). Firewall MUST block public :17777;
+# nginx proxies only to 127.0.0.1:17777.
+ExecStart=/usr/bin/java -Xmx768M -Xms128M -DmaxRunningTime=300 -DuseRFCMimeType=false \
+  -cp /opt/brouter/brouter-1.7.9-all.jar \
+  btools.server.RouteServer \
+  /opt/brouter/segments4 \
+  /opt/brouter/profiles2 \
+  /opt/brouter/customprofiles \
+  17777 \
+  1
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/brouter
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
