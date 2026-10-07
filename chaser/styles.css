@@ -1308,7 +1308,8 @@ path.trace-hit:focus {
 
 @media (orientation: portrait) {
   .unified-panel,
-  #panel-launcher {
+  #panel-launcher,
+  .chat-open {
     top: auto;
     bottom: 20px;
   }

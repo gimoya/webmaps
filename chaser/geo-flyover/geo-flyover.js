@@ -377,9 +377,11 @@
     this._zoom = clampZoom(opts.zoom);
     this._bearing = null;
     this._bearingTarget = null;
+    this._lookBack = false;
     this._lastProgressDrawM = -1e9;
     this._destroyed = false;
     this._playBtn = null;
+    this._lookBtn = null;
     this._speedInput = null;
     this._heightInput = null;
     this._onResize = null;
@@ -456,6 +458,17 @@
     return this.skipBy(1);
   };
 
+  /** Flip view 180° along the path (front ↔ rear). */
+  Session.prototype.toggleLookDirection = function () {
+    if (this._destroyed || !this.map) return this;
+    this._lookBack = !this._lookBack;
+    this._bearing = null;
+    this._bearingTarget = null;
+    this._syncLookBtn();
+    this._applyFrame(this._progressM, false, 0);
+    return this;
+  };
+
   Session.prototype._syncSpeedUi = function () {
     if (this._speedInput) this._speedInput.value = String(Math.round(this._speedKmh));
   };
@@ -463,6 +476,21 @@
   Session.prototype._syncHeightUi = function () {
     if (this._heightInput) {
       this._heightInput.value = String(heightSliderFromZoom(this._zoom));
+    }
+  };
+
+  Session.prototype._syncLookBtn = function () {
+    if (!this._lookBtn) return;
+    if (this._lookBack) {
+      this._lookBtn.textContent = "Front";
+      this._lookBtn.title = "Look forward along the path";
+      this._lookBtn.setAttribute("aria-label", "Switch to front view");
+      this._lookBtn.setAttribute("aria-pressed", "true");
+    } else {
+      this._lookBtn.textContent = "Rear";
+      this._lookBtn.title = "Look backward along the path";
+      this._lookBtn.setAttribute("aria-label", "Switch to rear view");
+      this._lookBtn.setAttribute("aria-pressed", "false");
     }
   };
 
@@ -483,6 +511,7 @@
     var opts = this.opts;
     var at = sampleAt(path, progressM);
     var rawBearing = this._pathBearing(progressM);
+    if (this._lookBack) rawBearing = normalizeBearing(rawBearing + 180);
     var target = snapBearing(rawBearing, opts.bearingStepDeg);
     this._bearingTarget = target;
 
@@ -558,10 +587,12 @@
     var speed = this.container.querySelector("[data-flyover-speed]");
     var height = this.container.querySelector("[data-flyover-height]");
     this._playBtn = play;
+    this._lookBtn = this.container.querySelector("[data-flyover-look]");
     this._speedInput = speed;
     this._heightInput = height;
     this._syncSpeedUi();
     this._syncHeightUi();
+    this._syncLookBtn();
     if (play) {
       play.addEventListener("click", function () {
         if (!self._playing) self.play();
@@ -579,6 +610,11 @@
     if (skipFwd) {
       skipFwd.addEventListener("click", function () {
         self.skipForward();
+      });
+    }
+    if (this._lookBtn) {
+      this._lookBtn.addEventListener("click", function () {
+        self.toggleLookDirection();
       });
     }
     if (speed) {
@@ -815,6 +851,7 @@
       '<button type="button" class="geo-flyover-btn" data-flyover-skip-back aria-label="Skip back">⟨⟨</button>' +
       '<button type="button" class="geo-flyover-btn" data-flyover-play aria-label="Pause">Pause</button>' +
       '<button type="button" class="geo-flyover-btn" data-flyover-skip-fwd aria-label="Skip forward">⟩⟩</button>' +
+      '<button type="button" class="geo-flyover-btn" data-flyover-look aria-pressed="false" title="Look backward along the path" aria-label="Switch to rear view">Rear</button>' +
       "</div>" +
       (isModal
         ? '<button type="button" class="geo-flyover-btn geo-flyover-btn--close" data-flyover-close aria-label="Close">Close</button>'

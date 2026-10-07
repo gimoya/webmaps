@@ -133,6 +133,11 @@
   border-color: rgba(255, 255, 255, 0.55);
 }
 
+.geo-flyover-btn[aria-pressed="true"] {
+  background: rgba(0, 185, 254, 0.35);
+  border-color: rgba(0, 185, 254, 0.85);
+}
+
 .geo-flyover-btn--close {
   border-color: rgba(220, 38, 38, 0.7);
 }

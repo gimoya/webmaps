@@ -33,8 +33,9 @@ session.stop(); // tears down map + overlay
 
 Toolbar:
 - **Speed** / **Height** sliders labeled **min … max**
-- **⟨⟨ / ⟩⟩** skip by `trackLength / 10` (10 forward clicks → end; nearer than one step → start/end)
-- Bearing: target snapped to **90°**, camera eases at up to **20°/s** (no hard jumps; Mapbox has no built-in damper for this loop)
+- **⟨⟨ / ⟩⟩** skip by `trackLength / skipSteps` (forward clicks → end; nearer than one step → start/end)
+- **Rear / Front** — flip camera bearing 180° along the path (look back / look ahead)
+- Bearing: path heading snapped to `bearingStepDeg`, camera eases at up to `bearingTurnDegPerSec`
 
 ### Embed
 
