@@ -14,6 +14,7 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 - After an event is chosen, a fresh load asks Rider or Viewer. **Start Ride / Resume Tracing** starts or continues a trace that is not finished. **Stop tracking** stops this page's writer and finishes the ride. The trace stays on the map.
 - Event admin can **Lock race** / **Unlock race** next to the event title (`raceLocked`). Locked: new aliases cannot start; unfinished aliases can still resume.
 - Viewer **replay** replays stored traces on the map (play control under the bike button).
+- Event **chat**: floating Chat opens a live message modal for everyone on the event. Active riders can send short text and/or a camera JPEG thumbnail (≤100 KB) to Firebase Storage + Firestore.
 - Paid admin codes: Ko-fi Shop → Cloud Functions webhook reserves a pool code → buyer claims via email (or `?tx=`) → create event with `#admin=CODE`.
 
 ## Project files
@@ -34,6 +35,7 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 - `sw.js` – app shell and topo tile cache. The page does not register it.
 - `icons/` – app icons
 - `gpx_tracks/` – sample course file, not loaded automatically
+- `geo-flyover/` – Mapbox terrain path flyover (modal from Chaser)
 
 ## Firebase
 
@@ -74,9 +76,22 @@ Everything live sits under an event:
 ```text
 events/{eventId}/routes/current
 events/{eventId}/placement/current
+events/{eventId}/chat/{messageId}
 events/{eventId}/trackingSessions/{sessionId}
 events/{eventId}/trackingSessions/{sessionId}/points/{pointId}
 ```
+
+Chat message fields (`events/{eventId}/chat/{messageId}`):
+
+- `name` (alias, max 30)
+- `sessionId` (active unfinished tracking session that posted)
+- `text` (string, may be empty; max 280)
+- `photoUrl` (download URL, may be empty)
+- `photoPath` (Storage object path, may be empty)
+- `createdAt` (server timestamp)
+- At least one of `text` or `photoUrl` must be non-empty.
+
+Storage object: `events/{eventId}/chat/{messageId}.jpg` (JPEG, ≤100 KB). Publish Storage rules when enabling chat (see below).
 
 Session fields:
 
@@ -261,6 +276,44 @@ service cloud.firestore {
         }
       }
 
+      match /chat/{messageId} {
+        allow read: if true;
+
+        allow create: if
+          request.resource.data.keys().hasOnly([
+            'name', 'sessionId', 'text', 'photoUrl', 'photoPath', 'createdAt'
+          ]) &&
+          request.resource.data.name is string &&
+          request.resource.data.name.size() >= 1 &&
+          request.resource.data.name.size() <= 30 &&
+          request.resource.data.sessionId is string &&
+          request.resource.data.sessionId.size() >= 1 &&
+          request.resource.data.sessionId.size() <= 80 &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() <= 280 &&
+          request.resource.data.photoUrl is string &&
+          request.resource.data.photoUrl.size() <= 2000 &&
+          request.resource.data.photoPath is string &&
+          request.resource.data.photoPath.size() <= 500 &&
+          request.resource.data.createdAt is timestamp &&
+          (
+            request.resource.data.text.size() >= 1 ||
+            request.resource.data.photoUrl.size() >= 1
+          ) &&
+          get(
+            /databases/$(database)/documents/events/$(eventId)/trackingSessions/$(request.resource.data.sessionId)
+          ).data.isActive == true &&
+          get(
+            /databases/$(database)/documents/events/$(eventId)/trackingSessions/$(request.resource.data.sessionId)
+          ).data.finished != true &&
+          get(
+            /databases/$(database)/documents/events/$(eventId)/trackingSessions/$(request.resource.data.sessionId)
+          ).data.name == request.resource.data.name;
+
+        allow update: if false;
+        allow delete: if true;
+      }
+
       match /routes/current {
         allow read: if true;
 
@@ -298,7 +351,28 @@ service cloud.firestore {
 }
 ```
 
-Publish these in the Firebase console whenever the paste above changes (e.g. `raceLocked` on event update). Event create (with `adminCode`), adminConfig pool updates, route overwrite, placement, race lock, and point writes all need this paste. `kofiFulfillments` is Admin SDK only (Cloud Functions).
+Publish these in the Firebase console whenever the paste above changes (e.g. `raceLocked` on event update, chat). Event create (with `adminCode`), adminConfig pool updates, route overwrite, placement, race lock, chat, and point writes all need this paste. `kofiFulfillments` is Admin SDK only (Cloud Functions).
+
+### Storage rules (chat photos)
+
+Publish in Firebase Console → Storage → Rules (bucket from `firebase-config.js`):
+
+```txt
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /events/{eventId}/chat/{fileName} {
+      allow read: if true;
+      allow create: if
+        fileName.matches('.*\\.jpg') &&
+        request.resource.size <= 100 * 1024 &&
+        request.resource.contentType == 'image/jpeg';
+      allow update: if false;
+      allow delete: if true;
+    }
+  }
+}
+```
 
 ## Ko-fi admin codes (v1)
 

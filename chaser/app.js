@@ -26,11 +26,15 @@
   const PLACEMENT_DOC = "current";
   const ROUTES_COLLECTION = "routes";
   const ROUTE_DOC = "current";
+  const CHAT_COLLECTION = "chat";
   const EVENTS_COLLECTION = "events";
   const ADMIN_CONFIG_COLLECTION = "adminConfig";
   const ADMIN_CONFIG_DOC = "current";
   const MASTER_PASSWORD = "admin_master_6071";
   const EVENT_ID_MAX = 40;
+  const CHAT_TEXT_MAX = 280;
+  const CHAT_PHOTO_MAX_BYTES = 100 * 1024;
+  const CHAT_LIST_LIMIT = 100;
   const PLACE_CUPS = ["🥇", "🥈", "🥉"];
   const PAGE_FADE_KEY = "chaserPageFade";
   const pageFadeOverlay = document.getElementById("page-fade");
@@ -337,8 +341,10 @@
   let sessionsUnsubscribe = null;
   let routesUnsubscribe = null;
   let placementUnsubscribe = null;
+  let chatUnsubscribe = null;
   let writeTimer = null;
   let activeSessionRef = null;
+  let activeWriterName = null;
   let acceptedFix = null;
   let writerTraceLine = TRACE_LINE_PAUSED;
   let latestOwnPosition = null;
@@ -348,7 +354,25 @@
   let centerControlButton = null;
   let urlSyncTimer = null;
   let db = null;
+  let storage = null;
   let sessionsRef = null;
+  let chatPendingFile = null;
+  let chatSending = false;
+  let chatWebcamStream = null;
+  const chatOpenBtn = document.getElementById("chat-open");
+  const chatDialog = document.getElementById("chat-dialog");
+  const chatListEl = document.getElementById("chat-list");
+  const chatComposer = document.getElementById("chat-composer");
+  const chatTextEl = document.getElementById("chat-text");
+  const chatCameraBtn = document.getElementById("chat-camera-btn");
+  const chatCameraEl = document.getElementById("chat-camera");
+  const chatPreviewEl = document.getElementById("chat-preview");
+  const chatSendBtn = document.getElementById("chat-send");
+  const chatCloseBtn = document.getElementById("chat-close");
+  const chatWebcamEl = document.getElementById("chat-webcam");
+  const chatWebcamVideo = document.getElementById("chat-webcam-video");
+  const chatWebcamSnap = document.getElementById("chat-webcam-snap");
+  const chatWebcamCancel = document.getElementById("chat-webcam-cancel");
   let placementCurrent = null;
   let placeCups = new Map();
   let replayActive = false;
@@ -392,6 +416,7 @@
 
   firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
+  storage = firebase.storage();
   attachAdminConfigSubscription();
   attachEventsSubscription();
   if (hashAdminCode && eventAdminCodeEl) eventAdminCodeEl.value = hashAdminCode;
@@ -402,6 +427,7 @@
     refreshTracePopups();
   }, 5000);
   wireControls();
+  wireChatControls();
 
   function eventSlug(name) {
     return String(name || "")
@@ -686,6 +712,7 @@
   function teardownEventScope() {
     clearWriter();
     if (replayActive) stopReplay();
+    closeChatDialog();
     if (sessionsUnsubscribe) {
       sessionsUnsubscribe();
       sessionsUnsubscribe = null;
@@ -698,6 +725,10 @@
       placementUnsubscribe();
       placementUnsubscribe = null;
     }
+    if (chatUnsubscribe) {
+      chatUnsubscribe();
+      chatUnsubscribe = null;
+    }
     [...tracksBySessionId.keys()].forEach((sessionId) => removeTrack(sessionId));
     clearCourse();
     placementCurrent = null;
@@ -708,9 +739,11 @@
     eventName = null;
     eventAdminCode = null;
     eventRaceLocked = false;
+    if (chatListEl) chatListEl.replaceChildren();
     renderEventPanel();
     renderTracksAndPanel();
     syncAdminControls();
+    syncChatUi();
   }
 
   async function bindEvent(id, data) {
@@ -720,6 +753,7 @@
       writePageUrl();
       renderEventPanel();
       syncAdminControls();
+      syncChatUi();
       if (pendingRouteFrame) {
         pendingRouteFrame = false;
         if (routeLatLngs && routeLatLngs.length > 1) {
@@ -751,7 +785,9 @@
     attachSessionsSubscription(sessionsRef);
     attachRoutesSubscription(eventRef);
     attachPlacementSubscription(eventRef);
+    attachChatSubscription(eventRef);
     syncAdminControls();
+    syncChatUi();
   }
 
   function wireEntryGate() {
@@ -1150,8 +1186,366 @@
     }
   }
 
+  function syncChatUi() {
+    if (chatOpenBtn) chatOpenBtn.hidden = !eventId;
+    if (chatComposer) chatComposer.hidden = !activeSessionRef;
+  }
+
+  function openChatDialog() {
+    if (!chatDialog || !eventId) return;
+    document.body.classList.add("panel-faded");
+    syncChatUi();
+    chatDialog.hidden = false;
+    if (chatListEl) chatListEl.scrollTop = chatListEl.scrollHeight;
+  }
+
+  function closeChatDialog() {
+    stopChatWebcam();
+    if (chatDialog) chatDialog.hidden = true;
+  }
+
+  function prefersNativeCameraCapture() {
+    return navigator.maxTouchPoints > 0 || window.matchMedia("(pointer: coarse)").matches;
+  }
+
+  function stopChatWebcam() {
+    if (chatWebcamStream) {
+      chatWebcamStream.getTracks().forEach((track) => track.stop());
+      chatWebcamStream = null;
+    }
+    if (chatWebcamVideo) chatWebcamVideo.srcObject = null;
+    if (chatWebcamEl) chatWebcamEl.hidden = true;
+  }
+
+  async function startChatWebcam() {
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+      throw new Error("Camera is not available in this browser.");
+    }
+    stopChatWebcam();
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: { ideal: "environment" } }
+    });
+    chatWebcamStream = stream;
+    if (chatWebcamVideo) {
+      chatWebcamVideo.srcObject = stream;
+      await chatWebcamVideo.play();
+    }
+    if (chatWebcamEl) chatWebcamEl.hidden = false;
+  }
+
+  async function snapChatWebcam() {
+    if (!chatWebcamVideo || !chatWebcamStream) {
+      throw new Error("Camera is not active.");
+    }
+    const w = chatWebcamVideo.videoWidth || 1280;
+    const h = chatWebcamVideo.videoHeight || 720;
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext("2d").drawImage(chatWebcamVideo, 0, 0, w, h);
+    const blob = await canvasToJpegBlob(canvas, 0.92);
+    stopChatWebcam();
+    return prepareChatPhoto(new File([blob], "chat-cam.jpg", { type: "image/jpeg" }));
+  }
+
+  function applyChatPhotoPreview(jpegFile) {
+    chatPendingFile = jpegFile;
+    if (!chatPreviewEl) return;
+    if (chatPreviewEl.src && chatPreviewEl.src.startsWith("blob:")) {
+      URL.revokeObjectURL(chatPreviewEl.src);
+    }
+    chatPreviewEl.src = URL.createObjectURL(jpegFile);
+    chatPreviewEl.hidden = false;
+    chatPreviewEl.title = `${Math.ceil(jpegFile.size / 1024)} KB`;
+  }
+
+  function clearChatComposer() {
+    chatPendingFile = null;
+    stopChatWebcam();
+    if (chatTextEl) chatTextEl.value = "";
+    if (chatCameraEl) chatCameraEl.value = "";
+    if (chatPreviewEl) {
+      if (chatPreviewEl.src && chatPreviewEl.src.startsWith("blob:")) {
+        URL.revokeObjectURL(chatPreviewEl.src);
+      }
+      chatPreviewEl.removeAttribute("src");
+      chatPreviewEl.hidden = true;
+    }
+  }
+
+  function formatChatTime(ms) {
+    if (!ms) return "";
+    const d = new Date(ms);
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function renderChatMessages(docs) {
+    if (!chatListEl) return;
+    const stickBottom =
+      chatListEl.scrollHeight - chatListEl.scrollTop - chatListEl.clientHeight < 48;
+    chatListEl.replaceChildren();
+    docs.forEach((doc) => {
+      const data = doc.data();
+      const name = typeof data.name === "string" ? data.name : "?";
+      const text = typeof data.text === "string" ? data.text : "";
+      const photoUrl = typeof data.photoUrl === "string" ? data.photoUrl : "";
+      const atMs = toMillis(data.createdAt);
+      const li = document.createElement("li");
+      li.className = "chat-item";
+      const meta = document.createElement("div");
+      meta.className = "chat-item-meta";
+      const nameEl = document.createElement("span");
+      nameEl.className = "chat-item-name";
+      nameEl.style.color = colorForAlias(name);
+      nameEl.textContent = name;
+      const timeEl = document.createElement("span");
+      timeEl.textContent = formatChatTime(atMs);
+      meta.append(nameEl, timeEl);
+      li.append(meta);
+      if (text) {
+        const p = document.createElement("p");
+        p.className = "chat-item-text";
+        p.textContent = text;
+        li.append(p);
+      }
+      if (photoUrl) {
+        const img = document.createElement("img");
+        img.className = "chat-item-photo";
+        img.src = photoUrl;
+        img.alt = "";
+        img.loading = "lazy";
+        li.append(img);
+      }
+      chatListEl.append(li);
+    });
+    if (stickBottom) chatListEl.scrollTop = chatListEl.scrollHeight;
+  }
+
+  function attachChatSubscription(scopeRef) {
+    if (chatUnsubscribe) {
+      chatUnsubscribe();
+      chatUnsubscribe = null;
+    }
+    if (!scopeRef) return;
+    chatUnsubscribe = scopeRef
+      .collection(CHAT_COLLECTION)
+      .orderBy("createdAt")
+      .limitToLast(CHAT_LIST_LIMIT)
+      .onSnapshot(
+        (snapshot) => {
+          renderChatMessages(snapshot.docs);
+          renderConnection(true, "online");
+        },
+        (error) => {
+          console.error("Firestore chat subscription error:", error);
+          renderConnection(false, "offline");
+        }
+      );
+  }
+
+  function loadImageFromFile(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(img);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Image could not be loaded."));
+      };
+      img.src = url;
+    });
+  }
+
+  function canvasToJpegBlob(canvas, quality) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) reject(new Error("JPEG encode failed."));
+          else resolve(blob);
+        },
+        "image/jpeg",
+        quality
+      );
+    });
+  }
+
+  async function compressImageToJpeg(file, maxBytes = CHAT_PHOTO_MAX_BYTES) {
+    const img = await loadImageFromFile(file);
+    let maxEdge = 1280;
+    for (let pass = 0; pass < 6; pass += 1) {
+      let w = img.naturalWidth || img.width;
+      let h = img.naturalHeight || img.height;
+      const scale = Math.min(1, maxEdge / Math.max(w, h, 1));
+      w = Math.max(1, Math.round(w * scale));
+      h = Math.max(1, Math.round(h * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+      let lo = 0.28;
+      let hi = 0.9;
+      let best = null;
+      for (let i = 0; i < 10; i += 1) {
+        const q = (lo + hi) / 2;
+        const blob = await canvasToJpegBlob(canvas, q);
+        if (blob.size <= maxBytes) {
+          best = blob;
+          lo = q;
+        } else {
+          hi = q;
+        }
+      }
+      if (best && best.size <= maxBytes) return best;
+      maxEdge = Math.max(320, Math.round(maxEdge * 0.65));
+    }
+    throw new Error("Photo could not be compressed under 100 KB.");
+  }
+
+  async function prepareChatPhoto(file) {
+    const jpeg = await compressImageToJpeg(file, CHAT_PHOTO_MAX_BYTES);
+    if (jpeg.size > CHAT_PHOTO_MAX_BYTES) {
+      throw new Error("Photo could not be compressed under 100 KB.");
+    }
+    return new File([jpeg], "chat.jpg", { type: "image/jpeg" });
+  }
+
+  async function sendChatMessage() {
+    if (chatSending || !db || !storage || !eventRef || !eventId || !activeSessionRef) return;
+    const text = String(chatTextEl && chatTextEl.value ? chatTextEl.value : "")
+      .trim()
+      .slice(0, CHAT_TEXT_MAX);
+    const file = chatPendingFile;
+    if (!text && !file) {
+      await showNotice("Type a message or take a photo.");
+      return;
+    }
+    const name = activeWriterName || hashRider;
+    if (!name) {
+      await showNotice("Rider name is missing.");
+      return;
+    }
+    const track = tracksBySessionId.get(activeSessionRef.id);
+    if (track && track.finished === true) {
+      await showNotice("Finished rides cannot post to chat.");
+      return;
+    }
+
+    chatSending = true;
+    if (chatSendBtn) chatSendBtn.disabled = true;
+    try {
+      const messageRef = eventRef.collection(CHAT_COLLECTION).doc();
+      let photoUrl = "";
+      let photoPath = "";
+      if (file) {
+        const jpeg =
+          file.type === "image/jpeg" && file.size <= CHAT_PHOTO_MAX_BYTES
+            ? file
+            : await compressImageToJpeg(file, CHAT_PHOTO_MAX_BYTES);
+        photoPath = `events/${eventId}/chat/${messageRef.id}.jpg`;
+        const storageRef = storage.ref().child(photoPath);
+        await storageRef.put(jpeg, { contentType: "image/jpeg" });
+        photoUrl = await storageRef.getDownloadURL();
+      }
+      await messageRef.set({
+        name,
+        sessionId: activeSessionRef.id,
+        text,
+        photoUrl,
+        photoPath,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      clearChatComposer();
+    } catch (err) {
+      console.error("Chat send failed:", err);
+      await showNotice(err && err.message ? err.message : "Message could not be sent.");
+    } finally {
+      chatSending = false;
+      if (chatSendBtn) chatSendBtn.disabled = false;
+    }
+  }
+
+  function wireChatControls() {
+    if (chatOpenBtn) {
+      chatOpenBtn.addEventListener("click", () => openChatDialog());
+    }
+    if (chatCloseBtn) {
+      chatCloseBtn.addEventListener("click", () => closeChatDialog());
+    }
+    if (chatDialog) {
+      chatDialog.addEventListener("click", (event) => {
+        if (event.target === chatDialog) closeChatDialog();
+      });
+    }
+    if (chatCameraBtn) {
+      chatCameraBtn.addEventListener("click", () => {
+        if (prefersNativeCameraCapture()) {
+          if (chatCameraEl) chatCameraEl.click();
+          return;
+        }
+        startChatWebcam().catch((err) => {
+          console.error("Chat webcam failed:", err);
+          showNotice(err && err.message ? err.message : "Camera could not be opened.");
+        });
+      });
+    }
+    if (chatWebcamSnap) {
+      chatWebcamSnap.addEventListener("click", () => {
+        if (chatSendBtn) chatSendBtn.disabled = true;
+        snapChatWebcam()
+          .then((jpegFile) => applyChatPhotoPreview(jpegFile))
+          .catch((err) => {
+            console.error("Chat webcam snap failed:", err);
+            chatPendingFile = null;
+            if (chatPreviewEl) chatPreviewEl.hidden = true;
+            showNotice(err && err.message ? err.message : "Photo could not be prepared.");
+          })
+          .finally(() => {
+            if (chatSendBtn) chatSendBtn.disabled = chatSending;
+          });
+      });
+    }
+    if (chatWebcamCancel) {
+      chatWebcamCancel.addEventListener("click", () => stopChatWebcam());
+    }
+    if (chatCameraEl) {
+      chatCameraEl.addEventListener("change", () => {
+        const file = chatCameraEl.files && chatCameraEl.files[0];
+        chatPendingFile = null;
+        if (!file) {
+          if (chatPreviewEl) chatPreviewEl.hidden = true;
+          return;
+        }
+        if (chatSendBtn) chatSendBtn.disabled = true;
+        prepareChatPhoto(file)
+          .then((jpegFile) => applyChatPhotoPreview(jpegFile))
+          .catch((err) => {
+            console.error("Chat photo prepare failed:", err);
+            chatPendingFile = null;
+            if (chatPreviewEl) chatPreviewEl.hidden = true;
+            showNotice(err && err.message ? err.message : "Photo could not be prepared.");
+          })
+          .finally(() => {
+            if (chatSendBtn) chatSendBtn.disabled = chatSending;
+            chatCameraEl.value = "";
+          });
+      });
+    }
+    if (chatSendBtn) {
+      chatSendBtn.addEventListener("click", () => {
+        sendChatMessage();
+      });
+    }
+    syncChatUi();
+  }
+
   async function beginAliasTracking(ref, name) {
     hashRider = name;
+    activeWriterName = name;
     writePageUrl("");
     setRiderPanelTitle(name);
     riderNameEl.disabled = true;
@@ -1365,6 +1759,8 @@
     acceptedFix = null;
     writerTraceLine = TRACE_LINE_WRITING;
     activeSessionRef = sessionRef;
+    const track = tracksBySessionId.get(sessionRef.id);
+    activeWriterName = (track && track.name) || hashRider || "";
     setWriterState(true);
     renderTracksAndPanel();
 
@@ -1386,6 +1782,7 @@
   function clearWriter() {
     const wasWriting = Boolean(activeSessionRef);
     activeSessionRef = null;
+    activeWriterName = null;
     acceptedFix = null;
     writerTraceLine = TRACE_LINE_PAUSED;
     clearInterval(writeTimer);
@@ -1411,6 +1808,7 @@
     renderGpsStatus();
     stopBtn.hidden = !active;
     updateCenterControl();
+    syncChatUi();
   }
 
   function attachSessionsSubscription(ref) {

@@ -9,18 +9,18 @@
   "use strict";
 
   var DEFAULTS = {
-    speedKmh: 100,
+    speedKmh: 200,
     pitch: 68,
     zoom: 14.5,
     style: "mapbox://styles/mapbox/satellite-streets-v12",
     lookAheadM: 80,
-    exaggeration: 1.25,
+    exaggeration: 1.15,
     /** Quantize desired heading (less fidget); camera eases toward it. */
-    bearingStepDeg: 90,
+    bearingStepDeg: 60,
     /** Max turn rate while easing to the stepped target (°/s). */
-    bearingTurnDegPerSec: 15,
+    bearingTurnDegPerSec: 20,
     /** Path divided into this many skip steps (10 forward clicks → end). */
-    skipSteps: 10,
+    skipSteps: 20,
     lineColor: "#00b9fe",
     lineColorDim: "#ffffff",
     headColor: "#f3ef9a"

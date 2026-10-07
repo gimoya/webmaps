@@ -86,6 +86,12 @@
     <button id="panel-launcher" type="button" aria-label="Show panel">ⓘ</button>
   </div>
 
+    <button id="chat-open" class="chat-open" type="button" title="Event chat" aria-label="Open event chat" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8l-4 4V6a2 2 0 0 1 2-2zm2 4v2h12V8H6zm0 4v2h8v-2H6z"/>
+      </svg>
+    </button>
+
     <button id="viewer-replay" class="viewer-ride viewer-replay" type="button" title="Replay Rides" aria-label="Play replay" aria-pressed="false" hidden>
       <svg class="replay-play" viewBox="0 0 24 24" aria-hidden="true">
         <path fill="currentColor" d="M8 5v14l11-7z"/>
@@ -164,10 +170,37 @@
     </div>
   </div>
 
+  <div id="chat-dialog" class="notice-dialog chat-dialog" hidden>
+    <div class="notice-dialog-card chat-dialog-card" role="dialog" aria-modal="true" aria-labelledby="chat-dialog-title">
+      <div class="chat-dialog-header">
+        <p id="chat-dialog-title">Event chat</p>
+        <button id="chat-close" type="button" class="ghost">Close</button>
+      </div>
+      <ul id="chat-list" class="chat-list" aria-live="polite"></ul>
+      <div id="chat-composer" class="chat-composer" hidden>
+        <textarea id="chat-text" maxlength="280" rows="2" placeholder="Message (optional with photo)"></textarea>
+        <div id="chat-webcam" class="chat-webcam" hidden>
+          <video id="chat-webcam-video" autoplay playsinline muted></video>
+          <div class="chat-webcam-actions">
+            <button id="chat-webcam-snap" type="button">Snap</button>
+            <button id="chat-webcam-cancel" type="button" class="ghost">Cancel</button>
+          </div>
+        </div>
+        <div class="chat-composer-row">
+          <button id="chat-camera-btn" class="chat-camera-btn" type="button" title="Take photo with camera (resized to ≤100 KB)">Take photo</button>
+          <input id="chat-camera" type="file" accept="image/*" capture="environment" hidden>
+          <img id="chat-preview" class="chat-preview" alt="" hidden>
+          <button id="chat-send" type="button">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-storage-compat.js"></script>
   <script src="firebase-config.js"></script>
   <script src="./geo-flyover/geo-flyover.js"></script>
   <script src="track-grade.js"></script>
