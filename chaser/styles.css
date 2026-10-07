@@ -9,11 +9,11 @@
   --color-text: rgba(232, 232, 236, 1);
   --color-text-muted: rgba(176, 176, 184, 1);
   --color-border: rgba(74, 74, 84, 1);
-  --color-accent: rgba(59, 130, 246, 1);
-  --color-accent-hover: rgba(37, 99, 235, 1);
+  --color-accent: rgb(116, 164, 242);
+  --color-accent-hover: rgb(90, 139, 243);
   --color-success: rgba(34, 197, 94, 1);
-  --color-danger: rgba(220, 38, 38, 1);
-  --color-danger-soft: rgb(255, 186, 186);
+  --color-danger: rgb(251, 71, 71);
+  --color-danger-soft: rgb(250, 143, 143);
   --color-danger-hover: rgba(185, 28, 28, 1);
   --color-white: rgba(255, 255, 255, 1);
   --color-shadow: rgba(0, 0, 0, 0.3);
@@ -64,7 +64,7 @@
   --color-ctrl-bg-active: rgba(240, 240, 240, 1);
   --color-ctrl-fg: rgba(240, 240, 240, 1);
   --color-ctrl-fg-active: rgba(30, 30, 34, 1);
-  --color-ctrl-bg-running: rgb(186, 240, 150);
+  --color-ctrl-bg-running: rgb(175, 255, 122);
   --color-ctrl-border: rgba(255, 255, 255, 0.55);
   --color-ctrl-divider: rgba(255, 255, 255, 0.22);
   --color-ctrl-disabled-bg: rgba(22, 22, 24, 1);
@@ -300,6 +300,10 @@ body.panel-faded #panel-launcher {
     0 0 0.35em rgba(0, 0, 0, 0.95),
     0 0.08em 0.2em rgba(0, 0, 0, 0.9),
     0 0.12em 0.45em rgba(0, 0, 0, 0.85);
+}
+
+.panel-header.is-race-locked .event-panel-name {
+  color: var(--color-danger);
 }
 
 .race-lock-btn {

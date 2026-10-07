@@ -398,16 +398,23 @@
       .slice(0, EVENT_ID_MAX);
   }
 
+  function syncEventTitleRaceLock() {
+    if (!panelHeader) return;
+    panelHeader.classList.toggle("is-race-locked", Boolean(eventId) && eventRaceLocked);
+  }
+
   function renderEventPanel() {
     if (!eventId || !eventName) {
       eventPanelLine.hidden = true;
       eventPanelName.textContent = "";
       panelHeader.classList.remove("has-event");
+      syncEventTitleRaceLock();
       return;
     }
     eventPanelLine.hidden = false;
     eventPanelName.textContent = eventName;
     panelHeader.classList.add("has-event");
+    syncEventTitleRaceLock();
   }
 
   function openCreateEventBoxIfAdmin() {
@@ -791,7 +798,7 @@
     riderPanelTitle.replaceChildren("Rider ", aliasNode(name));
   }
 
-  function showViewerNotice(fillLog) {
+  function showViewerNotice(fillLog, holdMs = ENTRY_FEEDBACK_MS) {
     document.body.classList.add("is-viewer");
     resetRiderForm();
     riderTitle.hidden = true;
@@ -805,7 +812,7 @@
     clearTimeout(riderCloseTimer);
     riderCloseTimer = setTimeout(() => fadeRiderBox(() => {
       entryDialog.hidden = true;
-    }), ENTRY_FEEDBACK_MS);
+    }), holdMs);
   }
 
   function showFinishedRide(name) {
@@ -816,11 +823,12 @@
 
   function showRaceClosedNotice() {
     showViewerNotice((log) => {
-      log.textContent = "Ride is locked by admin - you are too early / too late to start a ride!";
-    });
+      log.textContent = "Event locked by admin! You are either too early / too late to start a ride in this Event!";
+    }, ENTRY_FEEDBACK_MS + 3000);
   }
 
   function syncRaceLockButton() {
+    syncEventTitleRaceLock();
     if (!raceLockBtn) return;
     const show = isEventAdmin() && Boolean(eventId);
     raceLockBtn.hidden = !show;
