@@ -343,6 +343,8 @@
   let placementUnsubscribe = null;
   let chatUnsubscribe = null;
   let writeTimer = null;
+  let gpsWatchId = null;
+  let pendingGpsWrite = null;
   let activeSessionRef = null;
   let activeWriterName = null;
   let acceptedFix = null;
@@ -802,6 +804,8 @@
         return;
       }
       entryDialog.hidden = true;
+      // iOS Safari: permission prompt only inside this tap stack.
+      ensureGpsWatch();
       openRiderBox();
     });
     document.getElementById("viewer-ride").addEventListener("click", () => {
@@ -810,6 +814,7 @@
         showNotice("Open an event with its id in the URL hash.");
         return;
       }
+      ensureGpsWatch();
       openRiderBox();
     });
     document.getElementById("viewer-replay").addEventListener("click", () => {
@@ -833,6 +838,12 @@
       riderDialog.hidden = true;
       document.body.classList.add("is-viewer");
       setPageMode("viewing");
+      if (!activeSessionRef) {
+        stopGpsWatch();
+        latestOwnPosition = null;
+        locationRequest = null;
+        renderGpsStatus();
+      }
     });
     riderForm.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -865,7 +876,10 @@
         riderStart.removeEventListener("transitionend", hideStart);
         if (riderStart.classList.contains("is-fading")) riderActions.hidden = true;
       });
-      requestDeviceLocation();
+      // Must start watch here (user gesture). After await createAliasSession the
+      // gesture is gone and iOS Safari will never show the permission dialog.
+      if (!isSimulationMode()) ensureGpsWatch();
+      else requestDeviceLocation();
       beginAliasTracking(sessionsRef, name);
     });
   }
@@ -892,6 +906,8 @@
     riderNameEl.value = hashRider;
     riderDialog.hidden = false;
     riderNameEl.focus();
+    // Do NOT call geolocation here — hash/applyInitialMode open this without a
+    // user gesture; iOS Safari silently skips the permission prompt then.
   }
 
   function setRiderPanelTitle(name) {
@@ -1755,8 +1771,10 @@
   }
 
   function beginWriting(sessionRef) {
-    latestOwnPosition = null;
+    // Keep a pre-session fix from ensureGpsWatch (started on the tap).
+    const primedFix = latestOwnPosition;
     acceptedFix = null;
+    pendingGpsWrite = null;
     writerTraceLine = TRACE_LINE_WRITING;
     activeSessionRef = sessionRef;
     const track = tracksBySessionId.get(sessionRef.id);
@@ -1766,17 +1784,64 @@
 
     const requested = locationRequest;
     locationRequest = null;
-    writeTimer = setInterval(() => {
-      if (isSimulationMode()) sendSimulatedLocation(sessionRef);
-      else sendOwnLocation(sessionRef);
-    }, WRITE_INTERVAL_MS);
 
+    if (isSimulationMode()) {
+      writeTimer = setInterval(() => {
+        sendSimulatedLocation(sessionRef);
+      }, WRITE_INTERVAL_MS);
+    } else {
+      ensureGpsWatch();
+    }
+
+    const first = primedFix || null;
     return Promise.resolve(requested).then((position) => {
       if (sessionRef !== activeSessionRef) return;
-      if (position) return writePoint(sessionRef, position, true);
+      const fix = position || first;
+      if (fix) return writePoint(sessionRef, fix, true);
       if (isSimulationMode()) sendSimulatedLocation(sessionRef, true);
-      else sendOwnLocation(sessionRef, true);
     });
+  }
+
+  /** Start watchPosition under a user gesture so iOS shows the permission dialog. */
+  function ensureGpsWatch() {
+    if (isSimulationMode()) return;
+    if (!navigator.geolocation) {
+      console.warn("Geolocation unsupported.");
+      return;
+    }
+    if (gpsWatchId != null) return;
+
+    gpsWatchId = navigator.geolocation.watchPosition(
+      (position) => {
+        noteGpsAllowed();
+        if (!activeSessionRef) {
+          latestOwnPosition = position;
+          renderGpsStatus();
+          locationRequest = Promise.resolve(position);
+          return;
+        }
+        writePoint(activeSessionRef, position, !latestOwnPosition);
+      },
+      (err) => {
+        console.warn("Geolocation error:", err);
+        noteGpsError(err);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 20000,
+        maximumAge: 2000
+      }
+    );
+    renderGpsStatus();
+  }
+
+  function stopGpsWatch() {
+    if (gpsWatchId == null || !navigator.geolocation) {
+      gpsWatchId = null;
+      return;
+    }
+    navigator.geolocation.clearWatch(gpsWatchId);
+    gpsWatchId = null;
   }
 
   function clearWriter() {
@@ -1784,9 +1849,11 @@
     activeSessionRef = null;
     activeWriterName = null;
     acceptedFix = null;
+    pendingGpsWrite = null;
     writerTraceLine = TRACE_LINE_PAUSED;
     clearInterval(writeTimer);
     writeTimer = null;
+    stopGpsWatch();
     latestOwnPosition = null;
     setWriterState(false);
     refreshTracePopups();
@@ -1876,6 +1943,7 @@
       .collection("points")
       .orderBy("recordedAt", "asc")
       .onSnapshot((snapshot) => {
+        const becameReady = !track.pointsReady;
         if (!track.pointsReady) {
           track.points = snapshot.docs
             .map((doc) => pointFromDocument(doc))
@@ -1899,6 +1967,17 @@
               track.points = track.points.filter((row) => row.id !== change.doc.id);
             }
           });
+        }
+        if (
+          becameReady &&
+          pendingGpsWrite &&
+          activeSessionRef &&
+          pendingGpsWrite.sessionRef.id === track.sessionId &&
+          pendingGpsWrite.sessionRef.id === activeSessionRef.id
+        ) {
+          const queued = pendingGpsWrite;
+          pendingGpsWrite = null;
+          writePoint(queued.sessionRef, queued.position, queued.centerMap);
         }
         if (track.finished) dropPointsListener(track);
         renderTracksAndPanel();
@@ -3017,26 +3096,6 @@
     writePoint(sessionRef, position, centerMap);
   }
 
-  function sendOwnLocation(sessionRef, centerMap = false) {
-    if (!navigator.geolocation) {
-      console.warn("Geolocation unsupported.");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(async (position) => {
-      if (sessionRef !== activeSessionRef) return;
-      noteGpsAllowed();
-      await writePoint(sessionRef, position, centerMap);
-    }, (err) => {
-      console.warn("Geolocation error:", err);
-      noteGpsError(err);
-    }, {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 4000
-    });
-  }
-
   async function writePoint(sessionRef, position, centerMap) {
     if (sessionRef !== activeSessionRef) return;
     const track = tracksBySessionId.get(sessionRef.id);
@@ -3045,11 +3104,17 @@
     noteGpsAllowed();
 
     latestOwnPosition = position;
+    renderGpsStatus();
     if (centerMap) centerMapOnPosition(position);
 
     try {
       const baseline = speedBaseline(sessionRef.id);
-      if (baseline === undefined) return;
+      if (baseline === undefined) {
+        // Points listener not ready yet (common right after create) — retry when it is.
+        pendingGpsWrite = { sessionRef, position, centerMap };
+        return;
+      }
+      pendingGpsWrite = null;
       let meters = position.simStep ? position.simStep.meters : 0;
       let seconds = WRITE_INTERVAL_MS / 1000;
       if (baseline) {
@@ -3108,7 +3173,8 @@
       return acceptedFix;
     }
     if (!stored) return null;
-    if (!stored.recordedAtMs) return undefined;
+    // serverTimestamp often arrives null on the first snapshot — don't block writes.
+    if (!stored.recordedAtMs) return acceptedFix || null;
     return { lat: stored.lat, lon: stored.lon, atMs: stored.recordedAtMs };
   }
 
@@ -3228,6 +3294,7 @@
   }
 
   function noteGpsError(err) {
+    // Only PERMISSION_DENIED means blocked. Timeout / unavailable ≠ denied.
     if (err && err.code === 1) gpsAllowed = false;
     renderGpsStatus();
   }
@@ -3235,28 +3302,34 @@
   function watchGpsPermission() {
     if (!navigator.geolocation) {
       gpsAllowed = false;
+      renderGpsStatus();
       return;
     }
+    // Safari long lacked geolocation in Permissions API; ignore failures.
     if (!navigator.permissions || !navigator.permissions.query) return;
 
     navigator.permissions.query({ name: "geolocation" }).then((permission) => {
       applyGpsPermission(permission.state);
       permission.onchange = () => applyGpsPermission(permission.state);
-    });
+    }).catch(() => {});
   }
 
   function applyGpsPermission(state) {
     if (state === "granted") gpsAllowed = true;
     else if (state === "denied") gpsAllowed = false;
-    else gpsAllowed = null;
+    else if (state === "prompt") gpsAllowed = null;
     renderGpsStatus();
   }
 
   function renderGpsStatus() {
-    const allowedText = gpsAllowed === true ? "allowed" : gpsAllowed === false ? "denied" : "unknown";
+    let stateText = "unknown";
+    if (gpsAllowed === false) stateText = "denied";
+    else if (gpsRunning && !latestOwnPosition) stateText = "waiting";
+    else if (gpsAllowed === true) stateText = "allowed";
     const runningText = gpsRunning ? "running" : "stopped";
-    gpsStatusEl.textContent = `${allowedText} · ${runningText}`;
-    gpsStatusEl.classList.toggle("status-online", gpsAllowed === true && gpsRunning);
+    gpsStatusEl.textContent = `${stateText} · ${runningText}`;
+    // Green only after a real fix while tracking — not merely Permissions API "granted".
+    gpsStatusEl.classList.toggle("status-online", Boolean(gpsRunning && latestOwnPosition));
     gpsStatusEl.classList.toggle("status-offline", gpsAllowed === false);
   }
 

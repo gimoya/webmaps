@@ -323,6 +323,44 @@
     return Math.max(lo, Math.min(hi, n));
   }
 
+  function isIosSafari() {
+    var ua = navigator.userAgent || "";
+    if (!/iP(hone|ad|od)/.test(ua)) return false;
+    // Chrome/Firefox/Edge iOS also use WebKit; same WebGL terrain bugs.
+    return true;
+  }
+
+  /**
+   * Safari (esp. private / advanced fingerprint protection) injects noise into
+   * canvas getImageData. Mapbox decodes Terrain-RGB via that path → elevations
+   * explode to ~∞ and the tab crashes. Mapbox #12997.
+   */
+  function canvasDemDecodePoisoned() {
+    try {
+      var w = 85; // 255 / 3
+      var canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = 1;
+      var ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return false;
+      var inc = 0;
+      var i;
+      for (i = 0; i < w; i++) {
+        ctx.fillStyle = "rgba(" + inc++ + "," + inc++ + "," + inc++ + ",255)";
+        ctx.fillRect(i, 0, 1, 1);
+      }
+      var data = ctx.getImageData(0, 0, w, 1).data;
+      inc = 0;
+      for (i = 0; i < data.length; i++) {
+        if (i % 4 === 3) continue;
+        if (inc++ !== data[i]) return true;
+      }
+      return false;
+    } catch (err) {
+      return false;
+    }
+  }
+
   /** Slider 0 (close) … HEIGHT_SLIDER_MAX (high altitude). */
   function zoomFromHeightSlider(sliderVal) {
     var t = Math.max(0, Math.min(HEIGHT_SLIDER_MAX, Number(sliderVal) || 0)) / HEIGHT_SLIDER_MAX;
@@ -639,16 +677,24 @@
     var opts = this.opts;
     var full = lineFeature(this.path.coords);
 
-    map.addSource("mapbox-dem", {
-      type: "raster-dem",
-      url: "mapbox://mapbox.terrain-rgb",
-      tileSize: 256,
-      maxzoom: 15
-    });
-    map.setTerrain({
-      source: "mapbox-dem",
-      exaggeration: opts.exaggeration
-    });
+    // Poisoned canvas reads → garbage DEM → infinite Z mesh (iOS Safari).
+    if (canvasDemDecodePoisoned()) {
+      console.warn(
+        "GeoFlyover: canvas fingerprint noise detected — terrain DEM disabled " +
+          "(Safari privacy protection corrupts Terrain-RGB decode)."
+      );
+    } else {
+      map.addSource("mapbox-dem", {
+        type: "raster-dem",
+        url: "mapbox://mapbox.mapbox-terrain-dem-v1",
+        tileSize: 514,
+        maxzoom: 14
+      });
+      map.setTerrain({
+        source: "mapbox-dem",
+        exaggeration: opts.exaggeration
+      });
+    }
     map.addLayer({
       id: "sky",
       type: "sky",
@@ -730,7 +776,8 @@
       zoom: this._zoom,
       pitch: this.opts.pitch,
       bearing: startBearing,
-      antialias: true,
+      // WebKit + terrain + MSAA discards multisample buffers (Mapbox #11609).
+      antialias: !isIosSafari(),
       attributionControl: false
     });
 
