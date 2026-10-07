@@ -635,6 +635,12 @@ function legacyReadFilterStateFromLegend() {
 		var checked = document.querySelector('input[type="radio"][data-filter-key="' + key + '"]:checked');
 		state[key] = checked ? (parseInt(checked.getAttribute('data-filter-level'), 10) || 0) : 0;
 	}
+	var flagKeys = Object.keys(LegacyTrailFilters.FLAG_FILTER_KEYS || {});
+	for (var f = 0; f < flagKeys.length; f++) {
+		var fk = flagKeys[f];
+		var fChecked = document.querySelector('input[type="radio"][data-filter-key="' + fk + '"]:checked');
+		state[fk] = fChecked ? (parseInt(fChecked.getAttribute('data-filter-level'), 10) || 0) : 0;
+	}
 	return state;
 }
 

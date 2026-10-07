@@ -14,8 +14,19 @@
 		status: 'X'
 	};
 
+	/** Flag filters (not Trail_Char letters). landschaft: 1 = has 💎 (Holy) */
+	var FLAG_FILTER_KEYS = {
+		landschaft: true
+	};
+
 	var ratingsById = Object.create(null);
+	var landschaftById = Object.create(null);
 	var indexedCount = 0;
+
+	function featureHasLandschaft(props) {
+		var h = props && props.Holy;
+		return h === '💎' || h === 1 || h === '1' || h === true;
+	}
 
 	function parseTrailChar(trailChar) {
 		var s = String(trailChar == null ? '' : trailChar).trim();
@@ -41,15 +52,20 @@
 
 	function indexFeatures(features) {
 		ratingsById = Object.create(null);
+		landschaftById = Object.create(null);
 		indexedCount = 0;
 		if (!features || !features.length) return ratingsById;
 		for (var i = 0; i < features.length; i++) {
 			var feature = features[i];
 			var props = feature.properties || {};
 			var ratings = parseTrailChar(props.Trail_Char);
+			var hasLand = featureHasLandschaft(props);
 			props._charRatings = ratings;
+			props._hasLandschaft = hasLand;
 			if (props.ID != null) {
-				ratingsById[String(props.ID)] = ratings;
+				var id = String(props.ID);
+				ratingsById[id] = ratings;
+				landschaftById[id] = hasLand;
 			}
 			indexedCount++;
 		}
@@ -78,17 +94,31 @@
 			tech: 0,
 			features: 0,
 			exposure: 0,
-			status: 0
+			status: 0,
+			landschaft: 0
 		};
 	}
 
-	function isActive(state) {
+	function isCharFilterActive(state) {
 		if (!state) return false;
 		return state.flow > 0 || state.killer > 0 || state.tech > 0 || state.features > 0 || state.exposure > 0 || state.status > 0;
 	}
 
+	function isActive(state) {
+		if (!state) return false;
+		return isCharFilterActive(state) || (state.landschaft > 0);
+	}
+
+	function matchesLandschaft(hasLand, state) {
+		var want = state && state.landschaft ? state.landschaft : 0;
+		if (want <= 0) return true;
+		if (want === 1) return !!hasLand;
+		if (want === 2) return !hasLand;
+		return true;
+	}
+
 	function matches(ratings, state) {
-		if (!isActive(state)) return true;
+		if (!isCharFilterActive(state)) return true;
 		if (ratings == null) return false;
 		for (var key in FILTER_KEYS) {
 			if (!Object.prototype.hasOwnProperty.call(FILTER_KEYS, key)) continue;
@@ -101,6 +131,10 @@
 	}
 
 	function matchesFeature(feature, state) {
+		var props = (feature && feature.properties) || {};
+		var hasLand = props._hasLandschaft;
+		if (hasLand === undefined) hasLand = featureHasLandschaft(props);
+		if (!matchesLandschaft(hasLand, state)) return false;
 		return matches(getRatings(feature), state);
 	}
 
@@ -108,7 +142,9 @@
 		var n = 0;
 		var ids = Object.keys(ratingsById);
 		for (var i = 0; i < ids.length; i++) {
-			if (matches(ratingsById[ids[i]], state)) n++;
+			var id = ids[i];
+			if (!matchesLandschaft(!!landschaftById[id], state)) continue;
+			if (matches(ratingsById[id], state)) n++;
 		}
 		return n;
 	}
@@ -145,12 +181,15 @@
 
 	global.LegacyTrailFilters = {
 		FILTER_KEYS: FILTER_KEYS,
+		FLAG_FILTER_KEYS: FLAG_FILTER_KEYS,
 		parseTrailChar: parseTrailChar,
+		featureHasLandschaft: featureHasLandschaft,
 		indexFeatures: indexFeatures,
 		getRatings: getRatings,
 		createState: createState,
 		isActive: isActive,
 		matches: matches,
+		matchesLandschaft: matchesLandschaft,
 		matchesFeature: matchesFeature,
 		countMatching: countMatching,
 		applyToLayerGroup: applyToLayerGroup,

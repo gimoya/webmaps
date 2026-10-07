@@ -1475,6 +1475,8 @@ html.legacy-3d-loading #map .leaflet-top.leaflet-right > .leaflet-control {
     user-select: none;
     -webkit-user-select: none;
     direction: rtl; /* radio column → visual right */
+    table-layout: fixed;
+    width: 100%;
 }
 
 #info-div figure.table {
