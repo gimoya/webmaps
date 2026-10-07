@@ -73,6 +73,7 @@
   const stopBtn = document.getElementById("stop-tracking");
   const noticeDialog = document.getElementById("notice-dialog");
   const noticeMessage = document.getElementById("notice-dialog-message");
+  const noticeInput = document.getElementById("notice-dialog-input");
   const noticeConfirm = document.getElementById("notice-dialog-confirm");
   const noticeCancel = document.getElementById("notice-dialog-cancel");
   const createEventDialog = document.getElementById("create-event-dialog");
@@ -83,8 +84,12 @@
   const adminModeBadge = document.getElementById("admin-mode-badge");
   const eventPanelLine = document.getElementById("event-panel-line");
   const eventPanelName = document.getElementById("event-panel-name");
+  const eventShareBtn = document.getElementById("event-share-btn");
   const raceLockBtn = document.getElementById("race-lock-btn");
+  const eventDeleteBtn = document.getElementById("event-delete-btn");
   const panelHeader = document.getElementById("panel-header");
+  let noticeRequireTyped = null;
+  let shareCopiedTimer = 0;
   const entryDialog = document.getElementById("entry-dialog");
   const riderDialog = document.getElementById("rider-dialog");
   const riderForm = document.getElementById("rider-form");
@@ -292,8 +297,19 @@
     });
   }
 
-  noticeConfirm.addEventListener("click", () => closeNotice(true));
+  noticeConfirm.addEventListener("click", () => {
+    if (noticeRequireTyped != null && noticeInput && noticeInput.value !== noticeRequireTyped) return;
+    closeNotice(true);
+  });
   noticeCancel.addEventListener("click", () => closeNotice(false));
+  if (noticeInput) {
+    noticeInput.addEventListener("input", syncNoticeTypedGate);
+    noticeInput.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      if (!noticeConfirm.disabled) noticeConfirm.click();
+    });
+  }
   userListEl.addEventListener("click", centerOnListedUser);
 
   const initialView = parseMapView();
@@ -403,16 +419,61 @@
     panelHeader.classList.toggle("is-race-locked", Boolean(eventId) && eventRaceLocked);
   }
 
+  function openEventCourseFlyover() {
+    if (!routeLatLngs || routeLatLngs.length < 2) return;
+    if (typeof GeoFlyover === "undefined" || typeof GeoFlyover.open !== "function") {
+      console.warn("GeoFlyover not loaded.");
+      return;
+    }
+    const token = window.CHASER_MAPBOX_TOKEN || "";
+    const coords = routeLatLngs.map((ll) => [ll[1], ll[0]]);
+    GeoFlyover.open(coords, { accessToken: token }).catch((err) => {
+      console.error("Course flyover failed:", err);
+    });
+  }
+
+  function syncViewerPlayButtons() {
+    const replayBtn = document.getElementById("viewer-replay");
+    const flyoverBtn = document.getElementById("viewer-flyover");
+    const hasRiders = sortedTracks().length > 0;
+    const hasGpx = Boolean(routeLatLngs && routeLatLngs.length > 1);
+    const showReplay = hasRiders || replayActive;
+    if (replayBtn) replayBtn.hidden = !showReplay;
+    if (flyoverBtn) flyoverBtn.hidden = !hasGpx;
+    document.body.classList.toggle("has-replay", showReplay);
+    document.body.classList.toggle("has-flyover", hasGpx);
+  }
+
+  function eventShareUrl() {
+    if (!eventId) return "";
+    // Public viewer link only — never copy admin=, rider=, simulation, or map query.
+    return `${window.location.origin}${window.location.pathname}#${encodeURIComponent(eventId)}#viewing`;
+  }
+
+  async function copyEventShareLink() {
+    const url = eventShareUrl();
+    if (!url || !eventShareBtn) return;
+    await navigator.clipboard.writeText(url);
+    eventShareBtn.classList.add("is-copied");
+    clearTimeout(shareCopiedTimer);
+    shareCopiedTimer = setTimeout(() => {
+      eventShareBtn.classList.remove("is-copied");
+    }, 1600);
+    await showNotice("Share link copied!");
+  }
+
   function renderEventPanel() {
     if (!eventId || !eventName) {
       eventPanelLine.hidden = true;
       eventPanelName.textContent = "";
+      if (eventShareBtn) eventShareBtn.hidden = true;
       panelHeader.classList.remove("has-event");
       syncEventTitleRaceLock();
       return;
     }
     eventPanelLine.hidden = false;
     eventPanelName.textContent = eventName;
+    if (eventShareBtn) eventShareBtn.hidden = false;
     panelHeader.classList.add("has-event");
     syncEventTitleRaceLock();
   }
@@ -724,6 +785,9 @@
       else if (replayPaused) resumeReplay();
       else pauseReplay();
     });
+    document.getElementById("viewer-flyover").addEventListener("click", () => {
+      openEventCourseFlyover();
+    });
     document.getElementById("viewer-replay-stop").addEventListener("click", () => {
       if (replayActive) stopReplay();
     });
@@ -829,16 +893,75 @@
 
   function syncRaceLockButton() {
     syncEventTitleRaceLock();
-    if (!raceLockBtn) return;
     const show = isEventAdmin() && Boolean(eventId);
-    raceLockBtn.hidden = !show;
-    if (!show) return;
-    raceLockBtn.classList.toggle("is-locked", eventRaceLocked);
-    raceLockBtn.setAttribute("aria-pressed", eventRaceLocked ? "true" : "false");
-    raceLockBtn.textContent = eventRaceLocked ? "Unlock ride" : "Lock ride";
-    raceLockBtn.title = eventRaceLocked
-      ? "Allow new riders to start"
-      : "Close race — block new aliases";
+    if (raceLockBtn) {
+      raceLockBtn.hidden = !show;
+      if (show) {
+        raceLockBtn.classList.toggle("is-locked", eventRaceLocked);
+        raceLockBtn.setAttribute("aria-pressed", eventRaceLocked ? "true" : "false");
+        raceLockBtn.textContent = eventRaceLocked ? "Unlock ride" : "Lock ride";
+        raceLockBtn.title = eventRaceLocked
+          ? "Allow new riders to start"
+          : "Close race — block new aliases";
+      }
+    }
+    if (eventDeleteBtn) {
+      eventDeleteBtn.hidden = !show;
+      if (show) eventDeleteBtn.title = "Permanently delete this event";
+    }
+  }
+
+  async function deleteCurrentEvent() {
+    if (!db || !eventRef || !isEventAdmin()) return;
+    if (!isMasterAdmin()) {
+      const code = adminCodewordFromHash();
+      if (!code || code !== eventAdminCode) return;
+    }
+    const name = eventName;
+    if (!name) return;
+    const confirmed = await showNotice(
+      `Delete this event permanently? Type the full event name exactly, then OK.`,
+      { confirmLabel: "OK", cancelLabel: "Cancel", requireTyped: name }
+    );
+    if (!confirmed) return;
+
+    const scopeRef = eventRef;
+    const deletingId = eventId;
+    clearWriter();
+    try {
+      const sessions = await scopeRef.collection(SESSIONS_COLLECTION).get();
+      for (const sessionDoc of sessions.docs) {
+        const points = await sessionDoc.ref.collection("points").get();
+        const refs = points.docs.map((doc) => doc.ref);
+        refs.push(sessionDoc.ref);
+        for (let index = 0; index < refs.length; index += 500) {
+          const batch = db.batch();
+          refs.slice(index, index + 500).forEach((ref) => batch.delete(ref));
+          await batch.commit();
+        }
+      }
+      const routeRef = scopeRef.collection(ROUTES_COLLECTION).doc(ROUTE_DOC);
+      const routeSnap = await routeRef.get();
+      if (routeSnap.exists) await routeRef.delete();
+      try {
+        await scopeRef.collection(PLACEMENT_COLLECTION).doc(PLACEMENT_DOC).set({
+          order: [],
+          locked: [],
+          recordedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (placementErr) {
+        console.warn("Placement could not be cleared before event delete:", placementErr);
+      }
+      await scopeRef.delete();
+      if (eventId === deletingId) {
+        teardownEventScope();
+        writePageUrl();
+        openCreateEventBoxIfAdmin();
+      }
+    } catch (err) {
+      console.error("Failed to delete event:", err);
+      await showNotice("Event could not be deleted.");
+    }
   }
 
   async function toggleRaceLock() {
@@ -1016,6 +1139,15 @@
       if (activeSessionRef) stopTracking();
     });
     if (raceLockBtn) raceLockBtn.addEventListener("click", () => toggleRaceLock());
+    if (eventDeleteBtn) eventDeleteBtn.addEventListener("click", () => deleteCurrentEvent());
+    if (eventShareBtn) {
+      eventShareBtn.addEventListener("click", () => {
+        copyEventShareLink().catch((err) => {
+          console.error("Share link copy failed:", err);
+          showNotice("Could not copy the share link.");
+        });
+      });
+    }
   }
 
   async function beginAliasTracking(ref, name) {
@@ -1530,6 +1662,7 @@
     const tracks = sortedTracks();
     tracks.forEach(renderTrack);
     renderUserList(tracks);
+    syncViewerPlayButtons();
   }
 
   function hideLiveTraceLayers() {
@@ -1626,6 +1759,7 @@
     if (label) {
       label.textContent = !replayActive ? "replay" : (replayPaused ? "paused" : "replay");
     }
+    syncViewerPlayButtons();
   }
 
   function replayElapsedMs(now) {
@@ -1961,6 +2095,7 @@
   }
 
   function renderUserList(tracks) {
+    syncViewerPlayButtons();
     if (!tracks.length) {
       if (userListSignature !== "empty") {
         userListEl.innerHTML = "<li class='user-item'><div class='user-item-meta'>No active riders</div></li>";
@@ -2624,6 +2759,14 @@
     return alias;
   }
 
+  function syncNoticeTypedGate() {
+    if (noticeRequireTyped == null) {
+      noticeConfirm.disabled = false;
+      return;
+    }
+    noticeConfirm.disabled = !noticeInput || noticeInput.value !== noticeRequireTyped;
+  }
+
   function showNotice(message, options = {}) {
     if (noticeResolver) closeNotice(false);
 
@@ -2634,13 +2777,34 @@
     } else {
       noticeMessage.textContent = message;
     }
+    noticeRequireTyped = typeof options.requireTyped === "string" ? options.requireTyped : null;
+    if (noticeInput) {
+      if (noticeRequireTyped != null) {
+        noticeInput.hidden = false;
+        noticeInput.value = "";
+        noticeInput.placeholder = noticeRequireTyped;
+        noticeInput.setAttribute("aria-label", "Type event name to confirm");
+      } else {
+        noticeInput.hidden = true;
+        noticeInput.value = "";
+        noticeInput.removeAttribute("placeholder");
+      }
+    }
     noticeConfirm.textContent = options.confirmLabel || "OK";
     noticeCancel.hidden = !options.cancelLabel;
     if (options.cancelLabel) noticeCancel.textContent = options.cancelLabel;
-    noticeConfirm.classList.toggle("is-danger", noticeConfirm.textContent === "Stop tracking" || noticeConfirm.textContent === "Delete" || noticeConfirm.textContent === "Clear all");
+    noticeConfirm.classList.toggle(
+      "is-danger",
+      noticeConfirm.textContent === "Stop tracking" ||
+        noticeConfirm.textContent === "Delete" ||
+        noticeConfirm.textContent === "Clear all" ||
+        noticeRequireTyped != null
+    );
     noticeCancel.classList.toggle("is-danger", !noticeCancel.hidden && noticeCancel.textContent === "Stop tracking");
+    syncNoticeTypedGate();
     noticeDialog.hidden = false;
-    noticeConfirm.focus();
+    if (noticeRequireTyped != null && noticeInput) noticeInput.focus();
+    else noticeConfirm.focus();
 
     return new Promise((resolve) => {
       noticeResolver = resolve;
@@ -2649,6 +2813,12 @@
 
   function closeNotice(confirmed) {
     noticeDialog.hidden = true;
+    noticeRequireTyped = null;
+    if (noticeInput) {
+      noticeInput.hidden = true;
+      noticeInput.value = "";
+    }
+    noticeConfirm.disabled = false;
     const resolve = noticeResolver;
     noticeResolver = null;
     if (resolve) resolve(confirmed);

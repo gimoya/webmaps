@@ -5,7 +5,7 @@ const MIN_SPACING_M = 10;
 
 // xml: GPX 1.1 text.
 // Returns { error } or { name, points } with points already spaced.
-// points: [{ lat, lon, z }, ...] with z in meters from <ele>.
+// points: [{ lat, lon, z? }, ...] with optional z in meters from <ele>.
 (function (root) {
   const GPX_NS = "http://www.topografix.com/GPX/1/1";
 
@@ -57,9 +57,10 @@ const MIN_SPACING_M = 10;
         return { error: "GPX is corrupt or malformed." };
       }
       const elevation = childText(point, "ele");
-      const z = Number(elevation);
-      if (!elevation || !Number.isFinite(z)) return { error: "GPX elevation is missing." };
-      points.push({ lat, lon, z });
+      const parsedZ = elevation ? Number(elevation) : NaN;
+      const row = { lat, lon };
+      if (Number.isFinite(parsedZ)) row.z = parsedZ;
+      points.push(row);
     }
 
     const spaced = thinTrackPoints(points);
@@ -76,9 +77,12 @@ const MIN_SPACING_M = 10;
   }
 
   function gpxDocument(course) {
-    const points = course.points.map((point) => (
-      `      <trkpt lat="${point.lat}" lon="${point.lon}"><ele>${point.z}</ele></trkpt>`
-    )).join("\n");
+    const points = course.points.map((point) => {
+      const ele = Number.isFinite(point.z)
+        ? `<ele>${point.z}</ele>`
+        : "";
+      return `      <trkpt lat="${point.lat}" lon="${point.lon}">${ele}</trkpt>`;
+    }).join("\n");
     return `<?xml version="1.0" encoding="UTF-8"?>
 <gpx xmlns="${GPX_NS}" version="1.1" creator="Chaser">
   <trk>

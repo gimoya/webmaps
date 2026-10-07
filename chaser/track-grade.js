@@ -4,7 +4,7 @@ const RESOLUTION_M = 100;
 // Rise/run above this is uphill. 0.02 is a 2% grade. The rest is flat or downhill.
 const UPHILL_SLOPE = 0.02;
 
-// points: [{ lat, lon, z }, ...] with z in meters.
+// points: [{ lat, lon, z? }, ...] with optional z in meters (missing → 0 for grade).
 // Returns [{ kind: "uphill" | "flat", latLngs: [[lat, lon], ...], distance }, ...].
 (function (root) {
   function haversineMeters(a, b) {
@@ -28,10 +28,12 @@ const UPHILL_SLOPE = 0.02;
       const t = span === 0 ? 0 : (meters - cumulative[index - 1]) / span;
       const from = points[index - 1];
       const to = points[index];
+      const fromZ = Number.isFinite(from.z) ? from.z : 0;
+      const toZ = Number.isFinite(to.z) ? to.z : 0;
       return {
         lat: from.lat + (to.lat - from.lat) * t,
         lon: from.lon + (to.lon - from.lon) * t,
-        z: from.z + (to.z - from.z) * t
+        z: fromZ + (toZ - fromZ) * t
       };
     }
     return points[last];
@@ -57,7 +59,7 @@ const UPHILL_SLOPE = 0.02;
       latLngs.push([end.lat, end.lon]);
       const distance = endM - startM;
       portions.push({
-        kind: (end.z - start.z) / distance > UPHILL_SLOPE ? "uphill" : "flat",
+        kind: ((Number.isFinite(end.z) ? end.z : 0) - (Number.isFinite(start.z) ? start.z : 0)) / distance > UPHILL_SLOPE ? "uphill" : "flat",
         distance,
         latLngs
       });

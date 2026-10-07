@@ -21,6 +21,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Trade+Winds&display=swap" rel="stylesheet">
   <link href="https://fonts.cdnfonts.com/css/raster-forge" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css">
+  <link rel="stylesheet" href="./geo-flyover/geo-flyover.css">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="chaser-title.css">
   <script>
@@ -39,8 +41,16 @@
         <div id="panel-main">
           <header class="panel-header" id="panel-header">
             <p id="event-panel-line" class="event-panel-line" hidden>
+              <button id="event-share-btn" type="button" class="event-share-btn" hidden title="Copy public event link.." aria-label="Copy public event link">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M13.803 5.33333C13.803 3.49238 15.3022 2 17.1515 2C19.0008 2 20.5 3.49238 20.5 5.33333C20.5 7.17428 19.0008 8.66667 17.1515 8.66667C16.2177 8.66667 15.3738 8.28596 14.7671 7.67347L10.1317 10.8295C10.1745 11.0425 10.197 11.2625 10.197 11.4872C10.197 11.9322 10.109 12.3576 9.94959 12.7464L15.0323 16.0858C15.6092 15.6161 16.3473 15.3333 17.1515 15.3333C19.0008 15.3333 20.5 16.8257 20.5 18.6667C20.5 20.5076 19.0008 22 17.1515 22C15.3022 22 13.803 20.5076 13.803 18.6667C13.803 18.1845 13.9062 17.7255 14.0917 17.3111L9.05007 13.9987C8.46196 14.5098 7.6916 14.8205 6.84848 14.8205C4.99917 14.8205 3.5 13.3281 3.5 11.4872C3.5 9.64623 4.99917 8.15385 6.84848 8.15385C7.9119 8.15385 8.85853 8.64725 9.47145 9.41518L13.9639 6.35642C13.8594 6.03359 13.803 5.6896 13.803 5.33333Z"/>
+                </svg>
+              </button>
               <span id="event-panel-name" class="event-panel-name"></span>
-              <button id="race-lock-btn" type="button" class="race-lock-btn" hidden aria-pressed="false">Lock race</button>
+              <span class="event-admin-actions">
+                <button id="race-lock-btn" type="button" class="race-lock-btn" hidden aria-pressed="false">Lock race</button>
+                <button id="event-delete-btn" type="button" class="event-delete-btn" hidden>Delete event</button>
+              </span>
             </p>
             <a id="home-title-link" class="chaser-brand-row" href="./home.html" title="Home">
               <h1>GPS Chaser</h1>
@@ -76,12 +86,19 @@
     <button id="panel-launcher" type="button" aria-label="Show panel">ⓘ</button>
   </div>
 
-    <button id="viewer-replay" class="viewer-ride viewer-replay" type="button" title="Replay" aria-label="Play replay" aria-pressed="false">
+    <button id="viewer-replay" class="viewer-ride viewer-replay" type="button" title="Replay Rides" aria-label="Play replay" aria-pressed="false" hidden>
       <svg class="replay-play" viewBox="0 0 24 24" aria-hidden="true">
         <path fill="currentColor" d="M8 5v14l11-7z"/>
       </svg>
       <svg class="replay-pause" viewBox="0 0 24 24" aria-hidden="true">
         <path fill="currentColor" d="M6 5h4v14H6zm8 0h4v14h-4z"/>
+      </svg>
+    </button>
+    <button id="viewer-flyover" class="viewer-ride viewer-flyover" type="button" title="3D course flyover" aria-label="3D course flyover" hidden>
+      <svg viewBox="0 0 256 256" aria-hidden="true">
+        <g transform="translate(14 28) scale(2.52 2.52)">
+          <path fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M 88.516 72.599 H 78.88 v -6.87 h 5.786 c 2.941 0 5.333 -2.392 5.333 -5.332 c 0 -3.935 -1.397 -7.758 -3.932 -10.768 l -7.607 -9.028 c -5.538 -6.573 -13.644 -10.343 -22.239 -10.343 h -0.223 V 29.89 c 0 -4.025 -2.911 -7.377 -6.736 -8.078 v -4.411 h 35.403 c 0.819 0 1.484 -0.664 1.484 -1.484 s -0.664 -1.484 -1.484 -1.484 H 13.245 c -0.82 0 -1.484 0.664 -1.484 1.484 s 0.664 1.484 1.484 1.484 h 33.052 v 4.411 c -3.826 0.701 -6.736 4.053 -6.736 8.078 v 0.368 H 16.009 c -0.952 0 -1.807 -0.566 -2.178 -1.443 l -1.647 -3.891 c -0.837 -1.976 -2.764 -3.253 -4.911 -3.253 h -1.94 C 2.392 21.671 0 24.063 0 27.004 V 39.44 c 0 2.94 2.392 5.332 5.333 5.332 h 7.702 c 0.173 0 0.345 0.019 0.515 0.057 l 24.284 5.413 c 3.412 0.761 5.796 3.734 5.796 7.23 c 0 4.552 3.703 8.256 8.255 8.256 h 3.286 v 6.87 H 45 c -0.82 0 -1.484 0.664 -1.484 1.484 c 0 0.819 0.664 1.484 1.484 1.484 h 43.517 c 0.819 0 1.484 -0.664 1.484 -1.484 C 90 73.263 89.336 72.599 88.516 72.599 z M 76.192 42.513 l 7.607 9.028 c 0.139 0.165 0.263 0.341 0.394 0.512 c -24.324 -0.156 -26.878 -6.351 -28.055 -18.828 h 0.084 C 63.94 33.225 71.219 36.611 76.192 42.513 z M 42.527 29.89 c 0 -2.896 2.356 -5.252 5.253 -5.252 s 5.252 2.356 5.252 5.252 v 0.368 H 42.527 V 29.89 z M 46.597 57.473 c 0 -4.897 -3.338 -9.06 -8.118 -10.126 l -24.281 -5.413 c -0.38 -0.085 -0.771 -0.128 -1.163 -0.128 H 5.333 c -1.304 0 -2.366 -1.061 -2.366 -2.365 V 27.004 c 0 -1.304 1.061 -2.365 2.366 -2.365 h 1.94 c 0.952 0 1.807 0.566 2.178 1.443 l 1.647 3.891 c 0.837 1.976 2.764 3.253 4.911 3.253 H 53.16 c 1.447 15.038 5.5 21.799 31.91 21.799 c 0.279 0 0.569 -0.003 0.853 -0.005 c 0.719 1.69 1.11 3.516 1.11 5.376 c 0 1.304 -1.061 2.365 -2.366 2.365 H 51.885 C 48.969 62.762 46.597 60.389 46.597 57.473 z M 58.137 65.729 h 17.776 v 6.87 H 58.137 V 65.729 z"/>
+        </g>
       </svg>
     </button>
     <button id="viewer-replay-stop" class="viewer-ride viewer-replay-stop" type="button" title="Stop replay" aria-label="Stop replay" hidden>
@@ -139,6 +156,7 @@
   <div id="notice-dialog" class="notice-dialog" hidden>
     <div class="notice-dialog-card" role="dialog" aria-modal="true" aria-labelledby="notice-dialog-message">
       <p id="notice-dialog-message"></p>
+      <input id="notice-dialog-input" type="text" autocomplete="off" spellcheck="false" hidden>
       <div class="notice-dialog-actions">
         <button id="notice-dialog-confirm" type="button">OK</button>
         <button id="notice-dialog-cancel" type="button" class="ghost" hidden>Cancel</button>
@@ -147,9 +165,11 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
+  <script src="./geo-flyover/geo-flyover.js"></script>
   <script src="track-grade.js"></script>
   <script src="gpx.js"></script>
   <script src="app.js"></script>
