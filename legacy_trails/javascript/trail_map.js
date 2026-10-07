@@ -528,6 +528,10 @@ var terrain3dToggle = L.easyButton({
 		onClick: function (btn) {
 			legacyDismissChromeOnUserAction();
 			if (!window.LegacyTerrain3D) return;
+			if (typeof el !== 'undefined') {
+				el.clear();
+				map.removeControl(el);
+			}
 			window.LegacyTerrain3D.show(map, legacySelectedTrailName()).then(function () {
 				btn.state('terrain-3d-on');
 				if (btn.button) btn.button.classList.add('legacy-ctrl-selected');
@@ -560,6 +564,15 @@ window.legacyExitTerrain3D = function () {
 			terrain3dToggle.button.classList.remove('legacy-ctrl-selected');
 		}
 	}
+};
+
+/** Exit 3D, then select trail (popup + elevation profile) in 2D. */
+window.legacyOpenTrailFrom3D = function (trailName) {
+	window.legacyExitTerrain3D();
+	if (!trailName) return;
+	requestAnimationFrame(function () {
+		legacyFocusTrailByName(trailName);
+	});
 };
 
 function legacyShowMapToast(text) {

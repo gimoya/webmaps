@@ -297,6 +297,8 @@
 			if (!e.features || !e.features.length) return;
 			if (self._popup) self._popup.remove();
 
+			var trailName = e.features[0].properties && e.features[0].properties.name;
+
 			var tipHtml =
 				'<div class="legacy-3d-trail-tip-body">' +
 					'<p class="legacy-3d-trail-tip-text">' + CLICK_TIP + '</p>' +
@@ -322,11 +324,7 @@
 				btn.addEventListener('click', function (ev) {
 					ev.preventDefault();
 					ev.stopPropagation();
-					if (typeof window.legacyExitTerrain3D === 'function') {
-						window.legacyExitTerrain3D();
-					} else {
-						self.hide();
-					}
+					window.legacyOpenTrailFrom3D(trailName);
 				});
 			}
 		});
