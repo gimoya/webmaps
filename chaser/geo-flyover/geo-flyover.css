@@ -87,6 +87,9 @@
 
 .geo-flyover-btn {
   pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin: 0;
   padding: 0.4rem 0.75rem;
   border: 1px solid rgba(255, 255, 255, 0.35);
@@ -131,6 +134,13 @@
 .geo-flyover-btn:hover {
   background: rgba(0, 0, 0, 0.75);
   border-color: rgba(255, 255, 255, 0.55);
+}
+
+.geo-flyover-btn[data-flyover-look] {
+  width: 4.25rem;
+  box-sizing: border-box;
+  justify-content: center;
+  text-align: center;
 }
 
 .geo-flyover-btn[aria-pressed="true"] {

@@ -112,7 +112,8 @@ body.is-replaying {
 }
 
 body.is-replaying .unified-panel,
-body.is-replaying #panel-launcher {
+body.is-replaying #panel-launcher,
+body.is-replaying .chat-open {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -127,15 +128,19 @@ body.panel-faded .unified-panel {
 
 #panel-launcher {
   position: fixed;
-  top: 36px;
-  right: 20px;
+  top: auto;
+  right: auto;
+  bottom: 20px;
+  left: 50%;
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 44px;
   height: 44px;
+  margin: 0;
   padding: 0;
+  transform: translateX(-50%);
   border: 2px solid var(--color-ctrl-border);
   border-radius: 50%;
   background: var(--color-ctrl-bg);
@@ -1307,13 +1312,6 @@ path.trace-hit:focus {
 }
 
 @media (orientation: portrait) {
-  .unified-panel,
-  #panel-launcher,
-  .chat-open {
-    top: auto;
-    bottom: 20px;
-  }
-
   .unified-panel {
     top: auto;
     right: 20px;
@@ -1346,8 +1344,10 @@ html.page-fade-pending #page-fade {
 
 .chat-open {
   position: fixed;
-  left: 20px;
-  bottom: 28px;
+  top: auto;
+  right: auto;
+  bottom: 72px;
+  left: 50%;
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -1356,12 +1356,16 @@ html.page-fade-pending #page-fade {
   height: 44px;
   margin: 0;
   padding: 0;
+  transform: translateX(-50%);
   border: 2px solid var(--color-ctrl-border);
   border-radius: 50%;
   background: var(--color-ctrl-bg);
   color: var(--color-ctrl-fg);
   box-shadow: 0 2px 10px var(--color-shadow);
   cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
 }
 
 .chat-open svg {
@@ -1372,6 +1376,11 @@ html.page-fade-pending #page-fade {
 
 .chat-open:hover {
   background: var(--color-ctrl-bg-hover);
+}
+
+body.panel-faded .chat-open:not([hidden]) {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .chat-open[hidden] {
@@ -1385,6 +1394,12 @@ html.page-fade-pending #page-fade {
   flex-direction: column;
   padding: 0.65rem 0.7rem;
   overflow: hidden;
+}
+
+@media (orientation: portrait) {
+  .chat-dialog .chat-dialog-card {
+    max-height: min(60dvh, 60vh);
+  }
 }
 
 .chat-dialog-header {
