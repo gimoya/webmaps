@@ -27,6 +27,40 @@
 		return name.replace(/\s*\(\d+\)\s*$/, '').trim();
 	}
 
+	function isIosWebKit() {
+		return /iP(hone|ad|od)/.test(navigator.userAgent || '');
+	}
+
+	/**
+	 * Safari fingerprint protection poisons canvas getImageData → Terrain-RGB
+	 * elevations explode (Mapbox #12997). Detect before setTerrain.
+	 */
+	function canvasDemDecodePoisoned() {
+		try {
+			var w = 85;
+			var canvas = document.createElement('canvas');
+			canvas.width = w;
+			canvas.height = 1;
+			var ctx = canvas.getContext('2d', { willReadFrequently: true });
+			if (!ctx) return false;
+			var inc = 0;
+			var i;
+			for (i = 0; i < w; i++) {
+				ctx.fillStyle = 'rgba(' + inc++ + ',' + inc++ + ',' + inc++ + ',255)';
+				ctx.fillRect(i, 0, 1, 1);
+			}
+			var data = ctx.getImageData(0, 0, w, 1).data;
+			inc = 0;
+			for (i = 0; i < data.length; i++) {
+				if (i % 4 === 3) continue;
+				if (inc++ !== data[i]) return true;
+			}
+			return false;
+		} catch (err) {
+			return false;
+		}
+	}
+
 	function cleanTrailFeatureNames(features) {
 		for (var i = 0; i < features.length; i++) {
 			var p = features[i].properties;
@@ -413,7 +447,8 @@
 					zoom: OVERVIEW_CAMERA.zoom,
 					pitch: OVERVIEW_CAMERA.pitch,
 					bearing: OVERVIEW_CAMERA.bearing,
-					antialias: true,
+					// WebKit + terrain + MSAA: Mapbox #11609
+					antialias: !isIosWebKit(),
 					attributionControl: false
 				});
 
@@ -430,16 +465,23 @@
 				self.map.on('load', function () {
 					self.map.resize();
 
-					self.map.addSource('mapbox-dem', {
-						type: 'raster-dem',
-						url: 'mapbox://mapbox.terrain-rgb',
-						tileSize: 256,
-						maxzoom: 15
-					});
-					self.map.setTerrain({
-						source: 'mapbox-dem',
-						exaggeration: self.heightScale
-					});
+					if (canvasDemDecodePoisoned()) {
+						console.warn(
+							'LegacyTerrain3D: canvas fingerprint noise — terrain DEM disabled ' +
+								'(Safari privacy protection corrupts Terrain-RGB decode).'
+						);
+					} else {
+						self.map.addSource('mapbox-dem', {
+							type: 'raster-dem',
+							url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+							tileSize: 514,
+							maxzoom: 14
+						});
+						self.map.setTerrain({
+							source: 'mapbox-dem',
+							exaggeration: self.heightScale
+						});
+					}
 					self.map.addLayer({
 						id: 'sky',
 						type: 'sky',

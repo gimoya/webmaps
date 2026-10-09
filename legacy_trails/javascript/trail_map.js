@@ -218,7 +218,16 @@ L.control.locate({
     strings: {
         title: "Zeige GPS-Standort"
     },
-	position: 'topright'
+	position: 'topright',
+	// iOS Safari: locate() runs in the control's click stack (prompt OK).
+	// enableHighAccuracy is false in Leaflet defaults — GPS often never fixes.
+	locateOptions: {
+		watch: true,
+		setView: false,
+		enableHighAccuracy: true,
+		maximumAge: 2000,
+		timeout: 20000
+	}
 }).addTo(map);
 
 /*** Digitize: waypoints → BRouter snap → GPX download ***/
