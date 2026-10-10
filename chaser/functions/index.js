@@ -566,18 +566,33 @@ exports.onEventRideLockChanged = onDocumentUpdated("events/{eventId}", async (ev
   }
 });
 
+function formatChatPushTime(createdAt) {
+  let date;
+  if (createdAt && typeof createdAt.toDate === "function") date = createdAt.toDate();
+  else if (createdAt instanceof Date) date = createdAt;
+  else date = new Date();
+  return new Intl.DateTimeFormat("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Europe/Berlin"
+  }).format(date);
+}
+
 exports.onEventChatCreated = onDocumentCreated("events/{eventId}/chat/{messageId}", async (event) => {
   const data = event.data.data() || {};
   const eventId = event.params.eventId;
   const from = typeof data.name === "string" && data.name ? data.name : "Rider";
   const text = typeof data.text === "string" ? data.text.trim() : "";
   const hasPhoto = typeof data.photoUrl === "string" && data.photoUrl;
-  let body = text;
-  if (!body && hasPhoto) body = "sent a photo";
-  if (!body) body = "New message";
+  let message = text;
+  if (!message && hasPhoto) message = "sent a photo";
+  if (!message) message = "New message";
+  const time = formatChatPushTime(data.createdAt);
+  let body = `${from} ${time}: ${message}`;
   if (body.length > 120) body = `${body.slice(0, 117)}…`;
   await sendPushToEvent(eventId, {
-    title: `Chat · ${from}`,
+    title: "Chat",
     body,
     kind: "chat"
   });
