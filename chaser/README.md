@@ -319,12 +319,11 @@ service cloud.firestore {
 
         allow create, update: if
           request.resource.data.keys().hasOnly([
-            'token', 'role', 'updatedAt', 'userAgent'
+            'token', 'updatedAt', 'userAgent'
           ]) &&
           request.resource.data.token is string &&
           request.resource.data.token.size() >= 10 &&
           request.resource.data.token.size() <= 4096 &&
-          request.resource.data.role in ['viewer', 'rider'] &&
           request.resource.data.updatedAt is timestamp &&
           request.resource.data.userAgent is string &&
           request.resource.data.userAgent.size() <= 180;
@@ -377,7 +376,7 @@ Publish these in the Firebase console whenever the paste above changes (e.g. `ra
 2. Paste the public key into [`firebase-config.js`](firebase-config.js) as `CHASER_VAPID_KEY`.
 3. Deploy functions: `firebase deploy --only functions` from `chaser/`.
 4. Publish Firestore rules including `pushTokens`.
-5. Install Chaser as PWA / home screen → open event → **Enable alerts**.
+5. Install Chaser as PWA / home screen → open an event → tap the circled **!** next to Share → allow notifications (tap again to turn off).
 
 ### Storage rules (chat photos)
 
@@ -497,5 +496,5 @@ Pool admin bookmark: `?event=<id>&mode=viewing#admin=CODE`. Share: `?event=<id>&
 - Completed traces stay in Firestore and are hidden from the live map.
 - Pan and zoom write `?lat=&lng=&z=` and keep the mode fragment.
 - **Install required** for riders/viewers: installed PWA / iOS home-screen (`display-mode: standalone`). Normal tabs show an install gate. **Exception:** `#admin=<code>` skips the gate so admins can use the browser address bar.
-- **Web Push (FCM):** after install, **Enable alerts** stores `events/{eventId}/pushTokens/{id}`. Unlock/lock notify all subscribers; chat notifies `role: rider` only. Requires Web Push VAPID key in `firebase-config.js` (`CHASER_VAPID_KEY`) from Firebase Console → Cloud Messaging. Cloud Functions: `onEventRaceLockChanged`, `onEventChatCreated`. `sw.js` is registered for cache + background notifications.
+- **Web Push (FCM):** circled **!** next to Share toggles alerts (user gesture → OS permission). Stores `events/{eventId}/pushTokens/{id}` (no role). Lock, unlock, and chat notify every token for that event. Requires Web Push VAPID key in `firebase-config.js` (`CHASER_VAPID_KEY`). Cloud Functions: `onEventRaceLockChanged`, `onEventChatCreated`. `sw.js` is registered for cache + background notifications.
 - GPS permission is requested only on **Start Ride / Resume** (user gesture), after install.

@@ -41,8 +41,6 @@
   const PUSH_TOKEN_KEY = "chaserPushToken";
   const pageFadeOverlay = document.getElementById("page-fade");
   const installGateEl = document.getElementById("install-gate");
-  const pushToggleBtn = document.getElementById("push-toggle");
-
   function isStandaloneApp() {
     if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) {
       return true;
@@ -91,6 +89,7 @@
   let fcmMessaging = null;
   let pushToken = null;
   let pushSubscribed = false;
+  const pushToggleBtn = document.getElementById("push-toggle");
 
   function hashPushTokenId(token) {
     let hash = 2166136261;
@@ -117,36 +116,20 @@
     const ready = Boolean(eventId && window.CHASER_VAPID_KEY);
     pushToggleBtn.hidden = !ready;
     pushToggleBtn.classList.toggle("is-on", pushSubscribed);
-    pushToggleBtn.textContent = pushSubscribed ? "Alerts on" : "Enable alerts";
+    pushToggleBtn.setAttribute("aria-pressed", pushSubscribed ? "true" : "false");
+    pushToggleBtn.title = pushSubscribed ? "Alerts on" : "Enable alerts";
+    pushToggleBtn.setAttribute("aria-label", pushSubscribed ? "Alerts on" : "Enable alerts");
     pushToggleBtn.disabled = !ready;
   }
 
-  async function persistPushTokenDoc(role) {
+  async function persistPushTokenDoc() {
     if (!eventRef || !pushToken || !db) return;
     const id = hashPushTokenId(pushToken);
-    let nextRole = role === "rider" || role === "viewer" ? role : null;
-    if (!nextRole) {
-      const snap = await eventRef.collection(PUSH_TOKENS_COLLECTION).doc(id).get();
-      nextRole = snap.exists && snap.data().role === "rider" ? "rider" : "viewer";
-    }
-    await eventRef.collection(PUSH_TOKENS_COLLECTION).doc(id).set(
-      {
-        token: pushToken,
-        role: nextRole,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        userAgent: String(navigator.userAgent || "").slice(0, 180)
-      },
-      { merge: true }
-    );
-  }
-
-  async function upgradePushRoleToRider() {
-    if (!pushToken || !eventRef) return;
-    try {
-      await persistPushTokenDoc("rider");
-    } catch (err) {
-      console.warn("Push role upgrade failed:", err);
-    }
+    await eventRef.collection(PUSH_TOKENS_COLLECTION).doc(id).set({
+      token: pushToken,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      userAgent: String(navigator.userAgent || "").slice(0, 180)
+    });
   }
 
   async function enablePushAlerts() {
@@ -154,7 +137,7 @@
       await showNotice("Push is not configured (missing VAPID key).");
       return;
     }
-    if (!firebase.messaging) {
+    if (!firebase.messaging || typeof Notification === "undefined") {
       await showNotice("Push messaging is not supported in this browser.");
       return;
     }
@@ -163,9 +146,16 @@
       await showNotice("Could not register the service worker.");
       return;
     }
-    const permission = await Notification.requestPermission();
+    let permission = Notification.permission;
+    if (permission === "default") {
+      permission = await Notification.requestPermission();
+    }
     if (permission !== "granted") {
-      await showNotice("Notifications permission denied.");
+      await showNotice(
+        permission === "denied"
+          ? "Notifications are blocked. Enable them for Chaser in the device/app settings, then tap ! again."
+          : "Notifications permission not granted."
+      );
       syncPushToggleUi();
       return;
     }
@@ -181,8 +171,7 @@
     try {
       localStorage.setItem(PUSH_TOKEN_KEY, pushToken);
     } catch (err) { /* ignore */ }
-    const role = activeSessionRef ? "rider" : "viewer";
-    await persistPushTokenDoc(role);
+    await persistPushTokenDoc();
     pushSubscribed = true;
     syncPushToggleUi();
   }
@@ -233,11 +222,14 @@
     } catch (err) {
       pushToken = null;
     }
-    pushSubscribed = Boolean(pushToken);
+    const granted =
+      typeof Notification !== "undefined" && Notification.permission === "granted";
+    pushSubscribed = Boolean(pushToken && granted);
     if (pushSubscribed && eventRef) {
       try {
-        // Refresh token only; do not downgrade rider → viewer.
-        await persistPushTokenDoc(activeSessionRef ? "rider" : null);
+        if (!swRegistration) swRegistration = await registerChaserServiceWorker();
+        if (!fcmMessaging && firebase.messaging) fcmMessaging = firebase.messaging();
+        await persistPushTokenDoc();
       } catch (err) {
         console.warn("pushTokens refresh failed:", err);
       }
@@ -590,9 +582,6 @@
   db = firebase.firestore();
   storage = firebase.storage();
   registerChaserServiceWorker();
-  if (pushToggleBtn) pushToggleBtn.addEventListener("click", () => {
-    togglePushAlerts().catch((err) => console.error("Push toggle failed:", err));
-  });
   attachAdminConfigSubscription();
   attachEventsSubscription();
   if (hashAdminCode && eventAdminCodeEl) eventAdminCodeEl.value = hashAdminCode;
@@ -604,7 +593,6 @@
   }, 5000);
   wireControls();
   wireChatControls();
-  syncPushToggleUi();
 
   function eventSlug(name) {
     return String(name || "")
@@ -1375,6 +1363,11 @@
         });
       });
     }
+    if (pushToggleBtn) {
+      pushToggleBtn.addEventListener("click", () => {
+        togglePushAlerts().catch((err) => console.error("Push toggle failed:", err));
+      });
+    }
   }
 
   function syncChatUi() {
@@ -1761,12 +1754,10 @@
         const sessionRef = await createAliasSession(ref, name);
         showRiderResult(name, "..is starting!");
         beginWriting(sessionRef);
-        upgradePushRoleToRider();
       } else {
         if (isSimulationMode()) placeSimulationOnRoute(activeDocs[0].id);
         showRiderResult(name, "..is resuming the ride!");
         beginWriting(activeDocs[0].ref);
-        upgradePushRoleToRider();
       }
       clearTimeout(riderCloseTimer);
       riderCloseTimer = setTimeout(fadeRiderBox, ENTRY_FEEDBACK_MS);

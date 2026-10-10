@@ -298,7 +298,8 @@ body.panel-faded #panel-launcher {
   display: flex;
 }
 
-.event-share-btn {
+.event-share-btn,
+.event-push-btn {
   flex: 0 0 auto;
   align-self: center;
   display: inline-flex;
@@ -319,14 +320,17 @@ body.panel-faded #panel-launcher {
   cursor: pointer;
 }
 
-.event-share-btn svg {
+.event-share-btn svg,
+.event-push-btn svg {
   width: 1.65rem;
   height: 1.65rem;
   display: block;
 }
 
 .event-share-btn:hover,
-.event-share-btn.is-copied {
+.event-share-btn.is-copied,
+.event-push-btn:hover,
+.event-push-btn.is-on {
   filter:
     brightness(1.12)
     drop-shadow(0 0 0.35em rgba(0, 0, 0, 0.95))
@@ -334,7 +338,12 @@ body.panel-faded #panel-launcher {
     drop-shadow(0 0.12em 0.45em rgba(0, 0, 0, 0.85));
 }
 
-.event-share-btn[hidden] {
+.event-push-btn.is-on {
+  color: var(--color-success);
+}
+
+.event-share-btn[hidden],
+.event-push-btn[hidden] {
   display: none;
 }
 
@@ -353,6 +362,10 @@ body.panel-faded #panel-launcher {
 
 .panel-header.is-race-locked .event-panel-name,
 .panel-header.is-race-locked .event-share-btn {
+  color: var(--color-danger);
+}
+
+.panel-header.is-race-locked .event-push-btn:not(.is-on) {
   color: var(--color-danger);
 }
 
@@ -979,26 +992,6 @@ body.install-required .notice-dialog {
 
 .install-gate-steps li + li {
   margin-top: 0.45rem;
-}
-
-.push-toggle {
-  border: 0;
-  border-radius: 999px;
-  padding: 0.28rem 0.7rem;
-  font: inherit;
-  font-size: 0.78rem;
-  cursor: pointer;
-  background: var(--color-border);
-  color: var(--color-text);
-}
-
-.push-toggle.is-on {
-  background: var(--color-status-online-bg);
-  color: var(--color-success);
-}
-
-.push-toggle[hidden] {
-  display: none !important;
 }
 
 .notice-dialog {

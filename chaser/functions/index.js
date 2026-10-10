@@ -14,34 +14,27 @@ const CHASER_PUBLIC_BASE = defineString("CHASER_PUBLIC_BASE", {
   default: "https://example.com/webmaps/chaser"
 });
 
-function ensureAdminApp() {
-  if (!getApps().length) initializeApp();
+// Init once at cold start — lazy getApps() was failing for Firestore triggers.
+if (!getApps().length) {
+  initializeApp();
 }
 
-let db;
 function firestore() {
-  if (!db) {
-    ensureAdminApp();
-    db = getFirestore();
-  }
-  return db;
+  return getFirestore();
 }
 
 function messaging() {
-  ensureAdminApp();
   return getMessaging();
 }
 
-async function loadPushTokenDocs(eventId, riderOnly) {
+async function loadPushTokenDocs(eventId) {
   const col = firestore().collection("events").doc(eventId).collection("pushTokens");
-  const snap = riderOnly
-    ? await col.where("role", "==", "rider").get()
-    : await col.get();
+  const snap = await col.get();
   return snap.docs.map((doc) => ({ id: doc.id, ref: doc.ref, ...(doc.data() || {}) }));
 }
 
-async function sendPushToEvent(eventId, { title, body, kind, riderOnly }) {
-  const docs = await loadPushTokenDocs(eventId, Boolean(riderOnly));
+async function sendPushToEvent(eventId, { title, body, kind }) {
+  const docs = await loadPushTokenDocs(eventId);
   const tokens = docs.map((d) => d.token).filter((t) => typeof t === "string" && t);
   if (!tokens.length) {
     logger.info("push: no tokens", { eventId, kind });
@@ -561,15 +554,13 @@ exports.onEventRaceLockChanged = onDocumentUpdated("events/{eventId}", async (ev
     await sendPushToEvent(eventId, {
       title: "Race locked",
       body: `${name}: no new riders can start. Unfinished rides may still resume.`,
-      kind: "lock",
-      riderOnly: false
+      kind: "lock"
     });
   } else {
     await sendPushToEvent(eventId, {
       title: "Race unlocked",
       body: `${name}: new riders can start tracking.`,
-      kind: "unlock",
-      riderOnly: false
+      kind: "unlock"
     });
   }
 });
@@ -587,7 +578,6 @@ exports.onEventChatCreated = onDocumentCreated("events/{eventId}/chat/{messageId
   await sendPushToEvent(eventId, {
     title: `Chat · ${from}`,
     body,
-    kind: "chat",
-    riderOnly: true
+    kind: "chat"
   });
 });
