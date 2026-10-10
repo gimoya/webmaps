@@ -360,12 +360,12 @@ body.panel-faded #panel-launcher {
     0 0.12em 0.45em rgba(0, 0, 0, 0.85);
 }
 
-.panel-header.is-race-locked .event-panel-name,
-.panel-header.is-race-locked .event-share-btn {
+.panel-header.is-ride-locked .event-panel-name,
+.panel-header.is-ride-locked .event-share-btn {
   color: var(--color-danger);
 }
 
-.panel-header.is-race-locked .event-push-btn:not(.is-on) {
+.panel-header.is-ride-locked .event-push-btn:not(.is-on) {
   color: var(--color-danger);
 }
 
@@ -378,7 +378,7 @@ body.panel-faded #panel-launcher {
   margin: 0 0 0.55rem;
 }
 
-.race-lock-btn,
+.ride-lock-btn,
 .event-delete-btn {
   font: inherit;
   font-size: 0.65rem;
@@ -392,12 +392,12 @@ body.panel-faded #panel-launcher {
   cursor: pointer;
 }
 
-.race-lock-btn:hover {
+.ride-lock-btn:hover {
   border-color: var(--color-accent);
   color: var(--color-text);
 }
 
-.race-lock-btn.is-locked {
+.ride-lock-btn.is-locked {
   border-color: var(--color-danger);
   color: var(--color-bg);
   background: var(--color-danger);
@@ -408,7 +408,7 @@ body.panel-faded #panel-launcher {
   color: var(--color-danger);
 }
 
-.race-lock-btn[hidden],
+.ride-lock-btn[hidden],
 .event-delete-btn[hidden] {
   display: none;
 }

@@ -12,7 +12,7 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 - Alias labels shrink below zoom 14
 - Click the map to fade the panel. The floating ⓘ launcher brings it back. The **GPS Chaser** title (+ logo) opens `home.html` (riders first; Event Creation / admins via `?tab=admins`) with `?from=` back to the same map view. Navigation uses a short black page-fade (`sessionStorage` key `chaserPageFade`).
 - After an event is chosen, a fresh load asks Rider or Viewer. **Start Ride / Resume Tracing** starts or continues a trace that is not finished. **Stop tracking** stops this page's writer and finishes the ride. The trace stays on the map.
-- Event admin can **Lock race** / **Unlock race** next to the event title (`raceLocked`). Locked: new aliases cannot start; unfinished aliases can still resume.
+- Event admin can **Lock ride** / **Unlock ride** next to the event title (`rideLocked`). Locked: new aliases cannot start; unfinished aliases can still resume.
 - Viewer **replay** replays stored traces on the map (play control under the bike button).
 - Event **chat**: floating Chat opens a live message modal for everyone on the event. Active riders can send short text and/or a camera JPEG thumbnail (≤100 KB) to Firebase Storage + Firestore.
 - Paid admin codes: Ko-fi Shop → Cloud Functions webhook reserves a pool code → buyer claims via email (or `?tx=`) → create event with `#admin=CODE`.
@@ -22,7 +22,7 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 - `index.html` – map page
 - `firebase-config.js` – shared `CHASER_FIREBASE_CONFIG` (included by `index.html` and `home.html`)
 - `styles.css` – panel, dialog, marker, accuracy-ring pulse, page-fade overlay
-- `app.js` – map, Firestore, GPS writer, admin tools, race lock
+- `app.js` – map, Firestore, GPS writer, admin tools, ride lock
 - `gpx.js` – GPX parse, 10 m thinning, namespaced write
 - `track-grade.js` – uphill / flat split for the course line
 - `home.html` / `home.css` / `chaser-title.css` – homepage: rider/admin guides, live event list, Ko-fi/claim links (`?from=`, `?tab=admins`)
@@ -51,7 +51,7 @@ Collection: `events`
 - `name` (display name)
 - `createdAt` (server timestamp)
 - `adminCode` (string). Set at create from a pool code or the master password. Required for later admin (GPX upload, clear traces) via `#admin=<adminCode>` on that event.
-- `raceLocked` (boolean, optional). When `true`, new aliases cannot start a track. Unfinished riders can still resume. Event admin toggles via **Lock race** / **Unlock race** next to the event title.
+- `rideLocked` (boolean, optional). When `true`, new aliases cannot start a track. Unfinished riders can still resume. Event admin toggles via **Lock ride** / **Unlock ride** next to the event title.
 
 Document: `adminConfig/current`
 
@@ -136,13 +136,13 @@ One alias, one active trace per event.
 
 A load with a known `?event=` id binds that event. Missing or unknown id does not show a public event list — open the event via its share URL. Create needs `#admin=<code>` where code is an unused pool code or the master password (form + optional Skip). After an event is bound, a load with no `mode` asks Rider or Viewer. Viewer sets `?event=<id>&mode=viewing`. The bike button, or a load that already has `mode=tracking`, opens the name box. **Start Ride / Resume Tracing** calls GPS in that click, then:
 
-- No active trace for the typed alias: if `event.raceLocked == true`, the UI refuses with `This ride was already closed by admin - you can not start a new track here!` (client-side only; rules still allow session create). Otherwise a new session is created and this page writes to it. The URL becomes `?event=<id>&mode=tracking&rider=<alias>`.
+- No active trace for the typed alias: if `event.rideLocked == true`, the UI refuses with `This ride was already closed by admin - you can not start a new track here!` (client-side only; rules still allow session create). Otherwise a new session is created and this page writes to it. The URL becomes `?event=<id>&mode=tracking&rider=<alias>`.
 - Start and resume also write the alias as `rider=` in the query. The name box is filled from that param.
-- An active trace exists and is not finished: writing continues on the oldest active session for that alias (**allowed even when the race is locked**).
+- An active trace exists and is not finished: writing continues on the oldest active session for that alias (**allowed even when the ride is locked**).
 - An active trace for that alias is finished: the name box shows `{alias} already finished the ride!` and does not write. The box then closes and the page stays a viewer.
 - This page is already writing: **Stop tracking** asks for a confirm, then sets `finished` and `endedAt` and stops this page's writer. The trace stays on the map. The list shows `Tracking stopped/finished` in green with the end time. The page becomes a viewer (`?event=<id>&mode=viewing`).
 
-Event admin tools (when `#admin=` matches the event or master): GPX upload control, **Clear all traces**, per-rider delete, **Lock race** / **Unlock race**. Toolbox badge opens `home.html?tab=admins` with `?from=`.
+Event admin tools (when `#admin=` matches the event or master): GPX upload control, **Clear all traces**, per-rider delete, **Lock ride** / **Unlock ride**. Toolbox badge opens `home.html?tab=admins` with `?from=`.
 
 `?simulation=1` uses a generated fix instead of the device. Requires a valid `#admin=` for the bound event (or master). Without admin, **Start Ride** is refused with a notice. It also runs only while a GPX route is drawn; otherwise start is refused. A new ride begins at the route start. One speed is picked for the ride, evenly between 10 and 25 km/h, and each fix advances that far along the route. A resume on a fresh page starts at the route vertex nearest the last stored point. The fix still writes only for this page's active rider. The log under Active Riders shows meters, m/s, and `slow/no move skip`, `+30 m/s skip`, or `normal write`.
 
@@ -197,7 +197,7 @@ service cloud.firestore {
         request.resource.data.adminCode.size() <= 40;
 
       allow update: if
-        request.resource.data.keys().hasOnly(['name', 'createdAt', 'adminCode', 'raceLocked']) &&
+        request.resource.data.keys().hasOnly(['name', 'createdAt', 'adminCode', 'rideLocked']) &&
         request.resource.data.name is string &&
         request.resource.data.name.size() >= 1 &&
         request.resource.data.name.size() <= 80 &&
@@ -205,8 +205,8 @@ service cloud.firestore {
         request.resource.data.adminCode is string &&
         request.resource.data.adminCode == resource.data.adminCode &&
         (
-          !('raceLocked' in request.resource.data) ||
-          request.resource.data.raceLocked is bool
+          !('rideLocked' in request.resource.data) ||
+          request.resource.data.rideLocked is bool
         );
 
       allow delete: if true;
@@ -368,7 +368,7 @@ service cloud.firestore {
 }
 ```
 
-Publish these in the Firebase console whenever the paste above changes (e.g. `raceLocked` on event update, chat, `pushTokens`). Event create (with `adminCode`), adminConfig pool updates, route overwrite, placement, race lock, chat, push tokens, and point writes all need this paste. `kofiFulfillments` is Admin SDK only (Cloud Functions).
+Publish these in the Firebase console whenever the paste above changes (e.g. `rideLocked` on event update, chat, `pushTokens`). Event create (with `adminCode`), adminConfig pool updates, route overwrite, placement, ride lock, chat, push tokens, and point writes all need this paste. `kofiFulfillments` is Admin SDK only (Cloud Functions).
 
 ### Web Push setup
 
@@ -473,13 +473,13 @@ Pool admin bookmark: `?event=<id>&mode=viewing#admin=CODE`. Share: `?event=<id>&
 | Task | Where |
 |------|--------|
 | Web app / home copy | Static deploy of `chaser/` (e.g. tiroltrailhead `/webmaps/chaser`) |
-| Firestore rules | Console paste from this README (must include `raceLocked` on event update) |
+| Firestore rules | Console paste from this README (must include `rideLocked` on event update) |
 | Seed / refill pool | `adminConfig/current` + `admin-pool-seed.json` |
 | Ko-fi webhook + claim | `firebase deploy --only functions` from **`chaser/`** |
 | Secrets / params | `KOFI_VERIFY_TOKEN` secret; `functions/.env` → shop code + `CHASER_PUBLIC_BASE` |
 | Claim page look | Depends on hosted `home.css` at `CHASER_PUBLIC_BASE` |
 | New admin codes for sale | Ensure `unusedCodes` has stock before Shop Orders |
-| Race lock broken | Rules not updated, or client not refreshed |
+| Ride lock broken | Rules not updated, or client not refreshed |
 
 ## Runtime
 
@@ -496,5 +496,5 @@ Pool admin bookmark: `?event=<id>&mode=viewing#admin=CODE`. Share: `?event=<id>&
 - Completed traces stay in Firestore and are hidden from the live map.
 - Pan and zoom write `?lat=&lng=&z=` and keep the mode fragment.
 - **Install required** for riders/viewers: installed PWA / iOS home-screen (`display-mode: standalone`). Normal tabs show an install gate. **Exception:** `#admin=<code>` skips the gate so admins can use the browser address bar.
-- **Web Push (FCM):** circled **!** next to Share toggles alerts (user gesture → OS permission). Stores `events/{eventId}/pushTokens/{id}` (no role). Lock, unlock, and chat notify every token for that event. Requires Web Push VAPID key in `firebase-config.js` (`CHASER_VAPID_KEY`). Cloud Functions: `onEventRaceLockChanged`, `onEventChatCreated`. `sw.js` is registered for cache + background notifications.
+- **Web Push (FCM):** circled **!** next to Share toggles alerts (user gesture → OS permission). Stores `events/{eventId}/pushTokens/{id}` (no role). Lock, unlock, and chat notify every token for that event. Requires Web Push VAPID key in `firebase-config.js` (`CHASER_VAPID_KEY`). Cloud Functions: `onEventRideLockChanged`, `onEventChatCreated`. `sw.js` is registered for cache + background notifications.
 - GPS permission is requested only on **Start Ride / Resume** (user gesture), after install.

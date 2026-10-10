@@ -287,7 +287,7 @@
   const eventPanelLine = document.getElementById("event-panel-line");
   const eventPanelName = document.getElementById("event-panel-name");
   const eventShareBtn = document.getElementById("event-share-btn");
-  const raceLockBtn = document.getElementById("race-lock-btn");
+  const rideLockBtn = document.getElementById("ride-lock-btn");
   const eventDeleteBtn = document.getElementById("event-delete-btn");
   const panelHeader = document.getElementById("panel-header");
   let noticeRequireTyped = null;
@@ -314,7 +314,7 @@
   let eventId = null;
   let eventName = null;
   let eventAdminCode = null;
-  let eventRaceLocked = false;
+  let eventRideLocked = false;
   let eventRef = null;
   let eventsUnsubscribe = null;
   let adminConfigUnsubscribe = null;
@@ -605,9 +605,9 @@
       .slice(0, EVENT_ID_MAX);
   }
 
-  function syncEventTitleRaceLock() {
+  function syncEventTitleRideLock() {
     if (!panelHeader) return;
-    panelHeader.classList.toggle("is-race-locked", Boolean(eventId) && eventRaceLocked);
+    panelHeader.classList.toggle("is-ride-locked", Boolean(eventId) && eventRideLocked);
   }
 
   function openEventCourseFlyover() {
@@ -662,7 +662,7 @@
       eventPanelName.textContent = "";
       if (eventShareBtn) eventShareBtn.hidden = true;
       panelHeader.classList.remove("has-event");
-      syncEventTitleRaceLock();
+      syncEventTitleRideLock();
       syncPushToggleUi();
       return;
     }
@@ -670,7 +670,7 @@
     eventPanelName.textContent = eventName;
     if (eventShareBtn) eventShareBtn.hidden = false;
     panelHeader.classList.add("has-event");
-    syncEventTitleRaceLock();
+    syncEventTitleRideLock();
     syncPushToggleUi();
   }
 
@@ -740,14 +740,14 @@
           id: doc.id,
           name: data.name,
           adminCode: typeof data.adminCode === "string" ? data.adminCode : null,
-          raceLocked: data.raceLocked === true
+          rideLocked: data.rideLocked === true
         });
       });
       if (eventId && eventsById.has(eventId)) {
         const row = eventsById.get(eventId);
         eventAdminCode = row.adminCode;
-        eventRaceLocked = row.raceLocked === true;
-        syncRaceLockButton();
+        eventRideLocked = row.rideLocked === true;
+        syncRideLockButton();
       }
       if (eventId && !eventsById.has(eventId) && !resolvingEvent) {
         teardownEventScope();
@@ -908,7 +908,7 @@
     eventId = null;
     eventName = null;
     eventAdminCode = null;
-    eventRaceLocked = false;
+    eventRideLocked = false;
     if (chatListEl) chatListEl.replaceChildren();
     renderEventPanel();
     renderTracksAndPanel();
@@ -919,7 +919,7 @@
   async function bindEvent(id, data) {
     if (eventId === id && eventRef) {
       if (typeof data.adminCode === "string") eventAdminCode = data.adminCode;
-      if (typeof data.raceLocked === "boolean") eventRaceLocked = data.raceLocked;
+      if (typeof data.rideLocked === "boolean") eventRideLocked = data.rideLocked;
       writePageUrl();
       renderEventPanel();
       syncAdminControls();
@@ -938,14 +938,14 @@
     eventId = id;
     eventName = typeof data.name === "string" ? data.name : id;
     eventAdminCode = typeof data.adminCode === "string" ? data.adminCode : null;
-    eventRaceLocked = data.raceLocked === true;
-    if (eventAdminCode == null || typeof data.raceLocked !== "boolean") {
+    eventRideLocked = data.rideLocked === true;
+    if (eventAdminCode == null || typeof data.rideLocked !== "boolean") {
       const snap = await db.collection(EVENTS_COLLECTION).doc(id).get();
       if (snap.exists) {
         const row = snap.data();
         if (typeof row.name === "string" && row.name) eventName = row.name;
         if (typeof row.adminCode === "string") eventAdminCode = row.adminCode;
-        eventRaceLocked = row.raceLocked === true;
+        eventRideLocked = row.rideLocked === true;
       }
     }
     eventRef = db.collection(EVENTS_COLLECTION).doc(id);
@@ -1100,24 +1100,24 @@
     });
   }
 
-  function showRaceClosedNotice() {
+  function showRideClosedNotice() {
     showViewerNotice((log) => {
       log.textContent = "Event locked by admin! You are either too early / too late to start a ride in this Event!";
     }, ENTRY_FEEDBACK_MS + 3000);
   }
 
-  function syncRaceLockButton() {
-    syncEventTitleRaceLock();
+  function syncRideLockButton() {
+    syncEventTitleRideLock();
     const show = isEventAdmin() && Boolean(eventId);
-    if (raceLockBtn) {
-      raceLockBtn.hidden = !show;
+    if (rideLockBtn) {
+      rideLockBtn.hidden = !show;
       if (show) {
-        raceLockBtn.classList.toggle("is-locked", eventRaceLocked);
-        raceLockBtn.setAttribute("aria-pressed", eventRaceLocked ? "true" : "false");
-        raceLockBtn.textContent = eventRaceLocked ? "Unlock ride" : "Lock ride";
-        raceLockBtn.title = eventRaceLocked
+        rideLockBtn.classList.toggle("is-locked", eventRideLocked);
+        rideLockBtn.setAttribute("aria-pressed", eventRideLocked ? "true" : "false");
+        rideLockBtn.textContent = eventRideLocked ? "Unlock ride" : "Lock ride";
+        rideLockBtn.title = eventRideLocked
           ? "Allow new riders to start"
-          : "Close race — block new aliases";
+          : "Close ride — block new aliases";
       }
     }
     if (eventDeleteBtn) {
@@ -1179,27 +1179,27 @@
     }
   }
 
-  async function toggleRaceLock() {
+  async function toggleRideLock() {
     if (!db || !eventRef || !isEventAdmin()) return;
     if (!isMasterAdmin()) {
       const code = adminCodewordFromHash();
       if (!code || code !== eventAdminCode) return;
     }
-    const next = !eventRaceLocked;
+    const next = !eventRideLocked;
     const confirmed = await showNotice(
       next
-        ? "Lock this race? New aliases cannot start a track. Existing unfinished riders can still resume."
-        : "Unlock this race? New aliases can start tracks again.",
-      { confirmLabel: next ? "Lock race" : "Unlock race", cancelLabel: "Cancel" }
+        ? "Lock this ride? New aliases cannot start a track. Existing unfinished riders can still resume."
+        : "Unlock this ride? New aliases can start tracks again.",
+      { confirmLabel: next ? "Lock ride" : "Unlock ride", cancelLabel: "Cancel" }
     );
     if (!confirmed) return;
     try {
-      await eventRef.update({ raceLocked: next });
-      eventRaceLocked = next;
-      syncRaceLockButton();
-      } catch (err) {
-      console.error("Failed to toggle race lock:", err);
-      await showNotice("Race lock could not be updated. Publish the latest Firestore rules (raceLocked on events).");
+      await eventRef.update({ rideLocked: next });
+      eventRideLocked = next;
+      syncRideLockButton();
+    } catch (err) {
+      console.error("Failed to toggle ride lock:", err);
+      await showNotice("Ride lock could not be updated. Publish the latest Firestore rules (rideLocked on events).");
     }
   }
 
@@ -1269,7 +1269,7 @@
       syncAdminUsageLink();
     }
     simLogEl.hidden = !isSimulationMode();
-    syncRaceLockButton();
+    syncRideLockButton();
   }
 
   function noteSim(meters, seconds, label) {
@@ -1353,7 +1353,7 @@
     stopBtn.addEventListener("click", () => {
       if (activeSessionRef) stopTracking();
     });
-    if (raceLockBtn) raceLockBtn.addEventListener("click", () => toggleRaceLock());
+    if (rideLockBtn) rideLockBtn.addEventListener("click", () => toggleRideLock());
     if (eventDeleteBtn) eventDeleteBtn.addEventListener("click", () => deleteCurrentEvent());
     if (eventShareBtn) {
       eventShareBtn.addEventListener("click", () => {
@@ -1745,9 +1745,9 @@
         return;
       }
       if (!activeDocs.length) {
-        if (eventRaceLocked) {
+        if (eventRideLocked) {
           locationRequest = null;
-          showRaceClosedNotice();
+          showRideClosedNotice();
           return;
         }
         if (isSimulationMode()) beginNewSimulation();

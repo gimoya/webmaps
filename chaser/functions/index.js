@@ -49,9 +49,10 @@ async function sendPushToEvent(eventId, { title, body, kind }) {
   const chunkSize = 500;
   for (let i = 0; i < tokens.length; i += chunkSize) {
     const chunk = tokens.slice(i, i + chunkSize);
+    // Data-only: SW shows the notification once. Including `notification` here
+    // makes the browser display it AND onBackgroundMessage showNotification → doubles.
     const res = await messaging().sendEachForMulticast({
       tokens: chunk,
-      notification: { title: data.title, body: data.body },
       data,
       webpush: {
         fcmOptions: {
@@ -542,23 +543,23 @@ exports.claimCode = onRequest(
   }
 );
 
-exports.onEventRaceLockChanged = onDocumentUpdated("events/{eventId}", async (event) => {
+exports.onEventRideLockChanged = onDocumentUpdated("events/{eventId}", async (event) => {
   const before = event.data.before.data() || {};
   const after = event.data.after.data() || {};
-  const prev = before.raceLocked === true;
-  const next = after.raceLocked === true;
+  const prev = before.rideLocked === true;
+  const next = after.rideLocked === true;
   if (prev === next) return;
   const eventId = event.params.eventId;
   const name = typeof after.name === "string" && after.name ? after.name : eventId;
   if (next) {
     await sendPushToEvent(eventId, {
-      title: "Race locked",
+      title: "Ride locked",
       body: `${name}: no new riders can start. Unfinished rides may still resume.`,
       kind: "lock"
     });
   } else {
     await sendPushToEvent(eventId, {
-      title: "Race unlocked",
+      title: "Ride unlocked",
       body: `${name}: new riders can start tracking.`,
       kind: "unlock"
     });
