@@ -66,7 +66,19 @@
     if (otherEl) otherEl.hidden = ios || android;
   }
 
-  if (!isStandaloneApp()) {
+  /** Admin may use a normal browser tab via #admin=… (address bar / bookmarks). */
+  function adminCodewordFromHash() {
+    const raw = window.location.hash.replace(/^#/, "").trim();
+    if (!raw) return "";
+    const params = new URLSearchParams(raw);
+    if (params.has("admin")) return String(params.get("admin") || "").trim();
+    if (raw.startsWith("admin=")) {
+      return String(decodeURIComponent(raw.slice(6)) || "").trim();
+    }
+    return "";
+  }
+
+  if (!isStandaloneApp() && !adminCodewordFromHash()) {
     if (sessionStorage.getItem(PAGE_FADE_KEY) === "1") {
       sessionStorage.removeItem(PAGE_FADE_KEY);
       document.documentElement.classList.remove("page-fade-pending");
@@ -325,17 +337,6 @@
    */
   function pageSearchParams() {
     return new URLSearchParams(window.location.search);
-  }
-
-  function adminCodewordFromHash() {
-    const raw = window.location.hash.replace(/^#/, "").trim();
-    if (!raw) return "";
-    const params = new URLSearchParams(raw);
-    if (params.has("admin")) return String(params.get("admin") || "").trim();
-    if (raw.startsWith("admin=")) {
-      return String(decodeURIComponent(raw.slice(6)) || "").trim();
-    }
-    return "";
   }
 
   function hasAdminEntry() {

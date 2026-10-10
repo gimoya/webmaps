@@ -496,6 +496,6 @@ Pool admin bookmark: `?event=<id>&mode=viewing#admin=CODE`. Share: `?event=<id>&
 - Locking the phone freezes the page. No new points are stored. If the page is still there when you unlock, the writer continues. If the phone discarded it, open the name box and submit the alias again.
 - Completed traces stay in Firestore and are hidden from the live map.
 - Pan and zoom write `?lat=&lng=&z=` and keep the mode fragment.
-- **Install required:** Chaser only runs as an installed PWA / iOS home-screen app (`display-mode: standalone`). Normal browser tabs show an install gate.
+- **Install required** for riders/viewers: installed PWA / iOS home-screen (`display-mode: standalone`). Normal tabs show an install gate. **Exception:** `#admin=<code>` skips the gate so admins can use the browser address bar.
 - **Web Push (FCM):** after install, **Enable alerts** stores `events/{eventId}/pushTokens/{id}`. Unlock/lock notify all subscribers; chat notifies `role: rider` only. Requires Web Push VAPID key in `firebase-config.js` (`CHASER_VAPID_KEY`) from Firebase Console → Cloud Messaging. Cloud Functions: `onEventRaceLockChanged`, `onEventChatCreated`. `sw.js` is registered for cache + background notifications.
 - GPS permission is requested only on **Start Ride / Resume** (user gesture), after install.
