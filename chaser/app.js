@@ -125,14 +125,23 @@
   let reservedAdminCodes = [];
   let resolvingEvent = false;
 
-  function hashTokens() {
-    return window.location.hash.slice(1).split("#").filter(Boolean);
+  /**
+   * Public state in query (?event&mode&rider&simulation&lat&lng&z).
+   * Admin secret only in fragment (#admin=CODE) — never multi-# (iOS/%23).
+   */
+  function pageSearchParams() {
+    return new URLSearchParams(window.location.search);
   }
 
   function adminCodewordFromHash() {
-    const token = hashTokens().find((part) => part.startsWith("admin="));
-    if (!token) return "";
-    return String(decodeURIComponent(token.slice(6)) || "").trim();
+    const raw = window.location.hash.replace(/^#/, "").trim();
+    if (!raw) return "";
+    const params = new URLSearchParams(raw);
+    if (params.has("admin")) return String(params.get("admin") || "").trim();
+    if (raw.startsWith("admin=")) {
+      return String(decodeURIComponent(raw.slice(6)) || "").trim();
+    }
+    return "";
   }
 
   function hasAdminEntry() {
@@ -170,74 +179,31 @@
     return true;
   }
 
-  function hasSimulationHash() {
-    return hashTokens().includes("simulation");
+  function hasSimulationFlag() {
+    const params = pageSearchParams();
+    if (!params.has("simulation")) return false;
+    const value = params.get("simulation");
+    return value === "" || value === "1" || value === "true" || value === "simulation";
   }
 
   function isSimulationMode() {
-    return hasSimulationHash() && isEventAdmin();
+    return hasSimulationFlag() && isEventAdmin();
   }
 
-  function stripNamedSuffixes(raw, suffixes) {
-    let changed = true;
-    while (raw && changed) {
-      changed = false;
-      for (const suffix of suffixes) {
-        if (raw === suffix.slice(1)) {
-          raw = "";
-          changed = true;
-        } else if (raw.endsWith(suffix)) {
-          raw = raw.slice(0, -suffix.length);
-          changed = true;
-        }
-      }
-    }
-    return raw;
+  function riderFromUrl() {
+    return sanitizeName(pageSearchParams().get("rider") || "");
   }
 
-  function stripHashSuffixes(raw) {
-    return stripNamedSuffixes(raw, ["#admin", "#simulation", "#viewing", "#tracking"]);
-  }
-
-  function withoutRider(raw) {
-    return raw.split("#").filter((token) => !token.startsWith("rider=")).join("#");
-  }
-
-  function riderFromHash() {
-    const token = hashTokens().find((part) => part.startsWith("rider="));
-    if (!token) return "";
-    return sanitizeName(decodeURIComponent(token.slice(6)));
-  }
-
-  function modeFromHash() {
-    const tokens = hashTokens();
-    if (tokens.includes("viewing")) return "viewing";
-    if (tokens.includes("tracking")) return "tracking";
+  function modeFromUrl() {
+    const mode = pageSearchParams().get("mode");
+    if (mode === "viewing" || mode === "tracking") return mode;
     return null;
   }
 
-  function eventIdFromHash() {
-    const token = hashTokens().find((part) => (
-      part !== "admin" &&
-      !part.startsWith("admin=") &&
-      part !== "simulation" &&
-      part !== "viewing" &&
-      part !== "tracking" &&
-      !part.startsWith("rider=")
-    ));
-    return token ? decodeURIComponent(token) : null;
-  }
-
-  function modeHashFragment() {
-    let fragment = eventId || eventIdFromHash() || "";
-    if (hashRider) fragment = fragment ? `${fragment}#rider=${encodeURIComponent(hashRider)}` : `rider=${encodeURIComponent(hashRider)}`;
-    if (pageMode) fragment = fragment ? `${fragment}#${pageMode}` : pageMode;
-    if (hasSimulationHash()) fragment = fragment ? `${fragment}#simulation` : "simulation";
-    if (hashAdminCode) {
-      const adminToken = `admin=${encodeURIComponent(hashAdminCode)}`;
-      fragment = fragment ? `${fragment}#${adminToken}` : adminToken;
-    }
-    return fragment;
+  function eventIdFromUrl() {
+    const id = pageSearchParams().get("event");
+    if (id == null || id === "") return null;
+    return id;
   }
 
   function writePageUrl() {
@@ -246,8 +212,14 @@
     params.set("lat", center.lat.toFixed(5));
     params.set("lng", center.lng.toFixed(5));
     params.set("z", String(map.getZoom()));
-    const fragment = modeHashFragment();
-    const nextHash = fragment ? `#${fragment}` : "";
+    const id = eventId || eventIdFromUrl();
+    if (id) params.set("event", id);
+    if (pageMode === "viewing" || pageMode === "tracking") params.set("mode", pageMode);
+    if (hashRider) params.set("rider", hashRider);
+    if (hasSimulationFlag()) params.set("simulation", "1");
+    const nextHash = hashAdminCode
+      ? `#admin=${encodeURIComponent(hashAdminCode)}`
+      : "";
     history.replaceState(null, "", `${window.location.pathname}?${params}${nextHash}`);
     syncAdminUsageLink();
   }
@@ -257,8 +229,8 @@
     adminModeBadge.href = `./home.html?from=${encodeURIComponent(window.location.href)}&tab=admins`;
   }
 
-  let pageMode = modeFromHash();
-  let hashRider = riderFromHash();
+  let pageMode = modeFromUrl();
+  let hashRider = riderFromUrl();
   let hashAdminCode = adminCodewordFromHash();
 
   function setPageMode(mode) {
@@ -266,16 +238,16 @@
     writePageUrl();
   }
 
-  window.addEventListener("hashchange", () => {
-    pageMode = modeFromHash();
-    hashRider = riderFromHash();
+  function syncFromUrl() {
+    pageMode = modeFromUrl();
+    hashRider = riderFromUrl();
     hashAdminCode = adminCodewordFromHash();
     if (eventAdminCodeEl && hashAdminCode && !eventAdminCodeEl.value) {
       eventAdminCodeEl.value = hashAdminCode;
     }
-    const nextEvent = eventIdFromHash();
+    const nextEvent = eventIdFromUrl();
     if (db && nextEvent !== eventId) {
-      resolveEventFromHash();
+      resolveEventFromUrl();
       return;
     }
     if (!eventId) {
@@ -291,7 +263,10 @@
       openRiderBox();
     }
     syncAdminControls();
-  });
+  }
+
+  window.addEventListener("hashchange", syncFromUrl);
+  window.addEventListener("popstate", syncFromUrl);
   const homeTitleLink = document.getElementById("home-title-link");
   if (homeTitleLink) {
     homeTitleLink.addEventListener("click", (event) => {
@@ -422,7 +397,7 @@
   attachAdminConfigSubscription();
   attachEventsSubscription();
   if (hashAdminCode && eventAdminCodeEl) eventAdminCodeEl.value = hashAdminCode;
-  resolveEventFromHash();
+  resolveEventFromUrl();
   setInterval(() => {
     if (!eventId) return;
     renderUserList(sortedTracks());
@@ -474,8 +449,11 @@
 
   function eventShareUrl() {
     if (!eventId) return "";
-    // Public viewer link only — never copy admin=, rider=, simulation, or map query.
-    return `${window.location.origin}${window.location.pathname}#${encodeURIComponent(eventId)}#viewing`;
+    // Public viewer link only — never copy admin=, rider=, simulation, or map coords.
+    const params = new URLSearchParams();
+    params.set("event", eventId);
+    params.set("mode", "viewing");
+    return `${window.location.origin}${window.location.pathname}?${params}`;
   }
 
   async function copyEventShareLink() {
@@ -526,7 +504,7 @@
 
   function refreshCreateBoxVisibility() {
     if (canOpenCreateBox() && !eventId) {
-      const id = eventIdFromHash();
+      const id = eventIdFromUrl();
       if (!id || !eventsById.has(id)) openCreateEventBoxIfAdmin();
       return;
     }
@@ -593,11 +571,11 @@
     });
   }
 
-  async function resolveEventFromHash() {
+  async function resolveEventFromUrl() {
     if (!db || resolvingEvent) return;
     resolvingEvent = true;
     try {
-      const id = eventIdFromHash();
+      const id = eventIdFromUrl();
       if (!id) {
         if (eventId) {
           writePageUrl();
@@ -800,7 +778,7 @@
     });
     entryRider.addEventListener("click", () => {
       if (!eventId) {
-        showNotice("Open an event with its id in the URL hash.");
+        showNotice("Open an event with its id in the URL (?event=…).");
         return;
       }
       entryDialog.hidden = true;
@@ -811,7 +789,7 @@
     document.getElementById("viewer-ride").addEventListener("click", () => {
       if (activeSessionRef) return;
       if (!eventId) {
-        showNotice("Open an event with its id in the URL hash.");
+        showNotice("Open an event with its id in the URL (?event=…).");
         return;
       }
       ensureGpsWatch();
@@ -819,7 +797,7 @@
     });
     document.getElementById("viewer-replay").addEventListener("click", () => {
       if (!eventId) {
-        showNotice("Open an event with its id in the URL hash.");
+        showNotice("Open an event with its id in the URL (?event=…).");
         return;
       }
       if (!replayActive) startReplay();
@@ -854,7 +832,7 @@
         return;
       }
       if (!sessionsRef || !eventId) {
-        riderLog.textContent = eventId ? "Firebase is not configured." : "Open an event via the URL hash first.";
+        riderLog.textContent = eventId ? "Firebase is not configured." : "Open an event via the URL (?event=…) first.";
         riderLog.hidden = false;
         return;
       }
@@ -862,7 +840,7 @@
         showFinishedRide(name);
         return;
       }
-      if (hasSimulationHash() && !isEventAdmin()) {
+      if (hasSimulationFlag() && !isEventAdmin()) {
         showNotice("Simulation needs a valid admin code in the URL (#admin=…).");
         return;
       }
@@ -878,8 +856,14 @@
       });
       // Must start watch here (user gesture). After await createAliasSession the
       // gesture is gone and iOS Safari will never show the permission dialog.
-      if (!isSimulationMode()) ensureGpsWatch();
-      else requestDeviceLocation();
+      // Restart even if Rider already primed a watch — that watch may have
+      // errored/timed out with gpsWatchId still set (ensureGpsWatch no-op).
+      if (!isSimulationMode()) {
+        stopGpsWatch();
+        ensureGpsWatch();
+      } else {
+        requestDeviceLocation();
+      }
       beginAliasTracking(sessionsRef, name);
     });
   }
@@ -1780,6 +1764,7 @@
     const track = tracksBySessionId.get(sessionRef.id);
     activeWriterName = (track && track.name) || hashRider || "";
     setWriterState(true);
+    renderGpsStatus();
     renderTracksAndPanel();
 
     const requested = locationRequest;
@@ -3157,6 +3142,7 @@
         lon: position.coords.longitude,
         atMs: Date.now()
       };
+      renderGpsStatus();
       noteSim(meters, seconds, "normal write");
     } catch (err) {
       console.error("Failed to write tracking point:", err);
@@ -3166,7 +3152,9 @@
 
   function speedBaseline(sessionId) {
     const track = tracksBySessionId.get(sessionId);
-    if (!track || !track.pointsReady) return undefined;
+    // Never block writes on pointsReady — listener lag/errors left pendingGpsWrite
+    // stuck forever (green from latestOwnPosition, zero Firestore points).
+    if (!track || !track.pointsReady) return acceptedFix || null;
 
     const stored = track.points[track.points.length - 1];
     if (acceptedFix && (!stored || !stored.recordedAtMs || acceptedFix.atMs > stored.recordedAtMs)) {
@@ -3324,12 +3312,12 @@
   function renderGpsStatus() {
     let stateText = "unknown";
     if (gpsAllowed === false) stateText = "denied";
-    else if (gpsRunning && !latestOwnPosition) stateText = "waiting";
+    else if (gpsRunning && !acceptedFix) stateText = "waiting";
     else if (gpsAllowed === true) stateText = "allowed";
     const runningText = gpsRunning ? "running" : "stopped";
     gpsStatusEl.textContent = `${stateText} · ${runningText}`;
-    // Green only after a real fix while tracking — not merely Permissions API "granted".
-    gpsStatusEl.classList.toggle("status-online", Boolean(gpsRunning && latestOwnPosition));
+    // Green only after a point was written this writer session — not device fix alone.
+    gpsStatusEl.classList.toggle("status-online", Boolean(gpsRunning && acceptedFix));
     gpsStatusEl.classList.toggle("status-offline", gpsAllowed === false);
   }
 

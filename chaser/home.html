@@ -33,7 +33,7 @@
     <section id="panel-users" class="panel" role="tabpanel" aria-labelledby="tab-users">
       <h2>Riders &amp; viewers</h2>
       <ol>
-        <li>Open the event link you were given. If you look into the web address, you'll see the #hash with the event name, e.g. <code>../chaser/..#your-event</code>.</li>
+        <li>Open the event link you were given. The address has the event in the query, e.g. <code>…/chaser/?event=your-event&amp;mode=viewing</code>.</li>
         <li>Choose <strong>Viewer</strong> to watch, or <strong>Rider</strong> (same as hitting the bike button later) to ride.</li>
         <li>For tracking: Enter a unique name/alias → <strong>Start Ride / Resume</strong>. Allow GPS and keep internet connected!</li>
         <li>While the page is open and unlocked, track points of your ride will be written. Refresh or lock stops logging until you resume - always (!) use the same alias. Important (!) - Do not reuse someone else’s alias — you would write into their trace!</li>
@@ -49,11 +49,11 @@
         <li>Buy an admin code on <a href="https://ko-fi.com/s/4be9b1a7fc" target="_blank" rel="noopener">Ko-fi</a> (or get one from the developer).</li>
         <li>After purchase, open the <a href="https://europe-west1-chaser-75e2e.cloudfunctions.net/claimCode" target="_blank" rel="noopener">claim page</a> (should auto-open, but you'll also have it in your confirmation message) and enter the email you used at checkout to reveal your 5-character token. Lost it later? Same claim link + email recovers it anytime. If you bought more than once, all codes for that email are listed (newest first).</li>
         <li>Keep that token. You need it to <strong>create</strong> the event and later for <strong>admin</strong> (GPX upload, clear traces, delete riders).</li>
-        <li>Create: open <code>…/chaser/..#admin=YOURCODE</code>, then put name code to the form that opened up, to create and event. Once you have created an event using up one token, that code-token is bound to that event permanently!</li>
-        <li>You best bookmark the URL including your hash for the event <code>event-id</code> and the admin hash <code>#admin=YOURCODE</code>. NEVER EVER share the address with your admin code publicly!</li>
+        <li>Create: open <code>…/chaser/#admin=YOURCODE</code>, then put name/code into the form that opened to create an event. Once you have created an event using up one token, that code-token is bound to that event permanently!</li>
+        <li>Bookmark the URL with <code>?event=event-id&amp;mode=viewing</code> and your admin fragment <code>#admin=YOURCODE</code>. NEVER share the address with your admin code publicly!</li>
         <li>On that bookmark: On the Chaser Page you can upload GPX, clear all traces, delete a rider.</li>
-        <li>The internet address you share with everyone else - riders and viewers should contain: <code>#event-id#viewing</code> or <code>#event-id#riding</code> but never ever the hash <code>admin=YOURCODE</code>.</li>
-        <li>Simulation: as admin you can run a rider simulation by attaching the hash #simulation to the web address. If you now start a ride / tracking session from your device, the app wont log the device's GPS signal, but simply travel along the uploaded gpx route with random speed between 10 and 25 km/h until the end.</li>
+        <li>Share with riders/viewers: <code>?event=event-id&amp;mode=viewing</code> or <code>?event=event-id&amp;mode=tracking</code> — never include <code>#admin=YOURCODE</code>.</li>
+        <li>Simulation: as admin add <code>&amp;simulation=1</code> to the query. Starting a ride then walks the GPX at 10–25 km/h instead of using device GPS.</li>
       </ol>
     </section>
 
@@ -150,11 +150,11 @@
           return;
         }
         listEl.innerHTML = rows.map((row) => {
-          const href = `./#${encodeURIComponent(row.id)}#viewing`;
+          const href = `./?event=${encodeURIComponent(row.id)}&mode=viewing`;
           return `<li>
             <a class="event-list-link" href="${href}">
               <span class="event-list-name">${escapeHtml(row.name)}</span>
-              <code class="event-list-id">#${escapeHtml(row.id)}</code>
+              <code class="event-list-id">${escapeHtml(row.id)}</code>
             </a>
           </li>`;
         }).join("");

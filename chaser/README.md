@@ -5,7 +5,7 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 ## What it does
 
 - Tracestrack topo basemap
-- Events scope all live data. The event id is the first URL hash token (`#event-id#viewing`). Open events via that share URL or the live list on `home.html`. Admin is `#admin=<code>` only (not bare `#admin`). Master `admin_master_6071` can create and admin any event; a pool/event code admins only its event.
+- Events scope all live data. Public state lives in the query (`?event=<id>&mode=viewing`). Open events via that share URL or the live list on `home.html`. Admin is only in the fragment (`#admin=<code>`) so it is not sent to the server. Master `admin_master_6071` can create and admin any event; a pool/event code admins only its event.
 - Course overlay from a GPX that event admin uploads into the selected event (`events/{eventId}/routes/current`). Every client on that event draws it when it exists.
 - One live trace per alias per event. Case does not distinguish (`Kay` and `kay` are the same)
 - Last point shows the alias on a white stem, plus a dashed accuracy ring in the alias color. A finished ride drops the ring.
@@ -116,7 +116,7 @@ Route document `events/{eventId}/routes/current`:
 
 `#admin=<event adminCode>` or `#admin=admin_master_6071` shows the map upload control while that event is bound. Upload overwrites that event's `routes/current` only. Bare `#admin` does nothing. A pool code must match the bound event's `adminCode`. Master works on any bound event.
 
-Create-event box: `#admin=<unused pool code>` or master (no event id, or unknown id). **Skip** closes without creating. `#eventId#…#admin=matchingCode` revisits the event with admin tools and does not open create.
+Create-event box: `#admin=<unused pool code>` or master (no event id, or unknown id). **Skip** closes without creating. `?event=<id>&mode=viewing#admin=matchingCode` revisits the event with admin tools and does not open create.
 
 One route document is at most 1 MiB. Vertices closer than 10 m are dropped first, and the stored file is that GPX. The upload refuses it when the result would not fit beside `name` and `createdAt`.
 
@@ -134,17 +134,17 @@ One route document is at most 1 MiB. Vertices closer than 10 m are dropped first
 
 One alias, one active trace per event.
 
-A load with a known event id in the hash binds that event. Missing or unknown id does not show a public event list — open the event via its share URL. Create needs `#admin=<code>` where code is an unused pool code or the master password (form + optional Skip). After an event is bound, a load with no mode hash asks Rider or Viewer. Viewer sets `#eventId#viewing`. The bike button, or a load that already has `#tracking`, opens the name box. **Start Ride / Resume Tracing** calls GPS in that click, then:
+A load with a known `?event=` id binds that event. Missing or unknown id does not show a public event list — open the event via its share URL. Create needs `#admin=<code>` where code is an unused pool code or the master password (form + optional Skip). After an event is bound, a load with no `mode` asks Rider or Viewer. Viewer sets `?event=<id>&mode=viewing`. The bike button, or a load that already has `mode=tracking`, opens the name box. **Start Ride / Resume Tracing** calls GPS in that click, then:
 
-- No active trace for the typed alias: if `event.raceLocked == true`, the UI refuses with `This ride was already closed by admin - you can not start a new track here!` (client-side only; rules still allow session create). Otherwise a new session is created and this page writes to it. The hash becomes `#eventId#tracking`.
-- Start and resume also write the alias as a `#rider=` token (URL-encoded). The name box is filled from that token.
+- No active trace for the typed alias: if `event.raceLocked == true`, the UI refuses with `This ride was already closed by admin - you can not start a new track here!` (client-side only; rules still allow session create). Otherwise a new session is created and this page writes to it. The URL becomes `?event=<id>&mode=tracking&rider=<alias>`.
+- Start and resume also write the alias as `rider=` in the query. The name box is filled from that param.
 - An active trace exists and is not finished: writing continues on the oldest active session for that alias (**allowed even when the race is locked**).
 - An active trace for that alias is finished: the name box shows `{alias} already finished the ride!` and does not write. The box then closes and the page stays a viewer.
-- This page is already writing: **Stop tracking** asks for a confirm, then sets `finished` and `endedAt` and stops this page's writer. The trace stays on the map. The list shows `Tracking stopped/finished` in green with the end time. The page becomes a viewer (`#eventId#viewing`).
+- This page is already writing: **Stop tracking** asks for a confirm, then sets `finished` and `endedAt` and stops this page's writer. The trace stays on the map. The list shows `Tracking stopped/finished` in green with the end time. The page becomes a viewer (`?event=<id>&mode=viewing`).
 
 Event admin tools (when `#admin=` matches the event or master): GPX upload control, **Clear all traces**, per-rider delete, **Lock race** / **Unlock race**. Toolbox badge opens `home.html?tab=admins` with `?from=`.
 
-`#simulation` on the hash uses a generated fix instead of the device. Requires a valid `#admin=` for the bound event (or master). Without admin, **Start Ride** is refused with a notice. It also runs only while a GPX route is drawn; otherwise start is refused. A new ride begins at the route start. One speed is picked for the ride, evenly between 10 and 25 km/h, and each fix advances that far along the route. A resume on a fresh page starts at the route vertex nearest the last stored point. The fix still writes only for this page's active rider. The log under Active Riders shows meters, m/s, and `slow/no move skip`, `+30 m/s skip`, or `normal write`.
+`?simulation=1` uses a generated fix instead of the device. Requires a valid `#admin=` for the bound event (or master). Without admin, **Start Ride** is refused with a notice. It also runs only while a GPX route is drawn; otherwise start is refused. A new ride begins at the route start. One speed is picked for the ride, evenly between 10 and 25 km/h, and each fix advances that far along the route. A resume on a fresh page starts at the route vertex nearest the last stored point. The fix still writes only for this page's active rider. The log under Active Riders shows meters, m/s, and `slow/no move skip`, `+30 m/s skip`, or `normal write`.
 
 GPS loss, a dropped network, refresh, tab close, or locking the phone does not end the Firestore trace. The writer on this page stops. Open the name box and submit the alias again to continue it.
 
@@ -433,15 +433,15 @@ The page sends `strict-origin-when-cross-origin`, so the tile request includes t
 
 1. Serve `chaser/` over localhost or HTTPS (static host; functions are separate).
 2. Open `chaser/` or `chaser/home.html`.
-3. Open an event via hash (`#event-id#viewing`), from the home **Events** list, or create with `#admin=<code>` (pool/reserved code or `admin_master_6071`).
+3. Open an event via query (`?event=<id>&mode=viewing`), from the home **Events** list, or create with `#admin=<code>` (pool/reserved code or `admin_master_6071`).
 4. Choose Rider, or Viewer and then the bike button.
 5. Enter an alias and click **Start Ride / Resume Tracing**. Allow location.
-6. Open the page on another device with the same event hash to see the live trace.
+6. Open the page on another device with the same `?event=` to see the live trace.
 7. Click **Stop tracking** and confirm. This page stops writing and switches to viewer. The trace stays on the map with `Tracking stopped/finished` and the end time. That alias cannot start again in this event.
 
-Homepage: title/logo opens [`home.html`](home.html) (live event list → `#event-id#viewing`, plus Riders & viewers / Event Creation guides) in the same tab. Direct admins tab: `home.html?tab=admins` (query, not hash). **Back to Chaser** returns via `?from=` (same `?lat=&lng=&z=` + hash). With event admin active, the toolbox badge opens that tab the same way.
+Homepage: title/logo opens [`home.html`](home.html) (live event list → `?event=<id>&mode=viewing`, plus Riders & viewers / Event Creation guides) in the same tab. Direct admins tab: `home.html?tab=admins`. **Back to Chaser** returns via `?from=` (same query + `#admin=` if present). With event admin active, the toolbox badge opens that tab the same way.
 
-Pool admin bookmark shape: `#event-id#viewing#admin=CODE`. Share riders `#event-id#viewing` without `admin=`.
+Pool admin bookmark: `?event=<id>&mode=viewing#admin=CODE`. Share: `?event=<id>&mode=viewing` (no `#admin=`).
 
 ## Maintainer checklist
 
