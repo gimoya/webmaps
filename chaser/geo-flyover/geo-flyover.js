@@ -28,7 +28,7 @@
 
   /** Ground speed along the path (real km/h). 100 km/h ≈ 28 m/s. */
   var SPEED_MIN = 0;
-  var SPEED_MAX = 1000;
+  var SPEED_MAX = 2000;
   /** Camera height via Mapbox zoom: slider 0 = close, Max = high. */
   var ZOOM_CLOSE = 17;
   var ZOOM_HIGH = 11;

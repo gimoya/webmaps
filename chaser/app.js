@@ -782,8 +782,6 @@
         return;
       }
       entryDialog.hidden = true;
-      // iOS Safari: permission prompt only inside this tap stack.
-      ensureGpsWatch();
       openRiderBox();
     });
     document.getElementById("viewer-ride").addEventListener("click", () => {
@@ -792,7 +790,6 @@
         showNotice("Open an event with its id in the URL (?event=…).");
         return;
       }
-      ensureGpsWatch();
       openRiderBox();
     });
     document.getElementById("viewer-replay").addEventListener("click", () => {
@@ -816,12 +813,6 @@
       riderDialog.hidden = true;
       document.body.classList.add("is-viewer");
       setPageMode("viewing");
-      if (!activeSessionRef) {
-        stopGpsWatch();
-        latestOwnPosition = null;
-        locationRequest = null;
-        renderGpsStatus();
-      }
     });
     riderForm.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -854,10 +845,8 @@
         riderStart.removeEventListener("transitionend", hideStart);
         if (riderStart.classList.contains("is-fading")) riderActions.hidden = true;
       });
-      // Must start watch here (user gesture). After await createAliasSession the
-      // gesture is gone and iOS Safari will never show the permission dialog.
-      // Restart even if Rider already primed a watch — that watch may have
-      // errored/timed out with gpsWatchId still set (ensureGpsWatch no-op).
+      // Sole GPS entry: this tap stack only (iOS permission prompt).
+      // Do not prime on Rider/bike — avoids stuck watch before Start.
       if (!isSimulationMode()) {
         stopGpsWatch();
         ensureGpsWatch();
@@ -890,8 +879,6 @@
     riderNameEl.value = hashRider;
     riderDialog.hidden = false;
     riderNameEl.focus();
-    // Do NOT call geolocation here — hash/applyInitialMode open this without a
-    // user gesture; iOS Safari silently skips the permission prompt then.
   }
 
   function setRiderPanelTitle(name) {
