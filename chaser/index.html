@@ -33,6 +33,30 @@
 </head>
 <body class="is-viewer">
   <div id="page-fade" aria-hidden="true"></div>
+  <div id="install-gate" class="install-gate" hidden>
+    <div class="install-gate-card">
+      <h1 class="install-gate-title">Install Chaser</h1>
+      <p class="install-gate-lead">Add this app to your home screen, then open it from there. Browser tabs are not supported (push + reliable GPS).</p>
+      <ol id="install-gate-ios" class="install-gate-steps" hidden>
+        <li>Tap <strong>Share</strong> in Safari.</li>
+        <li>Choose <strong>Add to Home Screen</strong>.</li>
+        <li>Open <strong>Chaser</strong> from the home screen icon.</li>
+        <li>Location is asked only when you tap <strong>Start Ride / Resume</strong>.</li>
+      </ol>
+      <ol id="install-gate-android" class="install-gate-steps" hidden>
+        <li>Tap the browser menu (⋮) or the install banner.</li>
+        <li>Choose <strong>Install app</strong> / <strong>Add to Home screen</strong>.</li>
+        <li>Open <strong>Chaser</strong> from the home screen.</li>
+        <li>Location is asked only when you tap <strong>Start Ride / Resume</strong>.</li>
+      </ol>
+      <ol id="install-gate-other" class="install-gate-steps" hidden>
+        <li>Use Chrome/Edge → install this site as an app, or Add to Home Screen.</li>
+        <li>Open the installed Chaser window (not a normal tab).</li>
+        <li>Location is asked only when you tap <strong>Start Ride / Resume</strong>.</li>
+      </ol>
+      <p class="install-gate-note">After install you can enable notifications for race lock/unlock and (as a rider) chat.</p>
+    </div>
+  </div>
   <div class="app-layout">
     <div id="map"></div>
 
@@ -70,6 +94,10 @@
               <div class="status-row">
                 <div class="status-label">Connection</div>
                 <div id="connection-status" class="status-pill status-offline">offline</div>
+              </div>
+              <div class="status-row">
+                <div class="status-label">Alerts</div>
+                <button id="push-toggle" type="button" class="push-toggle" hidden>Enable alerts</button>
               </div>
             </div>
           </section>
@@ -201,6 +229,7 @@
   <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.8.0/firebase-messaging-compat.js"></script>
   <script src="firebase-config.js"></script>
   <script src="./geo-flyover/geo-flyover.js"></script>
   <script src="track-grade.js"></script>

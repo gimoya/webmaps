@@ -27,6 +27,7 @@
   const ROUTES_COLLECTION = "routes";
   const ROUTE_DOC = "current";
   const CHAT_COLLECTION = "chat";
+  const PUSH_TOKENS_COLLECTION = "pushTokens";
   const EVENTS_COLLECTION = "events";
   const ADMIN_CONFIG_COLLECTION = "adminConfig";
   const ADMIN_CONFIG_DOC = "current";
@@ -37,7 +38,200 @@
   const CHAT_LIST_LIMIT = 100;
   const PLACE_CUPS = ["🥇", "🥈", "🥉"];
   const PAGE_FADE_KEY = "chaserPageFade";
+  const PUSH_TOKEN_KEY = "chaserPushToken";
   const pageFadeOverlay = document.getElementById("page-fade");
+  const installGateEl = document.getElementById("install-gate");
+  const pushToggleBtn = document.getElementById("push-toggle");
+
+  function isStandaloneApp() {
+    if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) {
+      return true;
+    }
+    if (typeof navigator.standalone === "boolean" && navigator.standalone) return true;
+    return false;
+  }
+
+  function showInstallGate() {
+    document.body.classList.add("install-required");
+    if (!installGateEl) return;
+    installGateEl.hidden = false;
+    const ua = navigator.userAgent || "";
+    const ios = /iP(hone|ad|od)/.test(ua);
+    const android = /Android/i.test(ua);
+    const iosEl = document.getElementById("install-gate-ios");
+    const androidEl = document.getElementById("install-gate-android");
+    const otherEl = document.getElementById("install-gate-other");
+    if (iosEl) iosEl.hidden = !ios;
+    if (androidEl) androidEl.hidden = !android || ios;
+    if (otherEl) otherEl.hidden = ios || android;
+  }
+
+  if (!isStandaloneApp()) {
+    if (sessionStorage.getItem(PAGE_FADE_KEY) === "1") {
+      sessionStorage.removeItem(PAGE_FADE_KEY);
+      document.documentElement.classList.remove("page-fade-pending");
+    }
+    showInstallGate();
+    return;
+  }
+
+  let swRegistration = null;
+  let fcmMessaging = null;
+  let pushToken = null;
+  let pushSubscribed = false;
+
+  function hashPushTokenId(token) {
+    let hash = 2166136261;
+    for (let i = 0; i < token.length; i += 1) {
+      hash ^= token.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return `t${(hash >>> 0).toString(16)}`;
+  }
+
+  async function registerChaserServiceWorker() {
+    if (!("serviceWorker" in navigator)) return null;
+    try {
+      swRegistration = await navigator.serviceWorker.register("./sw.js", { scope: "./" });
+      return swRegistration;
+    } catch (err) {
+      console.warn("Service worker register failed:", err);
+      return null;
+    }
+  }
+
+  function syncPushToggleUi() {
+    if (!pushToggleBtn) return;
+    const ready = Boolean(eventId && window.CHASER_VAPID_KEY);
+    pushToggleBtn.hidden = !ready;
+    pushToggleBtn.classList.toggle("is-on", pushSubscribed);
+    pushToggleBtn.textContent = pushSubscribed ? "Alerts on" : "Enable alerts";
+    pushToggleBtn.disabled = !ready;
+  }
+
+  async function persistPushTokenDoc(role) {
+    if (!eventRef || !pushToken || !db) return;
+    const id = hashPushTokenId(pushToken);
+    let nextRole = role === "rider" || role === "viewer" ? role : null;
+    if (!nextRole) {
+      const snap = await eventRef.collection(PUSH_TOKENS_COLLECTION).doc(id).get();
+      nextRole = snap.exists && snap.data().role === "rider" ? "rider" : "viewer";
+    }
+    await eventRef.collection(PUSH_TOKENS_COLLECTION).doc(id).set(
+      {
+        token: pushToken,
+        role: nextRole,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        userAgent: String(navigator.userAgent || "").slice(0, 180)
+      },
+      { merge: true }
+    );
+  }
+
+  async function upgradePushRoleToRider() {
+    if (!pushToken || !eventRef) return;
+    try {
+      await persistPushTokenDoc("rider");
+    } catch (err) {
+      console.warn("Push role upgrade failed:", err);
+    }
+  }
+
+  async function enablePushAlerts() {
+    if (!window.CHASER_VAPID_KEY) {
+      await showNotice("Push is not configured (missing VAPID key).");
+      return;
+    }
+    if (!firebase.messaging) {
+      await showNotice("Push messaging is not supported in this browser.");
+      return;
+    }
+    if (!swRegistration) swRegistration = await registerChaserServiceWorker();
+    if (!swRegistration) {
+      await showNotice("Could not register the service worker.");
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+      await showNotice("Notifications permission denied.");
+      syncPushToggleUi();
+      return;
+    }
+    if (!fcmMessaging) fcmMessaging = firebase.messaging();
+    pushToken = await fcmMessaging.getToken({
+      vapidKey: window.CHASER_VAPID_KEY,
+      serviceWorkerRegistration: swRegistration
+    });
+    if (!pushToken) {
+      await showNotice("Could not get a push token.");
+      return;
+    }
+    try {
+      localStorage.setItem(PUSH_TOKEN_KEY, pushToken);
+    } catch (err) { /* ignore */ }
+    const role = activeSessionRef ? "rider" : "viewer";
+    await persistPushTokenDoc(role);
+    pushSubscribed = true;
+    syncPushToggleUi();
+  }
+
+  async function disablePushAlerts() {
+    if (!pushToken) {
+      try {
+        pushToken = localStorage.getItem(PUSH_TOKEN_KEY);
+      } catch (err) {
+        pushToken = null;
+      }
+    }
+    if (fcmMessaging && pushToken) {
+      try {
+        await fcmMessaging.deleteToken();
+      } catch (err) {
+        console.warn("deleteToken failed:", err);
+      }
+    }
+    if (eventRef && pushToken) {
+      try {
+        await eventRef.collection(PUSH_TOKENS_COLLECTION).doc(hashPushTokenId(pushToken)).delete();
+      } catch (err) {
+        console.warn("pushTokens delete failed:", err);
+      }
+    }
+    pushToken = null;
+    pushSubscribed = false;
+    try {
+      localStorage.removeItem(PUSH_TOKEN_KEY);
+    } catch (err) { /* ignore */ }
+    syncPushToggleUi();
+  }
+
+  async function togglePushAlerts() {
+    if (pushSubscribed) await disablePushAlerts();
+    else await enablePushAlerts();
+  }
+
+  async function restorePushSubscriptionState() {
+    if (!window.CHASER_VAPID_KEY || !eventId) {
+      pushSubscribed = false;
+      syncPushToggleUi();
+      return;
+    }
+    try {
+      pushToken = localStorage.getItem(PUSH_TOKEN_KEY);
+    } catch (err) {
+      pushToken = null;
+    }
+    pushSubscribed = Boolean(pushToken);
+    if (pushSubscribed && eventRef) {
+      try {
+        // Refresh token only; do not downgrade rider → viewer.
+        await persistPushTokenDoc(activeSessionRef ? "rider" : null);
+      } catch (err) {
+        console.warn("pushTokens refresh failed:", err);
+      }
+    }
+    syncPushToggleUi();
+  }
 
   function finishEnterPageFade() {
     if (sessionStorage.getItem(PAGE_FADE_KEY) !== "1") {
@@ -394,6 +588,10 @@
   firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
   storage = firebase.storage();
+  registerChaserServiceWorker();
+  if (pushToggleBtn) pushToggleBtn.addEventListener("click", () => {
+    togglePushAlerts().catch((err) => console.error("Push toggle failed:", err));
+  });
   attachAdminConfigSubscription();
   attachEventsSubscription();
   if (hashAdminCode && eventAdminCodeEl) eventAdminCodeEl.value = hashAdminCode;
@@ -405,6 +603,7 @@
   }, 5000);
   wireControls();
   wireChatControls();
+  syncPushToggleUi();
 
   function eventSlug(name) {
     return String(name || "")
@@ -475,6 +674,7 @@
       if (eventShareBtn) eventShareBtn.hidden = true;
       panelHeader.classList.remove("has-event");
       syncEventTitleRaceLock();
+      syncPushToggleUi();
       return;
     }
     eventPanelLine.hidden = false;
@@ -482,6 +682,7 @@
     if (eventShareBtn) eventShareBtn.hidden = false;
     panelHeader.classList.add("has-event");
     syncEventTitleRaceLock();
+    syncPushToggleUi();
   }
 
   function openCreateEventBoxIfAdmin() {
@@ -734,6 +935,7 @@
       renderEventPanel();
       syncAdminControls();
       syncChatUi();
+      restorePushSubscriptionState();
       if (pendingRouteFrame) {
         pendingRouteFrame = false;
         if (routeLatLngs && routeLatLngs.length > 1) {
@@ -762,6 +964,7 @@
     pendingRouteFrame = switching || !hadUrlMapView;
     writePageUrl();
     renderEventPanel();
+    restorePushSubscriptionState();
     attachSessionsSubscription(sessionsRef);
     attachRoutesSubscription(eventRef);
     attachPlacementSubscription(eventRef);
@@ -1557,10 +1760,12 @@
         const sessionRef = await createAliasSession(ref, name);
         showRiderResult(name, "..is starting!");
         beginWriting(sessionRef);
+        upgradePushRoleToRider();
       } else {
         if (isSimulationMode()) placeSimulationOnRoute(activeDocs[0].id);
         showRiderResult(name, "..is resuming the ride!");
         beginWriting(activeDocs[0].ref);
+        upgradePushRoleToRider();
       }
       clearTimeout(riderCloseTimer);
       riderCloseTimer = setTimeout(fadeRiderBox, ENTRY_FEEDBACK_MS);

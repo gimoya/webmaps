@@ -1,4 +1,9 @@
-const CACHE_NAME = "chaser-v7";
+/* Chaser service worker: app-shell cache + FCM background push. */
+importScripts("./firebase-config.js");
+importScripts("https://www.gstatic.com/firebasejs/12.8.0/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/12.8.0/firebase-messaging-compat.js");
+
+const CACHE_NAME = "chaser-v8";
 const TILE_CACHE_NAME = "chaser-tiles";
 const MAX_CACHE_SIZE = 50 * 1024 * 1024;
 const TILE_EVICTION_DELAY_MS = 3000;
@@ -10,6 +15,7 @@ const urlsToCache = [
   "./track-grade.js",
   "./gpx.js",
   "./app.js",
+  "./firebase-config.js",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -21,6 +27,56 @@ const urlsToCache = [
 ];
 
 let tileEvictionTimer = null;
+
+if (self.CHASER_FIREBASE_CONFIG && typeof firebase !== "undefined") {
+  try {
+    firebase.initializeApp(self.CHASER_FIREBASE_CONFIG);
+    const messaging = firebase.messaging();
+    messaging.onBackgroundMessage((payload) => {
+      const data = (payload && payload.data) || {};
+      const title =
+        (payload.notification && payload.notification.title) ||
+        data.title ||
+        "Chaser";
+      const body =
+        (payload.notification && payload.notification.body) ||
+        data.body ||
+        "";
+      const options = {
+        body,
+        data,
+        icon: "./icons/icon-192.png",
+        badge: "./icons/icon-192.png"
+      };
+      return self.registration.showNotification(title, options);
+    });
+  } catch (err) {
+    console.warn("FCM SW init failed", err);
+  }
+}
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const data = (event.notification && event.notification.data) || {};
+  const eventId = data.eventId ? String(data.eventId) : "";
+  let path = "./";
+  if (eventId) {
+    path = `./?event=${encodeURIComponent(eventId)}&mode=viewing`;
+  }
+  const url = new URL(path, self.location.href).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url && "focus" in client) {
+          if (typeof client.navigate === "function") client.navigate(url);
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
+      return undefined;
+    })
+  );
+});
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();

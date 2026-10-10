@@ -924,6 +924,83 @@ body.map-zoom-title .course-callout-title .course-callout-label {
   display: none !important;
 }
 
+.install-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: linear-gradient(165deg, #1a1a1e 0%, #2a2520 45%, #1e2228 100%);
+  color: #f2efe8;
+}
+
+.install-gate[hidden] {
+  display: none;
+}
+
+body.install-required .app-layout,
+body.install-required .viewer-ride,
+body.install-required .chat-open,
+body.install-required .admin-mode-badge,
+body.install-required .viewer-replay-label,
+body.install-required .notice-dialog {
+  display: none !important;
+}
+
+.install-gate-card {
+  max-width: 26rem;
+  width: 100%;
+}
+
+.install-gate-title {
+  margin: 0 0 0.65rem;
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 2.4rem;
+  letter-spacing: 0.04em;
+  font-weight: 400;
+}
+
+.install-gate-lead,
+.install-gate-note {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: rgba(242, 239, 232, 0.88);
+}
+
+.install-gate-steps {
+  margin: 0 0 1.1rem;
+  padding-left: 1.2rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.install-gate-steps li + li {
+  margin-top: 0.45rem;
+}
+
+.push-toggle {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.28rem 0.7rem;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.push-toggle.is-on {
+  background: var(--color-status-online-bg);
+  color: var(--color-success);
+}
+
+.push-toggle[hidden] {
+  display: none !important;
+}
+
 .notice-dialog {
   position: fixed;
   inset: 0;

@@ -1,7 +1,9 @@
 const { onRequest } = require("firebase-functions/v2/https");
+const { onDocumentUpdated, onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { defineSecret, defineString } = require("firebase-functions/params");
-const { initializeApp } = require("firebase-admin/app");
+const { initializeApp, getApps } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getMessaging } = require("firebase-admin/messaging");
 const { logger } = require("firebase-functions");
 
 const KOFI_VERIFY_TOKEN = defineSecret("KOFI_VERIFY_TOKEN");
@@ -12,13 +14,80 @@ const CHASER_PUBLIC_BASE = defineString("CHASER_PUBLIC_BASE", {
   default: "https://example.com/webmaps/chaser"
 });
 
+function ensureAdminApp() {
+  if (!getApps().length) initializeApp();
+}
+
 let db;
 function firestore() {
   if (!db) {
-    initializeApp();
+    ensureAdminApp();
     db = getFirestore();
   }
   return db;
+}
+
+function messaging() {
+  ensureAdminApp();
+  return getMessaging();
+}
+
+async function loadPushTokenDocs(eventId, riderOnly) {
+  const col = firestore().collection("events").doc(eventId).collection("pushTokens");
+  const snap = riderOnly
+    ? await col.where("role", "==", "rider").get()
+    : await col.get();
+  return snap.docs.map((doc) => ({ id: doc.id, ref: doc.ref, ...(doc.data() || {}) }));
+}
+
+async function sendPushToEvent(eventId, { title, body, kind, riderOnly }) {
+  const docs = await loadPushTokenDocs(eventId, Boolean(riderOnly));
+  const tokens = docs.map((d) => d.token).filter((t) => typeof t === "string" && t);
+  if (!tokens.length) {
+    logger.info("push: no tokens", { eventId, kind });
+    return;
+  }
+  const data = {
+    eventId: String(eventId),
+    kind: String(kind || ""),
+    title: String(title || "Chaser"),
+    body: String(body || "")
+  };
+  const chunkSize = 500;
+  for (let i = 0; i < tokens.length; i += chunkSize) {
+    const chunk = tokens.slice(i, i + chunkSize);
+    const res = await messaging().sendEachForMulticast({
+      tokens: chunk,
+      notification: { title: data.title, body: data.body },
+      data,
+      webpush: {
+        fcmOptions: {
+          link: `${CHASER_PUBLIC_BASE.value().replace(/\/$/, "")}/?event=${encodeURIComponent(eventId)}&mode=viewing`
+        }
+      }
+    });
+    const prune = [];
+    res.responses.forEach((r, idx) => {
+      if (r.success) return;
+      const code = r.error && r.error.code;
+      if (
+        code === "messaging/registration-token-not-registered" ||
+        code === "messaging/invalid-registration-token"
+      ) {
+        const token = chunk[idx];
+        const doc = docs.find((d) => d.token === token);
+        if (doc) prune.push(doc.ref);
+      }
+    });
+    await Promise.all(prune.map((ref) => ref.delete().catch(() => {})));
+    logger.info("push sent", {
+      eventId,
+      kind,
+      success: res.successCount,
+      failure: res.failureCount,
+      pruned: prune.length
+    });
+  }
 }
 
 function adminConfigRef() {
@@ -479,3 +548,46 @@ exports.claimCode = onRequest(
     }));
   }
 );
+
+exports.onEventRaceLockChanged = onDocumentUpdated("events/{eventId}", async (event) => {
+  const before = event.data.before.data() || {};
+  const after = event.data.after.data() || {};
+  const prev = before.raceLocked === true;
+  const next = after.raceLocked === true;
+  if (prev === next) return;
+  const eventId = event.params.eventId;
+  const name = typeof after.name === "string" && after.name ? after.name : eventId;
+  if (next) {
+    await sendPushToEvent(eventId, {
+      title: "Race locked",
+      body: `${name}: no new riders can start. Unfinished rides may still resume.`,
+      kind: "lock",
+      riderOnly: false
+    });
+  } else {
+    await sendPushToEvent(eventId, {
+      title: "Race unlocked",
+      body: `${name}: new riders can start tracking.`,
+      kind: "unlock",
+      riderOnly: false
+    });
+  }
+});
+
+exports.onEventChatCreated = onDocumentCreated("events/{eventId}/chat/{messageId}", async (event) => {
+  const data = event.data.data() || {};
+  const eventId = event.params.eventId;
+  const from = typeof data.name === "string" && data.name ? data.name : "Rider";
+  const text = typeof data.text === "string" ? data.text.trim() : "";
+  const hasPhoto = typeof data.photoUrl === "string" && data.photoUrl;
+  let body = text;
+  if (!body && hasPhoto) body = "sent a photo";
+  if (!body) body = "New message";
+  if (body.length > 120) body = `${body.slice(0, 117)}…`;
+  await sendPushToEvent(eventId, {
+    title: `Chat · ${from}`,
+    body,
+    kind: "chat",
+    riderOnly: true
+  });
+});

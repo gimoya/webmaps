@@ -32,7 +32,7 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 - `.gitignore` – `functions/node_modules/`, `functions/.env`, firebase debug / `.firebase/`
 - `admin-pool-seed.json` – one-time seed for `adminConfig/current` unused codes
 - `manifest.json` – installable app
-- `sw.js` – app shell and topo tile cache. The page does not register it.
+- `sw.js` – app shell / tile cache + FCM background push (registered from `app.js` when installed)
 - `icons/` – app icons
 - `gpx_tracks/` – sample course file, not loaded automatically
 - `geo-flyover/` – Mapbox terrain path flyover (modal from Chaser)
@@ -314,6 +314,24 @@ service cloud.firestore {
         allow delete: if true;
       }
 
+      match /pushTokens/{tokenId} {
+        allow read: if true;
+
+        allow create, update: if
+          request.resource.data.keys().hasOnly([
+            'token', 'role', 'updatedAt', 'userAgent'
+          ]) &&
+          request.resource.data.token is string &&
+          request.resource.data.token.size() >= 10 &&
+          request.resource.data.token.size() <= 4096 &&
+          request.resource.data.role in ['viewer', 'rider'] &&
+          request.resource.data.updatedAt is timestamp &&
+          request.resource.data.userAgent is string &&
+          request.resource.data.userAgent.size() <= 180;
+
+        allow delete: if true;
+      }
+
       match /routes/current {
         allow read: if true;
 
@@ -351,7 +369,15 @@ service cloud.firestore {
 }
 ```
 
-Publish these in the Firebase console whenever the paste above changes (e.g. `raceLocked` on event update, chat). Event create (with `adminCode`), adminConfig pool updates, route overwrite, placement, race lock, chat, and point writes all need this paste. `kofiFulfillments` is Admin SDK only (Cloud Functions).
+Publish these in the Firebase console whenever the paste above changes (e.g. `raceLocked` on event update, chat, `pushTokens`). Event create (with `adminCode`), adminConfig pool updates, route overwrite, placement, race lock, chat, push tokens, and point writes all need this paste. `kofiFulfillments` is Admin SDK only (Cloud Functions).
+
+### Web Push setup
+
+1. Firebase Console → Project settings → Cloud Messaging → **Web Push certificates** → generate key pair.
+2. Paste the public key into [`firebase-config.js`](firebase-config.js) as `CHASER_VAPID_KEY`.
+3. Deploy functions: `firebase deploy --only functions` from `chaser/`.
+4. Publish Firestore rules including `pushTokens`.
+5. Install Chaser as PWA / home screen → open event → **Enable alerts**.
 
 ### Storage rules (chat photos)
 
@@ -470,4 +496,6 @@ Pool admin bookmark: `?event=<id>&mode=viewing#admin=CODE`. Share: `?event=<id>&
 - Locking the phone freezes the page. No new points are stored. If the page is still there when you unlock, the writer continues. If the phone discarded it, open the name box and submit the alias again.
 - Completed traces stay in Firestore and are hidden from the live map.
 - Pan and zoom write `?lat=&lng=&z=` and keep the mode fragment.
-- Installable from the manifest. `sw.js` is not registered, so its app-shell and tile cache do not run.
+- **Install required:** Chaser only runs as an installed PWA / iOS home-screen app (`display-mode: standalone`). Normal browser tabs show an install gate.
+- **Web Push (FCM):** after install, **Enable alerts** stores `events/{eventId}/pushTokens/{id}`. Unlock/lock notify all subscribers; chat notifies `role: rider` only. Requires Web Push VAPID key in `firebase-config.js` (`CHASER_VAPID_KEY`) from Firebase Console → Cloud Messaging. Cloud Functions: `onEventRaceLockChanged`, `onEventChatCreated`. `sw.js` is registered for cache + background notifications.
+- GPS permission is requested only on **Start Ride / Resume** (user gesture), after install.
