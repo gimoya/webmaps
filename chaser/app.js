@@ -541,6 +541,11 @@
   let chatPendingFile = null;
   let chatSending = false;
   let chatWebcamStream = null;
+  let chatSeenMs = 0;
+  let chatSnapshotReady = false;
+  let chatAutoOpenedThisVisit = false;
+  let chatFireTimer = 0;
+  let chatDocsCache = [];
   const chatOpenBtn = document.getElementById("chat-open");
   const chatDialog = document.getElementById("chat-dialog");
   const chatListEl = document.getElementById("chat-list");
@@ -917,6 +922,12 @@
       chatUnsubscribe();
       chatUnsubscribe = null;
     }
+    chatSeenMs = 0;
+    chatSnapshotReady = false;
+    chatAutoOpenedThisVisit = false;
+    chatDocsCache = [];
+    clearTimeout(chatFireTimer);
+    if (chatOpenBtn) chatOpenBtn.classList.remove("is-alert");
     [...tracksBySessionId.keys()].forEach((sessionId) => removeTrack(sessionId));
     clearCourse();
     placementCurrent = null;
@@ -1393,16 +1404,83 @@
     if (chatComposer) chatComposer.hidden = !activeSessionRef;
   }
 
+  function chatSelfAliasKey() {
+    const name = String(activeWriterName || hashRider || "").trim();
+    return name ? aliasKey(name) : "";
+  }
+
+  function chatSeenStorageKey() {
+    return eventId ? `chaserChatSeen:${eventId}` : "";
+  }
+
+  function loadChatSeenMs() {
+    const key = chatSeenStorageKey();
+    if (!key) return 0;
+    try {
+      const raw = Number(localStorage.getItem(key));
+      return Number.isFinite(raw) && raw > 0 ? raw : 0;
+    } catch (err) {
+      return 0;
+    }
+  }
+
+  function saveChatSeenMs(ms) {
+    if (!ms || !Number.isFinite(ms)) return;
+    chatSeenMs = Math.max(chatSeenMs, ms);
+    const key = chatSeenStorageKey();
+    if (!key) return;
+    try {
+      localStorage.setItem(key, String(chatSeenMs));
+    } catch (err) { /* ignore */ }
+  }
+
+  function newestChatMs(docs) {
+    let max = 0;
+    docs.forEach((doc) => {
+      const ms = toMillis(doc.data().createdAt);
+      if (ms > max) max = ms;
+    });
+    return max;
+  }
+
+  function markChatSeenFromDocs(docs) {
+    const max = newestChatMs(docs);
+    if (max) saveChatSeenMs(max);
+  }
+
+  function isOwnChatData(data) {
+    const selfKey = chatSelfAliasKey();
+    if (!selfKey) return false;
+    const name = typeof data.name === "string" ? data.name : "";
+    return Boolean(name) && aliasKey(name) === selfKey;
+  }
+
+  function fireChatButton() {
+    if (!chatOpenBtn || !eventId) return;
+    chatOpenBtn.hidden = false;
+    chatOpenBtn.classList.remove("is-alert");
+    // reflow so re-triggering the animation works
+    void chatOpenBtn.offsetWidth;
+    chatOpenBtn.classList.add("is-alert");
+    clearTimeout(chatFireTimer);
+    chatFireTimer = setTimeout(() => {
+      if (chatOpenBtn) chatOpenBtn.classList.remove("is-alert");
+    }, 2800);
+  }
+
   function openChatDialog() {
     if (!chatDialog || !eventId) return;
     document.body.classList.add("panel-faded");
     syncChatUi();
     chatDialog.hidden = false;
+    markChatSeenFromDocs(chatDocsCache);
     if (chatListEl) chatListEl.scrollTop = chatListEl.scrollHeight;
   }
 
   function closeChatDialog() {
     stopChatWebcam();
+    markChatSeenFromDocs(chatDocsCache);
+    if (chatOpenBtn) chatOpenBtn.classList.remove("is-alert");
     if (chatDialog) chatDialog.hidden = true;
   }
 
@@ -1524,20 +1602,57 @@
     if (stickBottom) chatListEl.scrollTop = chatListEl.scrollHeight;
   }
 
+  function processChatSnapshot(snapshot) {
+    chatDocsCache = snapshot.docs.slice();
+    renderChatMessages(chatDocsCache);
+    renderConnection(true, "online");
+
+    if (!chatSnapshotReady) {
+      chatSnapshotReady = true;
+      chatSeenMs = loadChatSeenMs();
+      const unreadOther = chatDocsCache.some((doc) => {
+        const data = doc.data() || {};
+        if (isOwnChatData(data)) return false;
+        return toMillis(data.createdAt) > chatSeenMs;
+      });
+      if (unreadOther && !chatAutoOpenedThisVisit) {
+        chatAutoOpenedThisVisit = true;
+        fireChatButton();
+        openChatDialog();
+      }
+      return;
+    }
+
+    const chatOpen = chatDialog && !chatDialog.hidden;
+    let otherIncoming = false;
+    snapshot.docChanges().forEach((change) => {
+      if (change.type !== "added") return;
+      const data = change.doc.data() || {};
+      if (isOwnChatData(data)) return;
+      if (toMillis(data.createdAt) > chatSeenMs) otherIncoming = true;
+    });
+    if (!otherIncoming) return;
+    fireChatButton();
+    if (chatOpen) markChatSeenFromDocs(chatDocsCache);
+  }
+
   function attachChatSubscription(scopeRef) {
     if (chatUnsubscribe) {
       chatUnsubscribe();
       chatUnsubscribe = null;
     }
+    chatSnapshotReady = false;
+    chatAutoOpenedThisVisit = false;
+    chatDocsCache = [];
     if (!scopeRef) return;
+    chatSeenMs = loadChatSeenMs();
     chatUnsubscribe = scopeRef
       .collection(CHAT_COLLECTION)
       .orderBy("createdAt")
       .limitToLast(CHAT_LIST_LIMIT)
       .onSnapshot(
         (snapshot) => {
-          renderChatMessages(snapshot.docs);
-          renderConnection(true, "online");
+          processChatSnapshot(snapshot);
         },
         (error) => {
           console.error("Firestore chat subscription error:", error);

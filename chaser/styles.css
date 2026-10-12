@@ -1467,9 +1467,28 @@ html.page-fade-pending #page-fade {
   background: var(--color-ctrl-bg-hover);
 }
 
-body.panel-faded .chat-open:not([hidden]) {
+body.panel-faded .chat-open:not([hidden]),
+.chat-open.is-alert:not([hidden]) {
   opacity: 1;
   pointer-events: auto;
+}
+
+.chat-open.is-alert {
+  border-color: #f3ef9a;
+  color: #f3ef9a;
+  animation: chat-open-fire 0.7s ease-in-out 4;
+}
+
+@keyframes chat-open-fire {
+  0%,
+  100% {
+    transform: translateX(-50%) scale(1);
+    box-shadow: 0 2px 10px var(--color-shadow);
+  }
+  50% {
+    transform: translateX(-50%) scale(1.12);
+    box-shadow: 0 0 0 6px rgba(243, 239, 154, 0.35);
+  }
 }
 
 .chat-open[hidden] {
