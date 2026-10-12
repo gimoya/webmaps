@@ -1058,8 +1058,8 @@
 				className: 'legacy-routesnap-elev-flash',
 				html: '<span class="legacy-routesnap-elev-flash-ring"></span>' +
 					'<span class="legacy-routesnap-elev-flash-dot"></span>',
-				iconSize: [72, 72],
-				iconAnchor: [36, 36]
+				iconSize: [110, 110],
+				iconAnchor: [55, 55]
 			});
 			this._elevFlashMarker = L.marker([ll.lat, ll.lng], {
 				icon: icon,
@@ -1070,7 +1070,7 @@
 			var self = this;
 			this._elevFlashTimer = setTimeout(function () {
 				self._clearElevFlash();
-			}, 4500);
+			}, 5000);
 		},
 
 		_bindElevLoupe: function (host) {
