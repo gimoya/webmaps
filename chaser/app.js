@@ -1662,12 +1662,15 @@
       return;
     }
 
+    // Text and photo msgs share the same doc shape. createdAt often lands on a
+    // later "modified" (serverTimestamp), especially after photo upload — treat both.
     let otherIncoming = false;
     snapshot.docChanges().forEach((change) => {
-      if (change.type !== "added") return;
+      if (change.type !== "added" && change.type !== "modified") return;
       const data = change.doc.data() || {};
       if (isOwnChatData(data)) return;
-      if (toMillis(data.createdAt) > chatSeenMs) otherIncoming = true;
+      const ms = toMillis(data.createdAt);
+      if (ms && ms > chatSeenMs) otherIncoming = true;
     });
     if (!otherIncoming) return;
     highlightAndOpenNewChat();
