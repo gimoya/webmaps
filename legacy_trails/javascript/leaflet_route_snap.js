@@ -1318,13 +1318,14 @@
 
 			for (var i = 0; i < indices.length; i++) {
 				(function (legIndex) {
+					/* Drag / reroute: adopt current pen (Route profile or Gerade inkl./exkl. Höhe) */
+					self._legMode[legIndex] = self._penMode;
+					self._legProfile[legIndex] = self._profileKey;
 					if (isStraightMode(self._legMode[legIndex])) {
 						self._legLatLngs[legIndex] = self._legEndpoints(legIndex);
 						jobs.push(Promise.resolve({ legIndex: legIndex, latLngs: self._legLatLngs[legIndex] }));
 						return;
 					}
-					/* Drag / reroute: adopt the profile pen currently selected */
-					self._legProfile[legIndex] = self._profileKey;
 					needsNet = true;
 					jobs.push(
 						Promise.resolve(routeFn(self._legEndpoints(legIndex), self._profileKey, { signal: ac && ac.signal }))
