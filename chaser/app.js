@@ -545,6 +545,8 @@
   let chatSnapshotReady = false;
   let chatAutoOpenedThisVisit = false;
   let chatFireTimer = 0;
+  let chatHighlightTimer = 0;
+  let chatHighlightAfterMs = null;
   let chatDocsCache = [];
   const chatOpenBtn = document.getElementById("chat-open");
   const chatDialog = document.getElementById("chat-dialog");
@@ -926,7 +928,9 @@
     chatSnapshotReady = false;
     chatAutoOpenedThisVisit = false;
     chatDocsCache = [];
+    chatHighlightAfterMs = null;
     clearTimeout(chatFireTimer);
+    clearTimeout(chatHighlightTimer);
     if (chatOpenBtn) chatOpenBtn.classList.remove("is-alert");
     [...tracksBySessionId.keys()].forEach((sessionId) => removeTrack(sessionId));
     clearCourse();
@@ -1468,18 +1472,43 @@
     }, 2800);
   }
 
+  function clearChatMessageHighlights() {
+    chatHighlightAfterMs = null;
+    clearTimeout(chatHighlightTimer);
+    renderChatMessages(chatDocsCache);
+  }
+
+  function highlightAndOpenNewChat() {
+    chatHighlightAfterMs = chatSeenMs;
+    renderChatMessages(chatDocsCache);
+    fireChatButton();
+    openChatDialog();
+    clearTimeout(chatHighlightTimer);
+    chatHighlightTimer = setTimeout(() => {
+      clearChatMessageHighlights();
+    }, 4500);
+  }
+
   function openChatDialog() {
     if (!chatDialog || !eventId) return;
     document.body.classList.add("panel-faded");
     syncChatUi();
     chatDialog.hidden = false;
     markChatSeenFromDocs(chatDocsCache);
-    if (chatListEl) chatListEl.scrollTop = chatListEl.scrollHeight;
+    if (chatListEl) {
+      const firstNew = chatListEl.querySelector(".chat-item.is-new");
+      if (firstNew && typeof firstNew.scrollIntoView === "function") {
+        firstNew.scrollIntoView({ block: "nearest" });
+      } else {
+        chatListEl.scrollTop = chatListEl.scrollHeight;
+      }
+    }
   }
 
   function closeChatDialog() {
     stopChatWebcam();
     markChatSeenFromDocs(chatDocsCache);
+    clearChatMessageHighlights();
     if (chatOpenBtn) chatOpenBtn.classList.remove("is-alert");
     if (chatDialog) chatDialog.hidden = true;
   }
@@ -1564,6 +1593,10 @@
     if (!chatListEl) return;
     const stickBottom =
       chatListEl.scrollHeight - chatListEl.scrollTop - chatListEl.clientHeight < 48;
+    const highlightAfter =
+      chatHighlightAfterMs != null && Number.isFinite(chatHighlightAfterMs)
+        ? chatHighlightAfterMs
+        : null;
     chatListEl.replaceChildren();
     docs.forEach((doc) => {
       const data = doc.data();
@@ -1573,6 +1606,13 @@
       const atMs = toMillis(data.createdAt);
       const li = document.createElement("li");
       li.className = "chat-item";
+      if (
+        highlightAfter != null &&
+        atMs > highlightAfter &&
+        !isOwnChatData(data)
+      ) {
+        li.classList.add("is-new");
+      }
       const meta = document.createElement("div");
       meta.className = "chat-item-meta";
       const nameEl = document.createElement("span");
@@ -1617,13 +1657,11 @@
       });
       if (unreadOther && !chatAutoOpenedThisVisit) {
         chatAutoOpenedThisVisit = true;
-        fireChatButton();
-        openChatDialog();
+        highlightAndOpenNewChat();
       }
       return;
     }
 
-    const chatOpen = chatDialog && !chatDialog.hidden;
     let otherIncoming = false;
     snapshot.docChanges().forEach((change) => {
       if (change.type !== "added") return;
@@ -1632,8 +1670,7 @@
       if (toMillis(data.createdAt) > chatSeenMs) otherIncoming = true;
     });
     if (!otherIncoming) return;
-    fireChatButton();
-    if (chatOpen) markChatSeenFromDocs(chatDocsCache);
+    highlightAndOpenNewChat();
   }
 
   function attachChatSubscription(scopeRef) {
@@ -1644,6 +1681,8 @@
     chatSnapshotReady = false;
     chatAutoOpenedThisVisit = false;
     chatDocsCache = [];
+    chatHighlightAfterMs = null;
+    clearTimeout(chatHighlightTimer);
     if (!scopeRef) return;
     chatSeenMs = loadChatSeenMs();
     chatUnsubscribe = scopeRef
