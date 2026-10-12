@@ -56,12 +56,30 @@
     const ua = navigator.userAgent || "";
     const ios = /iP(hone|ad|od)/.test(ua);
     const android = /Android/i.test(ua);
+    const mac = /Macintosh/i.test(ua);
+    const chromium = /Chrome|Chromium|CriOS|Edg|EdgiOS|OPR\//i.test(ua);
+    const safari = /Safari/i.test(ua) && !chromium && !/Firefox|FxiOS/i.test(ua);
     const iosEl = document.getElementById("install-gate-ios");
     const androidEl = document.getElementById("install-gate-android");
+    const macEl = document.getElementById("install-gate-mac");
+    const desktopEl = document.getElementById("install-gate-desktop");
     const otherEl = document.getElementById("install-gate-other");
-    if (iosEl) iosEl.hidden = !ios;
-    if (androidEl) androidEl.hidden = !android || ios;
-    if (otherEl) otherEl.hidden = ios || android;
+    let matched = otherEl;
+    if (ios) matched = iosEl;
+    else if (android) matched = androidEl;
+    else if (mac && safari) matched = macEl;
+    else if (chromium) matched = desktopEl;
+    [iosEl, androidEl, macEl, desktopEl, otherEl].forEach((el) => {
+      if (!el) return;
+      const show = el === matched;
+      el.hidden = !show;
+      el.classList.toggle("is-matched", show);
+      const label = el.previousElementSibling;
+      if (label && label.classList.contains("install-gate-platform")) {
+        label.hidden = !show;
+        label.classList.toggle("is-matched", show);
+      }
+    });
   }
 
   /** Admin may use a normal browser tab via #admin=… (address bar / bookmarks). */

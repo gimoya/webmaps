@@ -983,11 +983,30 @@ body.install-required .notice-dialog {
   color: rgba(242, 239, 232, 0.88);
 }
 
+.install-gate-platform {
+  margin: 0 0 0.4rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+  color: rgba(242, 239, 232, 0.55);
+}
+
+.install-gate-platform.is-matched {
+  color: #f3ef9a;
+}
+
 .install-gate-steps {
   margin: 0 0 1.1rem;
-  padding-left: 1.2rem;
+  padding-left: 0;
+  list-style-position: inside;
   font-size: 0.95rem;
   line-height: 1.5;
+  color: rgba(242, 239, 232, 0.72);
+}
+
+.install-gate-steps.is-matched {
+  color: #f3ef9a;
 }
 
 .install-gate-steps li + li {
