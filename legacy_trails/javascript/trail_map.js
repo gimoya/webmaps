@@ -34,6 +34,8 @@ var LEGACY_BROUTER_URL = (function () {
 	} catch (e) { /* ignore */ }
 	return 'https://route.tiroltrailhead.com/brouter';
 })();
+/** Shared with nginx `X-Route-Key` — stops casual scrapers; not a user login secret. */
+var LEGACY_BROUTER_KEY = '02abf8f41a8f1ca689eb64b2221657cc475e2e45de57c11c';
 
 function legacyDefaultStartViewFromTrails() {
 	if (!trails_json) return null;
@@ -265,6 +267,7 @@ function legacyRouteSnapDownloadGpx(latLngs, profileKey, fileName) {
 var legacyRouteSnap = L.control.routeSnap({
 	position: 'topright',
 	routeUrl: LEGACY_BROUTER_URL,
+	routeKey: LEGACY_BROUTER_KEY,
 	profileKey: 'mtb'
 }).addTo(map);
 
@@ -273,8 +276,8 @@ map.on('routesnap:save', function (e) {
 	legacyShowMapToast('GPX gespeichert');
 });
 
-map.on('routesnap:error', function (e) {
-	legacyShowMapToast((e && e.message) ? e.message : 'Routing fehlgeschlagen');
+map.on('routesnap:error', function () {
+	legacyShowMapToast('Router derzeit nicht verfügbar..');
 });
 
 map.on('routesnap:activate', function () {

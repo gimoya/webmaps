@@ -8,8 +8,8 @@ Self-hosted [BRouter](https://github.com/abrensch/brouter) behind nginx for **le
 | VPS | `202.61.241.71` (netcup nano, Debian 13) |
 | App path | `/opt/brouter/` |
 | Service | `systemd` unit `brouter` → `127.0.0.1:17777` |
-| Proxy | nginx TLS + IP allow-list + CORS |
-| Digitize default | `legacy_trails/javascript/trail_map.js` → `LEGACY_BROUTER_URL` |
+| Proxy | nginx TLS + `X-Route-Key` + CORS |
+| Digitize default | `trail_map.js` → `LEGACY_BROUTER_URL` + `LEGACY_BROUTER_KEY` |
 | Local override | `?brouter=http://127.0.0.1:17777/brouter` |
 | Local tiles/jar | `C:\GitHub\brouter\brouter-1.7.9\` (gitignored) |
 
@@ -122,7 +122,7 @@ journalctl -u brouter -f
 systemctl restart brouter
 ```
 
-Local on VPS (always works; bypasses allow-list):
+Local on VPS (bypasses nginx key check):
 
 ```bash
 curl -sS -m 30 \
@@ -130,25 +130,28 @@ curl -sS -m 30 \
   | head -c 200
 ```
 
-From an **allow-listed** admin IP:
+Public HTTPS (needs `X-Route-Key` = `LEGACY_BROUTER_KEY` in `trail_map.js`):
 
 ```bash
-curl -sS -m 30 \
+KEY='…same as LEGACY_BROUTER_KEY…'
+curl -sS -m 30 -H "X-Route-Key: $KEY" \
   'https://route.tiroltrailhead.com/brouter?lonlats=11.394,47.269|11.405,47.260&profile=mtb&alternativeidx=0&format=geojson' \
   | head -c 200
 ```
 
-Expect JSON `FeatureCollection`. HTTP 403 = your public IP is not in nginx `allow`.
+Expect JSON `FeatureCollection`. HTTP **403** = missing/wrong key.
 
-### nginx allow-list / CORS
+### Auth (`X-Route-Key`) / CORS
 
 Live site: `/etc/nginx/sites-enabled/route.tiroltrailhead.com` (certbot-managed TLS).
 
-- New office IP → add `allow X.X.X.X;` next to the existing allows, `nginx -t && systemctl reload nginx`.
-- New map origin (e.g. another localhost port) → add to the `map $http_origin $brouter_cors_origin` block, reload.
-- Keep `proxy_hide_header Access-Control-Allow-Origin` (and Methods/Headers): BRouter sends `ACAO: *`; a second header breaks browsers (“Failed to fetch”).
+- No IP allow-list — any client with the shared key can route.
+- Key lives in nginx `map $http_x_route_key` **and** `trail_map.js` → `LEGACY_BROUTER_KEY` (must match). Rotate both when leaking.
+- Digitize sends header via `brouter_client.js` / RouteSnap `routeKey`.
+- New map origin → add to `map $http_origin $brouter_cors_origin`, reload.
+- Keep `proxy_hide_header Access-Control-Allow-Origin` (BRouter’s `ACAO: *` otherwise duplicates and browsers fail).
 
-Draft mirror: [`nginx-route.conf`](./nginx-route.conf) — sync important edits back into the repo after live changes.
+Draft mirror: [`nginx-route.conf`](./nginx-route.conf).
 
 ### TLS certs
 
@@ -232,23 +235,24 @@ sudo systemctl enable --now brouter
 
 ### 4. nginx + TLS
 
-1. Edit allow-list + CORS in [`nginx-route.conf`](./nginx-route.conf).
+1. Set matching `X-Route-Key` in [`nginx-route.conf`](./nginx-route.conf) + CORS origins.
 2. Install site, `nginx -t`, reload.
 3. `certbot --nginx -d route.tiroltrailhead.com`
 4. Apply `proxy_hide_header` for upstream CORS (see Maintain → nginx).
 
-### 5. Digitize URL
+### 5. Digitize URL + key
 
-Default in `trail_map.js`:
+In `trail_map.js`:
 
 ```js
 return 'https://route.tiroltrailhead.com/brouter';
+// LEGACY_BROUTER_KEY must match nginx map $http_x_route_key
 ```
 
 ### Security checklist
 
 - [ ] ufw: 22, 80, 443 only — **no** 17777
-- [ ] nginx `allow` has current admin IPs
+- [ ] nginx `X-Route-Key` map matches `LEGACY_BROUTER_KEY`
 - [ ] CORS map lists real Digitize origins only
 - [ ] Upstream CORS headers hidden; single ACAO from nginx
 - [ ] Digitize uses `https://…/brouter` (not raw `:17777`)

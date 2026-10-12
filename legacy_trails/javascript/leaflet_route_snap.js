@@ -36,6 +36,7 @@
 		options: {
 			position: 'topright',
 			routeUrl: null,
+			routeKey: null,
 			routeFn: null,
 			profiles: DEFAULT_PROFILES,
 			profileKey: 'mtb',
@@ -490,7 +491,10 @@
 					return Promise.reject(new Error('no routeFn / routeUrl'));
 				};
 			}
+			var routeKey = this.options.routeKey;
 			return function (waypoints, profile, opts) {
+				opts = opts || {};
+				if (routeKey && opts.routeKey == null) opts.routeKey = routeKey;
 				return global.BRouterClient.route(url, waypoints, profile, opts);
 			};
 		},
@@ -577,7 +581,7 @@
 					if (err && err.name === 'AbortError') return;
 					self._routing = false;
 					self._abort = null;
-					var msg = (err && err.message) ? err.message : 'Routing fehlgeschlagen';
+					var msg = 'Router derzeit nicht verfügbar..';
 					self._setStatus(msg);
 					self._syncToolState();
 					if (self._map) self._map.fire('routesnap:error', { error: err, message: msg });

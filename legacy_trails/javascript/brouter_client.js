@@ -98,7 +98,13 @@
 		}
 
 		var reqUrl = buildRequestUrl(routeUrl, waypoints, profile);
-		return fetch(reqUrl, { signal: opts.signal, credentials: 'omit' }).then(function (res) {
+		var headers = {};
+		if (opts.routeKey) headers['X-Route-Key'] = opts.routeKey;
+		return fetch(reqUrl, {
+			signal: opts.signal,
+			credentials: 'omit',
+			headers: headers
+		}).then(function (res) {
 			return res.text().then(function (text) {
 				if (!res.ok) {
 					throw new Error(text || ('BRouter HTTP ' + res.status));
