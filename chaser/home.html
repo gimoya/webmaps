@@ -19,10 +19,10 @@
   <div id="page-fade" aria-hidden="true"></div>
   <main>
     <a id="home-back" class="back-link" href="./" hidden>← Back to Chaser</a>
-    <div class="chaser-app-title chaser-app-title--page">
+    <a id="home-brand-link" class="chaser-app-title chaser-app-title--page chaser-brand-link" href="./index.html" title="Back to Chaser Map">
       <h1>GPS Chaser</h1>
       <img class="chaser-app-title-img" src="./rr_white.png" alt="">
-    </div>
+    </a>
     <p class="home-tagline">GPS Chaser in a nutshell: Each rider in a big group ride / training uses the smartphone GPS sensor to track the ride and be visible to all other riders or viewers of that ride!</p>
 
     <div class="tabs" role="tablist">
@@ -104,6 +104,13 @@
       finishEnterFade();
 
       const back = document.getElementById("home-back");
+      const brandLink = document.getElementById("home-brand-link");
+      if (brandLink) {
+        brandLink.addEventListener("click", (event) => {
+          event.preventDefault();
+          navigateWithFade(brandLink.href);
+        });
+      }
       const params = new URLSearchParams(window.location.search);
       const raw = params.get("from");
       if (raw && back) {

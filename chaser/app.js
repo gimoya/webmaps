@@ -285,6 +285,7 @@
   finishEnterPageFade();
 
   const userListEl = document.getElementById("user-list");
+  const panelRidersEl = document.getElementById("panel-riders");
   const clearSessionsBtn = document.getElementById("clear-sessions");
   const simLogEl = document.getElementById("sim-log");
   const simLines = [];
@@ -686,6 +687,7 @@
       eventPanelLine.hidden = true;
       eventPanelName.textContent = "";
       if (eventShareBtn) eventShareBtn.hidden = true;
+      if (panelRidersEl) panelRidersEl.hidden = true;
       panelHeader.classList.remove("has-event");
       syncEventTitleRideLock();
       syncPushToggleUi();
@@ -694,6 +696,7 @@
     eventPanelLine.hidden = false;
     eventPanelName.textContent = eventName;
     if (eventShareBtn) eventShareBtn.hidden = false;
+    if (panelRidersEl) panelRidersEl.hidden = false;
     panelHeader.classList.add("has-event");
     syncEventTitleRideLock();
     syncPushToggleUi();
