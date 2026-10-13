@@ -151,21 +151,9 @@ code {
   word-break: break-all;
 }
 
-.back-link {
-  display: inline-block;
-  margin: 0 0 1.25rem;
-  font-size: 0.85rem;
-  color: var(--accent);
-  text-decoration: none;
-}
-
 a {
   color: var(--accent);
 }
-
-.back-link[hidden] { display: none; }
-
-.back-link:hover { text-decoration: underline; }
 
 .tabs {
   display: flex;
