@@ -18,7 +18,7 @@
 <body>
   <div id="page-fade" aria-hidden="true"></div>
   <main>
-    <a id="home-brand-link" class="chaser-app-title chaser-app-title--page chaser-brand-link" href="./index.html" title="Back to Chaser Map">
+    <a id="home-brand-link" class="chaser-app-title chaser-app-title--page chaser-brand-link" href="../legacy_trails/index.html" title="Back to Legacy Trails">
       <h1>GPS Chaser</h1>
       <img class="chaser-app-title-img" src="./rr_white.png" alt="">
     </a>
@@ -102,26 +102,24 @@
 
       finishEnterFade();
 
-      const back = document.getElementById("home-back");
       const brandLink = document.getElementById("home-brand-link");
+      const params = new URLSearchParams(window.location.search);
+      // Same as old #home-back: ?from= is the exact caller URL (set by chaser index).
+      const rawFrom = params.get("from");
+      if (brandLink && rawFrom) {
+        try {
+          const fromUrl = new URL(rawFrom, window.location.href);
+          if (fromUrl.origin === window.location.origin) {
+            brandLink.href = fromUrl.href;
+            brandLink.title = "Back";
+          }
+        } catch (err) { /* keep default href */ }
+      }
       if (brandLink) {
         brandLink.addEventListener("click", (event) => {
           event.preventDefault();
           navigateWithFade(brandLink.href);
         });
-      }
-      const params = new URLSearchParams(window.location.search);
-      const raw = params.get("from");
-      if (raw && back) {
-        const url = new URL(raw, window.location.href);
-        if (url.origin === window.location.origin) {
-          back.href = `${url.pathname}${url.search}${url.hash}`;
-          back.hidden = false;
-          back.addEventListener("click", (event) => {
-            event.preventDefault();
-            navigateWithFade(back.href);
-          });
-        }
       }
 
       const tabUsers = document.getElementById("tab-users");
