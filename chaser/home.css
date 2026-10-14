@@ -187,6 +187,15 @@ a {
 
 .panel[hidden] { display: none; }
 
+.admin-browser-urls {
+  margin-top: 1rem;
+}
+
+.admin-browser-urls summary {
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+}
+
 #page-fade {
   position: fixed;
   inset: 0;

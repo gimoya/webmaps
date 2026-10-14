@@ -15,7 +15,7 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 - Event admin can **Lock ride** / **Unlock ride** next to the event title (`rideLocked`). Locked: new aliases cannot start; unfinished aliases can still resume.
 - Viewer **replay** replays stored traces on the map (play control under the bike button).
 - Event **chat**: floating Chat opens a live message modal for everyone on the event. Active riders can send short text and/or a camera JPEG thumbnail (≤100 KB) to Firebase Storage + Firestore.
-- Paid admin codes: Ko-fi Shop → Cloud Functions webhook reserves a pool code → buyer claims via email (or `?tx=`) → create event with `#admin=CODE`.
+- Paid admin codes: Ko-fi Shop → webhook reserves a pool code → Resend email with token + `claimCode?tx=` → create event with `#admin=CODE`.
 
 ## Project files
 
@@ -26,7 +26,8 @@ Live multi-user GPS map. Leaflet + Firestore, no auth.
 - `gpx.js` – GPX parse, 10 m thinning, namespaced write
 - `track-grade.js` – uphill / flat split for the course line
 - `home.html` / `home.css` / `chaser-title.css` – homepage: rider/admin guides, live event list, Ko-fi/claim links (`?from=`, `?tab=admins`)
-- `functions/` – `kofiWebhook` + `claimCode` (Node 22, europe-west1). Deploy **from `chaser/`** (`firebase.json` lives here)
+- `after-purchase.html` – Ko-fi thank-you target (“check your Chaser email”)
+- `functions/` – `kofiWebhook` + `claimCode` + push triggers (Node 22, europe-west1). Deploy **from `chaser/`** (`firebase.json` lives here)
 - `functions/.env.example` – param template; real `.env` is gitignored
 - `firebase.json` / `.firebaserc` – Firebase project `chaser-75e2e`
 - `.gitignore` – `functions/node_modules/`, `functions/.env`, firebase debug / `.firebase/`
@@ -410,18 +411,19 @@ Sell a **Shop** product (not Donation); webhook reserves pool code(s); claim pag
 1. Create a Shop item (digital / “code” product). Price is yours. Current shop link code in production: see `functions/.env` → `KOFI_SHOP_DIRECT_LINK_CODE` (example shop URL shape `https://ko-fi.com/s/<code>`).
 2. Copy the item’s **direct link code** (from the shop item URL / webhook `shop_items[].direct_link_code` on a test order). Bare code only in `.env`, not the full URL.
 3. Put it in `functions/.env` as `KOFI_SHOP_DIRECT_LINK_CODE=...`
-4. Set shop **redirect / thank-you** URL to the live `claimCode` function (email lookup form). Optional deep link: `…/claimCode?tx=<kofi_transaction_id>` — note Ko-fi **Delivery Ref** is not always the same as webhook `kofi_transaction_id`.
+4. Set shop **redirect / thank-you** URL to the static page `${CHASER_PUBLIC_BASE}/after-purchase.html` (tells the buyer to open the Chaser email). Do **not** point it at bare `claimCode` (no `?tx=`).
 5. Point Ko-fi webhooks at the live `kofiWebhook` URL. Verification token → Firebase secret `KOFI_VERIFY_TOKEN` (must match Ko-fi).
+6. Resend: secret `RESEND_API_KEY`; in `functions/.env` set `RESEND_FROM` (verified domain sender) and `CLAIM_CODE_URL` (live claim function URL).
 
 **Flow**
 
 1. Buyer purchases that shop product (`type === "Shop Order"` webhook only; other types ignored).
 2. `kofiWebhook` verifies token, matches `direct_link_code`, moves `quantity` codes from `unusedCodes` → `reservedCodes`, writes `kofiFulfillments/{kofi_transaction_id}` with `email` + `emailNormalized`.
-3. Buyer opens `claimCode` → enters **checkout email** → sees code(s). Lookup merges `emailNormalized` and raw `email` queries (dedupe by tx id), newest first, up to 25. Multiple purchases → listed as separate blocks with purchase time (Europe/Vienna). Single hit → direct code view. `?tx=` still works.
+3. Same request: Resend emails the buyer (when Ko-fi shared email) with the admin token(s) and `claimCode?tx=<kofi_transaction_id>`. Email-only claim listing is disabled.
 4. Buyer keeps the 5-char token for **create** and later **admin/GPX**. Opens Chaser `#admin=<code>` and creates an event → that code leaves `reservedCodes` (or `unusedCodes`).
-5. Lost token: same claim page + checkout email recovers all fulfillments for that email (when email was stored).
+5. Lost token: open the claim link from the Chaser email again (`?tx=`). No email-only recovery.
 
-**Claim page styling:** HTML is served by the function; it links `${CHASER_PUBLIC_BASE}/home.css` plus Google fonts. Static host must serve `home.css` at that base or the page looks unstyled.
+**Claim page styling:** HTML is served by the function; it links `${CHASER_PUBLIC_BASE}/home.css` plus Google fonts. Static host must serve `home.css` / `after-purchase.html` at that base.
 
 **Deploy (Blaze required)**
 
@@ -429,14 +431,16 @@ Sell a **Shop** product (not Donation); webhook reserves pool code(s); claim pag
 # Always from chaser/ (firebase.json + .firebaserc live here — not repo root)
 cd functions && npm install && cd ..
 firebase functions:secrets:set KOFI_VERIFY_TOKEN
+firebase functions:secrets:set RESEND_API_KEY
 # functions/.env (gitignored):
 #   KOFI_SHOP_DIRECT_LINK_CODE=your_shop_item_code
 #   CHASER_PUBLIC_BASE=https://YOUR_HOST/path/to/chaser
-firebase deploy --only functions
-# or only one: firebase deploy --only functions:claimCode
+#   CLAIM_CODE_URL=https://europe-west1-chaser-75e2e.cloudfunctions.net/claimCode
+#   RESEND_FROM=Chaser <you@your-verified-domain.com>
+firebase deploy --only functions:kofiWebhook,functions:claimCode
 ```
 
-After deploy, copy the printed Function URLs into Ko-fi (webhook + shop redirect). Cloud Run-style `*.a.run.app` URLs and `cloudfunctions.net` aliases both work if they hit the same functions.
+After deploy: Ko-fi webhook → `kofiWebhook`; shop thank-you → hosted `after-purchase.html`. Cloud Run-style `*.a.run.app` URLs and `cloudfunctions.net` aliases both work if they hit the same functions.
 
 Manual giveaways: hand out a code still in `unusedCodes` only (not one already in `reservedCodes`).
 

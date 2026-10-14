@@ -48,14 +48,22 @@
       <h2>Event Creation / Admins</h2>
       <ol>
         <li>Buy an admin code on <a href="https://ko-fi.com/s/4be9b1a7fc" target="_blank" rel="noopener">Ko-fi</a> (or get one from the developer).</li>
-        <li>After purchase, open the <a href="https://europe-west1-chaser-75e2e.cloudfunctions.net/claimCode" target="_blank" rel="noopener">claim page</a> (should auto-open, but you'll also have it in your confirmation message) and enter the email you used at checkout to reveal your 5-character token. Lost it later? Same claim link + email recovers it anytime. If you bought more than once, all codes for that email are listed (newest first).</li>
+        <li>After purchase, check the <strong>Chaser email from office@tiroltrailhead.com</strong> (spam too) for your 5-character token and personal claim link - you can get your the token only with that email. Ko-fi’s own “Go to your items” button opens only reminder page!</li>
         <li>Keep that token. You need it to <strong>create</strong> the event and later for <strong>admin</strong> (GPX upload, clear traces, delete riders).</li>
-        <li>Create: install Chaser, open <code>…/chaser/#admin=YOURCODE</code>, then put name/code into the form to create an event. That code-token is bound to that event permanently!</li>
-        <li>Bookmark the URL with <code>?event=event-id&amp;mode=viewing</code> and your admin fragment <code>#admin=YOURCODE</code>. NEVER share the address with your admin code publicly!</li>
-        <li>On that bookmark: On the Chaser Page you can upload GPX, clear all traces, delete a rider.</li>
-        <li>Share with riders/viewers: <code>?event=event-id&amp;mode=viewing</code> or <code>?event=event-id&amp;mode=tracking</code> — never include <code>#admin=YOURCODE</code>.</li>
-        <li>Simulation: as admin add <code>&amp;simulation=1</code> to the query. Starting a ride then walks the GPX at 10–25 km/h instead of using device GPS.</li>
+        <li>Create: install Chaser, enter your token in the create form. That token is bound to the event permanently.</li>
+        <li>On the event page as admin: upload GPX, clear traces, delete riders. Share riders/viewers a link without your admin token.</li>
       </ol>
+      <details class="admin-browser-urls">
+        <summary>Admins can control the app in 
+          normal browser via URL hashes...</summary>
+        <p class="home-tagline">Only if you open Chaser in a normal browser tab instead of the installed app.</p>
+        <ul>
+          <li>Create / admin unlock: <code>…/chaser/#admin=YOURCODE</code></li>
+          <li>Admin bookmark: <code>?event=id&amp;mode=viewing#admin=YOURCODE</code> — never share that full URL.</li>
+          <li>Share: <code>?event=id&amp;mode=viewing</code> or <code>mode=tracking</code> (no <code>#admin=</code>).</li>
+          <li>Simulation: add <code>&amp;simulation=1</code> to walk the GPX instead of GPS.</li>
+        </ul>
+      </details>
     </section>
 
     <section class="event-list-section" aria-labelledby="event-list-heading">

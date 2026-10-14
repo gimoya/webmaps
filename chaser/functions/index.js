@@ -7,11 +7,18 @@ const { getMessaging } = require("firebase-admin/messaging");
 const { logger } = require("firebase-functions");
 
 const KOFI_VERIFY_TOKEN = defineSecret("KOFI_VERIFY_TOKEN");
+const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
 const KOFI_SHOP_DIRECT_LINK_CODE = defineString("KOFI_SHOP_DIRECT_LINK_CODE", {
   default: ""
 });
 const CHASER_PUBLIC_BASE = defineString("CHASER_PUBLIC_BASE", {
   default: "https://example.com/webmaps/chaser"
+});
+const CLAIM_CODE_URL = defineString("CLAIM_CODE_URL", {
+  default: "https://europe-west1-chaser-75e2e.cloudfunctions.net/claimCode"
+});
+const RESEND_FROM = defineString("RESEND_FROM", {
+  default: ""
 });
 
 // Init once at cold start — lazy getApps() was failing for Firestore triggers.
@@ -158,12 +165,64 @@ function codesFromData(data) {
   return [];
 }
 
-function claimPageUrl(req, tx) {
-  const host = req.get("x-forwarded-host") || req.get("host") || "";
-  const proto = req.get("x-forwarded-proto") || "https";
-  const base = host ? `${proto}://${host}` : "";
-  const path = (req.path || "/claimCode").split("?")[0] || "/claimCode";
-  return `${base}${path}?tx=${encodeURIComponent(tx)}`;
+function claimLinkForTx(tx) {
+  const base = CLAIM_CODE_URL.value().replace(/\/$/, "").split("?")[0];
+  return `${base}?tx=${encodeURIComponent(tx)}`;
+}
+
+function afterPurchaseUrl() {
+  return `${CHASER_PUBLIC_BASE.value().replace(/\/$/, "")}/after-purchase.html`;
+}
+
+async function sendClaimEmail({ to, txId, codes }) {
+  const apiKey = RESEND_API_KEY.value();
+  const from = RESEND_FROM.value().trim();
+  if (!apiKey || !from) {
+    logger.error("Resend not configured (RESEND_API_KEY / RESEND_FROM)");
+    return false;
+  }
+  if (!to || typeof to !== "string") {
+    logger.warn("No buyer email on fulfillment; skip claim mail", { txId });
+    return false;
+  }
+  const claimUrl = claimLinkForTx(txId);
+  const codeLines = (codes || []).map((c) => `  ${c}`).join("\n");
+  const codeHtml = (codes || [])
+    .map((c) => `<p style="font-size:1.25rem;letter-spacing:0.12em;"><strong>${escapeHtml(c)}</strong></p>
+      <p><a href="${escapeHtml(chaserAdminUrl(c))}">Open Chaser with ${escapeHtml(c)}</a></p>`)
+    .join("");
+  const subject = "Your Chaser admin code";
+  const text = `Thanks for your purchase.
+
+Your Chaser admin token(s):
+${codeLines}
+
+Open your claim page (bookmark this):
+${claimUrl}
+
+Use the token to create/admin your event (#admin=TOKEN). Do not share it publicly.
+`;
+  const html = `<p>Thanks for your purchase.</p>
+<p>Your Chaser admin token(s):</p>
+${codeHtml}
+<p><a href="${escapeHtml(claimUrl)}">Open claim page</a> (bookmark that link).</p>
+<p>Use the token to create/admin your event (<code>#admin=TOKEN</code>). Do not share it publicly.</p>`;
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ from, to: [to], subject, html, text })
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    logger.error("Resend failed", { status: res.status, body, txId });
+    return false;
+  }
+  logger.info("Claim email sent", { txId, to });
+  return true;
 }
 
 function keepTokenNotice() {
@@ -184,41 +243,26 @@ function formatPurchaseAt(ms) {
   }).format(new Date(ms));
 }
 
-function claimHtml({ codes, code, tx, error, showLookup, emailValue, matches, purchasedAt }) {
+function claimHtml({ codes, code, tx, error, purchasedAt, hint }) {
   const list = Array.isArray(codes) && codes.length
     ? codes
     : (typeof code === "string" && code ? [code] : []);
-  const title = error && !showLookup ? "Claim" : "Your Chaser admin code";
+  const title = error ? "Claim" : (list.length ? "Your Chaser admin code" : "Claim");
 
   let body = "";
-  if (showLookup) {
+  if (hint) {
     body = `
-      <p class="muted">Enter the email you used at Ko-fi checkout.</p>
+      <p class="muted">${escapeHtml(hint)}</p>
       ${error ? `<p class="err">${escapeHtml(error)}</p>` : ""}
-      <form method="GET" action="" class="lookup">
-        <label for="email">Email</label>
-        <input id="email" name="email" type="email" required autocomplete="email"
-          value="${escapeHtml(emailValue || "")}" placeholder="you@example.com">
-        <button type="submit">Find my code</button>
-      </form>`;
-    if (Array.isArray(matches) && matches.length) {
-      body += keepTokenNotice();
-      body += `<ul class="matches">` + matches.map((m) => `
-        <li class="match">
-          ${m.purchasedAt ? `<p class="match-when">Purchased ${escapeHtml(m.purchasedAt)}</p>` : ""}
-          ${m.codes.map((c) => `<p class="code">${escapeHtml(c)}</p>
-            <p class="match-open"><a href="${escapeHtml(chaserAdminUrl(c))}">Open Chaser with ${escapeHtml(c)}</a></p>`).join("")}
-        </li>`).join("") + `</ul>`;
-    }
+      <p class="muted"><a href="${escapeHtml(afterPurchaseUrl())}">After-purchase help</a></p>`;
   } else if (error) {
     body = `<p class="err">${escapeHtml(error)}</p>
-      <p class="muted"><a href="?">Look up by email</a></p>`;
+      <p class="muted"><a href="${escapeHtml(afterPurchaseUrl())}">After-purchase help</a></p>`;
   } else {
     body = `${keepTokenNotice()}
        ${purchasedAt ? `<p class="muted">Purchased ${escapeHtml(purchasedAt)}</p>` : ""}
        ${list.map((c) => `<p class="code">${escapeHtml(c)}</p>
-       <p><a href="${escapeHtml(chaserAdminUrl(c))}">Open Chaser with ${escapeHtml(c)}</a></p>`).join("")}
-       <p class="muted"><a href="?">Look up another purchase by email</a></p>`;
+       <p><a href="${escapeHtml(chaserAdminUrl(c))}">Open Chaser with ${escapeHtml(c)}</a></p>`).join("")}`;
   }
 
   const base = CHASER_PUBLIC_BASE.value().replace(/\/$/, "");
@@ -249,24 +293,6 @@ function claimHtml({ codes, code, tx, error, showLookup, emailValue, matches, pu
       background: rgba(243, 239, 154, 0.08); font-size: 0.88rem; line-height: 1.45;
     }
     .warn strong { color: var(--accent); }
-    .lookup { display: grid; gap: 0.5rem; margin: 1rem 0; }
-    .lookup label { font-size: 0.8rem; color: var(--muted); }
-    .lookup input {
-      font: inherit; padding: 0.55rem 0.65rem; border-radius: 5px;
-      border: 1px solid var(--border); background: var(--panel); color: var(--text);
-    }
-    .lookup button {
-      font: inherit; padding: 0.55rem 0.75rem; border-radius: 5px; border: 0;
-      background: var(--accent); color: var(--bg); cursor: pointer; font-weight: 600;
-    }
-    .matches { list-style: none; margin: 1.5rem 0 0; padding: 0; display: grid; gap: 1.5rem; }
-    .match {
-      margin: 0; padding: 0.65rem 0.75rem;
-      border: 1px solid var(--border); border-radius: 6px; background: var(--panel);
-    }
-    .match-when { margin: 0 0 0.15rem; color: var(--muted); font-size: 0.8rem; }
-    .match-open { margin: 0.2rem 0 0; }
-    .match-open a { word-break: break-all; font-size: 0.85rem; }
   </style>
 </head>
 <body>
@@ -281,7 +307,7 @@ function claimHtml({ codes, code, tx, error, showLookup, emailValue, matches, pu
 exports.kofiWebhook = onRequest(
   {
     region: "europe-west1",
-    secrets: [KOFI_VERIFY_TOKEN],
+    secrets: [KOFI_VERIFY_TOKEN, RESEND_API_KEY],
     cors: false
   },
   async (req, res) => {
@@ -341,6 +367,8 @@ exports.kofiWebhook = onRequest(
     }
 
     let reserved = false;
+    let mailTo = null;
+    let mailCodes = [];
     try {
       await firestore().runTransaction(async (txn) => {
         const again = await txn.get(fulfillments().doc(txId));
@@ -385,6 +413,8 @@ exports.kofiWebhook = onRequest(
           eventId: null
         });
         reserved = true;
+        mailTo = emailRaw;
+        mailCodes = taken;
       });
     } catch (err) {
       if (err && err.message === "POOL_EMPTY") {
@@ -397,6 +427,14 @@ exports.kofiWebhook = onRequest(
       return;
     }
 
+    if (reserved) {
+      try {
+        await sendClaimEmail({ to: mailTo, txId, codes: mailCodes });
+      } catch (err) {
+        logger.error("Claim email threw", err);
+      }
+    }
+
     done(reserved ? `Reserved code for tx=${txId}` : `Idempotent hit tx=${txId}`);
   }
 );
@@ -404,110 +442,16 @@ exports.kofiWebhook = onRequest(
 exports.claimCode = onRequest(
   { region: "europe-west1", cors: false },
   async (req, res) => {
-    if (req.method !== "GET" && req.method !== "POST") {
+    if (req.method !== "GET") {
       res.status(405).send("Method Not Allowed");
       return;
     }
 
-    const tx = String((req.query && req.query.tx) || (req.body && req.body.tx) || "").trim();
-    const emailRaw = String(
-      (req.query && req.query.email) || (req.body && req.body.email) || ""
-    ).trim();
-    const emailNorm = normalizeEmail(emailRaw);
+    const tx = String((req.query && req.query.tx) || "").trim();
 
-    if (!tx && !emailNorm) {
-      res.status(200).send(claimHtml({ showLookup: true }));
-      return;
-    }
-
-    if (!tx && emailNorm) {
-      const byId = new Map();
-      const absorb = (snap) => {
-        if (!snap || snap.empty) return;
-        snap.docs.forEach((doc) => {
-          if (!byId.has(doc.id)) byId.set(doc.id, doc);
-        });
-      };
-
-      try {
-        absorb(await fulfillments()
-          .where("emailNormalized", "==", emailNorm)
-          .limit(25)
-          .get());
-        absorb(await fulfillments()
-          .where("email", "==", emailRaw)
-          .limit(25)
-          .get());
-        if (emailRaw !== emailNorm) {
-          absorb(await fulfillments()
-            .where("email", "==", emailNorm)
-            .limit(25)
-            .get());
-        }
-      } catch (err) {
-        logger.error("Email lookup failed", err);
-        res.status(500).send(claimHtml({
-          showLookup: true,
-          emailValue: emailRaw,
-          error: "Lookup failed. Try again in a moment."
-        }));
-        return;
-      }
-
-      if (!byId.size) {
-        res.status(404).send(claimHtml({
-          showLookup: true,
-          emailValue: emailRaw,
-          error: "No purchase found for that email. Use the same address as at Ko-fi checkout, or wait a few seconds after paying."
-        }));
-        return;
-      }
-
-      const rows = [...byId.values()].map((doc) => {
-        const data = doc.data() || {};
-        const created = data.createdAt && typeof data.createdAt.toMillis === "function"
-          ? data.createdAt.toMillis()
-          : 0;
-        return { id: doc.id, data, created };
-      });
-      rows.sort((a, b) => b.created - a.created);
-
-      const matches = rows.map((row) => ({
-        url: claimPageUrl(req, row.id),
-        codes: codesFromData(row.data),
-        tx: row.id,
-        purchasedAt: formatPurchaseAt(row.created)
-      })).filter((m) => m.codes.length);
-
-      if (!matches.length) {
-        res.status(500).send(claimHtml({
-          showLookup: true,
-          emailValue: emailRaw,
-          error: "Purchase found but it has no code. Contact the seller."
-        }));
-        return;
-      }
-
-      if (matches.length === 1) {
-        const only = matches[0];
-        const docRef = fulfillments().doc(only.tx);
-        const fresh = await docRef.get();
-        if (fresh.exists && !fresh.data().claimedAt) {
-          await docRef.update({ claimedAt: FieldValue.serverTimestamp() });
-        }
-        res.status(200).send(claimHtml({
-          codes: only.codes,
-          code: only.codes[0],
-          tx: only.tx,
-          purchasedAt: only.purchasedAt
-        }));
-        return;
-      }
-
+    if (!tx) {
       res.status(200).send(claimHtml({
-        showLookup: true,
-        emailValue: emailRaw,
-        matches
+        hint: "Open the claim link from the Chaser email we sent after your Ko-fi purchase (check spam). Email-only lookup is disabled."
       }));
       return;
     }
@@ -516,7 +460,7 @@ exports.claimCode = onRequest(
     if (!snap.exists) {
       res.status(404).send(claimHtml({
         tx,
-        error: "No code for that transaction. Wait a moment after purchase, or look up by email."
+        error: "No code for that transaction. Wait a moment after purchase, then use the link from your Chaser email."
       }));
       return;
     }

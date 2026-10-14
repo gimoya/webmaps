@@ -1209,7 +1209,7 @@
         writePageUrl();
         openCreateEventBoxIfAdmin();
       }
-    } catch (err) {
+      } catch (err) {
       console.error("Failed to delete event:", err);
       await showNotice("Event could not be deleted.");
     }
@@ -3420,12 +3420,12 @@
           resolve(position);
         },
         (err) => {
-          console.warn("Geolocation error:", err);
+      console.warn("Geolocation error:", err);
           noteGpsError(err);
           resolve(null);
         },
         {
-          enableHighAccuracy: true,
+      enableHighAccuracy: true,
           timeout: 20000,
           maximumAge: 0
         }
