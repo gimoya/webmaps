@@ -143,6 +143,43 @@ function chaserAdminUrl(code) {
   return `${base}/#admin=${encodeURIComponent(code)}`;
 }
 
+async function chaserOpenUrlForCode(code) {
+  const base = CHASER_PUBLIC_BASE.value().replace(/\/$/, "");
+  const adminHash = `#admin=${encodeURIComponent(code)}`;
+  try {
+    const snap = await firestore()
+      .collection("events")
+      .where("adminCode", "==", code)
+      .limit(1)
+      .get();
+    if (!snap.empty) {
+      const eventId = snap.docs[0].id;
+      return {
+        href: `${base}/?event=${encodeURIComponent(eventId)}&mode=viewing${adminHash}`,
+        label: `Open event ${eventId} (admin)`,
+        bound: true
+      };
+    }
+  } catch (err) {
+    logger.warn("Event lookup by adminCode failed", err);
+  }
+  return {
+    href: `${base}/${adminHash}`,
+    label: `Open Chaser with ${code}`,
+    bound: false
+  };
+}
+
+async function buildCodeOpens(codes) {
+  const opens = [];
+  for (const c of codes || []) {
+    if (typeof c !== "string" || !c) continue;
+    const open = await chaserOpenUrlForCode(c);
+    opens.push({ code: c, href: open.href, label: open.label, bound: open.bound });
+  }
+  return opens;
+}
+
 function escapeHtml(str) {
   return String(str)
     .replaceAll("&", "&amp;")
@@ -186,10 +223,11 @@ async function sendClaimEmail({ to, txId, codes }) {
     return false;
   }
   const claimUrl = claimLinkForTx(txId);
-  const codeLines = (codes || []).map((c) => `  ${c}`).join("\n");
-  const codeHtml = (codes || [])
-    .map((c) => `<p style="font-size:1.25rem;letter-spacing:0.12em;"><strong>${escapeHtml(c)}</strong></p>
-      <p><a href="${escapeHtml(chaserAdminUrl(c))}">Open Chaser with ${escapeHtml(c)}</a></p>`)
+  const opens = await buildCodeOpens(codes);
+  const codeLines = opens.map((o) => `  ${o.code}\n  ${o.href}`).join("\n");
+  const codeHtml = opens
+    .map((o) => `<p style="font-size:1.25rem;letter-spacing:0.12em;"><strong>${escapeHtml(o.code)}</strong></p>
+      <p><a href="${escapeHtml(o.href)}">${escapeHtml(o.label)}</a></p>`)
     .join("");
   const subject = "Your Chaser admin code";
   const text = `Thanks for your purchase.
@@ -200,13 +238,13 @@ ${codeLines}
 Open your claim page (bookmark this):
 ${claimUrl}
 
-Use the token to create/admin your event (#admin=TOKEN). Do not share it publicly.
+Use the token to create/admin your event. Do not share it publicly.
 `;
   const html = `<p>Thanks for your purchase.</p>
 <p>Your Chaser admin token(s):</p>
 ${codeHtml}
 <p><a href="${escapeHtml(claimUrl)}">Open claim page</a> (bookmark that link).</p>
-<p>Use the token to create/admin your event (<code>#admin=TOKEN</code>). Do not share it publicly.</p>`;
+<p>Use the token to create/admin your event. Do not share it publicly.</p>`;
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -226,7 +264,8 @@ ${codeHtml}
 }
 
 function keepTokenNotice() {
-  return `<p class="warn"><strong>Keep this 5-character token.</strong> You need it to <strong>create</strong> your event (<code>#admin=TOKEN</code>) and later for <strong>admin access</strong> on that event (GPX upload, clear traces, delete riders). Bookmark a URL that still includes <code>#admin=TOKEN</code>. Do not share the token publicly.</p>`;
+  const guide = `${CHASER_PUBLIC_BASE.value().replace(/\/$/, "")}/home.html?tab=admins#admin-browser-urls`;
+  return `<p class="warn"><strong>Admins can control the app also through a normal browser — for this, keep this 5-character token.</strong> Bookmakr and use it with the URL hash <code>#admin=TOKEN</code>. Do not share the token or that URL publicly. For DEtail on working wuth URL hashes, see: <a href="${escapeHtml(guide)}">Browser / URL details</a> (Event Creation).</p>`;
 }
 
 function formatPurchaseAt(ms) {
@@ -243,11 +282,15 @@ function formatPurchaseAt(ms) {
   }).format(new Date(ms));
 }
 
-function claimHtml({ codes, code, tx, error, purchasedAt, hint }) {
-  const list = Array.isArray(codes) && codes.length
-    ? codes
-    : (typeof code === "string" && code ? [code] : []);
-  const title = error ? "Claim" : (list.length ? "Your Chaser admin code" : "Claim");
+function claimHtml({ codes, code, codeOpens, tx, error, purchasedAt, hint }) {
+  const opens = Array.isArray(codeOpens) && codeOpens.length
+    ? codeOpens
+    : (Array.isArray(codes) && codes.length
+      ? codes.map((c) => ({ code: c, href: chaserAdminUrl(c), label: `Open Chaser with ${c}` }))
+      : (typeof code === "string" && code
+        ? [{ code, href: chaserAdminUrl(code), label: `Open Chaser with ${code}` }]
+        : []));
+  const title = error ? "Claim" : (opens.length ? "Your Chaser admin code" : "Claim");
 
   let body = "";
   if (hint) {
@@ -261,8 +304,8 @@ function claimHtml({ codes, code, tx, error, purchasedAt, hint }) {
   } else {
     body = `${keepTokenNotice()}
        ${purchasedAt ? `<p class="muted">Purchased ${escapeHtml(purchasedAt)}</p>` : ""}
-       ${list.map((c) => `<p class="code">${escapeHtml(c)}</p>
-       <p><a href="${escapeHtml(chaserAdminUrl(c))}">Open Chaser with ${escapeHtml(c)}</a></p>`).join("")}`;
+       ${opens.map((o) => `<p class="code">${escapeHtml(o.code)}</p>
+       <p><a href="${escapeHtml(o.href)}">${escapeHtml(o.label)}</a></p>`).join("")}`;
   }
 
   const base = CHASER_PUBLIC_BASE.value().replace(/\/$/, "");
@@ -478,14 +521,51 @@ exports.claimCode = onRequest(
     const createdMs = data.createdAt && typeof data.createdAt.toMillis === "function"
       ? data.createdAt.toMillis()
       : 0;
+    const codeOpens = await buildCodeOpens(codes);
     res.status(200).send(claimHtml({
-      codes,
-      code: codes[0],
+      codeOpens,
       tx,
       purchasedAt: formatPurchaseAt(createdMs)
     }));
   }
 );
+
+exports.onEventCreatedLinkFulfillment = onDocumentCreated("events/{eventId}", async (event) => {
+  const data = event.data.data() || {};
+  const eventId = event.params.eventId;
+  const adminCode = typeof data.adminCode === "string" ? data.adminCode.trim() : "";
+  if (!adminCode) return;
+  try {
+    const snap = await fulfillments()
+      .where("codes", "array-contains", adminCode)
+      .limit(5)
+      .get();
+    let docs = snap.docs;
+    if (!docs.length) {
+      const byCode = await fulfillments().where("code", "==", adminCode).limit(5).get();
+      docs = byCode.docs;
+    }
+    if (!docs.length) {
+      logger.info("No fulfillment for new event adminCode", { eventId, adminCode });
+      return;
+    }
+    let linked = 0;
+    for (const doc of docs) {
+      const row = doc.data() || {};
+      if (row.eventId) continue;
+      await doc.ref.update({
+        eventId,
+        redeemedAt: FieldValue.serverTimestamp()
+      });
+      linked += 1;
+    }
+    if (linked) {
+      logger.info("Linked fulfillment(s) to event", { eventId, adminCode, count: linked });
+    }
+  } catch (err) {
+    logger.error("onEventCreatedLinkFulfillment failed", err);
+  }
+});
 
 exports.onEventRideLockChanged = onDocumentUpdated("events/{eventId}", async (event) => {
   const before = event.data.before.data() || {};

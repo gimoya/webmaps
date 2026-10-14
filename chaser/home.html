@@ -53,7 +53,7 @@
         <li>Create: install Chaser, enter your token in the create form. That token is bound to the event permanently.</li>
         <li>On the event page as admin: upload GPX, clear traces, delete riders. Share riders/viewers a link without your admin token.</li>
       </ol>
-      <details class="admin-browser-urls">
+      <details class="admin-browser-urls" id="admin-browser-urls">
         <summary>Admins can control the app in 
           normal browser via URL hashes...</summary>
         <p class="home-tagline">Only if you open Chaser in a normal browser tab instead of the installed app.</p>
@@ -146,6 +146,11 @@
       tabUsers.addEventListener("click", () => show("users"));
       tabAdmins.addEventListener("click", () => show("admins"));
       if (params.get("tab") === "admins") show("admins");
+      if (window.location.hash === "#admin-browser-urls") {
+        show("admins");
+        const browserUrls = document.getElementById("admin-browser-urls");
+        if (browserUrls) browserUrls.open = true;
+      }
 
       const listEl = document.getElementById("event-list");
 

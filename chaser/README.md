@@ -68,8 +68,9 @@ Collection: `kofiFulfillments/{kofi_transaction_id}` (Cloud Functions / Admin SD
 - `shop_direct_link_code` (string)
 - `amount`, `currency` (strings from Ko-fi)
 - `email` (raw from Ko-fi, or `null` if omitted)
-- `emailNormalized` (lowercase trim, or `null`) – primary claim lookup key; always set on new Shop Orders when Ko-fi sends email
+- `emailNormalized` (lowercase trim, or `null`) – stored from checkout; claim uses `?tx=` only (not email lookup)
 - `createdAt`, `claimedAt`, `redeemedAt`, `eventId`, `message_id`, `from_name`
+- `eventId` / `redeemedAt` – set by `onEventCreatedLinkFulfillment` when an event is created with a pool/reserved token from that purchase
 - Deleting the collection does not restore old claims; the next webhook `set` recreates the collection. Pool moves (`unusedCodes` → `reservedCodes`) are already applied and are not rolled back.
 
 Everything live sits under an event:
@@ -420,7 +421,7 @@ Sell a **Shop** product (not Donation); webhook reserves pool code(s); claim pag
 1. Buyer purchases that shop product (`type === "Shop Order"` webhook only; other types ignored).
 2. `kofiWebhook` verifies token, matches `direct_link_code`, moves `quantity` codes from `unusedCodes` → `reservedCodes`, writes `kofiFulfillments/{kofi_transaction_id}` with `email` + `emailNormalized`.
 3. Same request: Resend emails the buyer (when Ko-fi shared email) with the admin token(s) and `claimCode?tx=<kofi_transaction_id>`. Email-only claim listing is disabled.
-4. Buyer keeps the 5-char token for **create** and later **admin/GPX**. Opens Chaser `#admin=<code>` and creates an event → that code leaves `reservedCodes` (or `unusedCodes`).
+4. Buyer keeps the 5-char token for **create** and later **admin/GPX**. Opens Chaser `#admin=<code>` and creates an event → that code leaves `reservedCodes` (or `unusedCodes`). Trigger `onEventCreatedLinkFulfillment` sets matching fulfillment `eventId` + `redeemedAt`. Revisit with the same `#admin=` binds that event (no second create). Claim/email “Open” links use `?event=…#admin=…` when already linked.
 5. Lost token: open the claim link from the Chaser email again (`?tx=`). No email-only recovery.
 
 **Claim page styling:** HTML is served by the function; it links `${CHASER_PUBLIC_BASE}/home.css` plus Google fonts. Static host must serve `home.css` / `after-purchase.html` at that base.
@@ -437,7 +438,7 @@ firebase functions:secrets:set RESEND_API_KEY
 #   CHASER_PUBLIC_BASE=https://YOUR_HOST/path/to/chaser
 #   CLAIM_CODE_URL=https://europe-west1-chaser-75e2e.cloudfunctions.net/claimCode
 #   RESEND_FROM=Chaser <you@your-verified-domain.com>
-firebase deploy --only functions:kofiWebhook,functions:claimCode
+firebase deploy --only functions:kofiWebhook,functions:claimCode,functions:onEventCreatedLinkFulfillment
 ```
 
 After deploy: Ko-fi webhook → `kofiWebhook`; shop thank-you → hosted `after-purchase.html`. Cloud Run-style `*.a.run.app` URLs and `cloudfunctions.net` aliases both work if they hit the same functions.

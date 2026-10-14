@@ -376,12 +376,40 @@
     return Boolean(eventId && eventAdminCode && code && code === eventAdminCode);
   }
 
-  /** Master always; pool/event codes only when not already admin on a bound event. */
+  function eventRowForAdminCode(code) {
+    if (!code || code === adminMasterPassword) return null;
+    for (const row of eventsById.values()) {
+      if (row.adminCode === code) return row;
+    }
+    return null;
+  }
+
+  /** If #admin=TOKEN already owns an event, bind it (create revisited → open that event). */
+  async function tryBindEventForAdminHash() {
+    const code = adminCodewordFromHash();
+    const row = eventRowForAdminCode(code);
+    if (!row) return false;
+    if (eventId === row.id) {
+      hideCreateEventBox();
+      return true;
+    }
+    await bindEvent(row.id, {
+      name: row.name,
+      adminCode: row.adminCode,
+      rideLocked: row.rideLocked === true
+    });
+    hideCreateEventBox();
+    applyInitialMode();
+    return true;
+  }
+
+  /** Master always; pool codes only when not already bound to an event. */
   function canOpenCreateBox() {
     if (isMasterAdmin()) return true;
     const code = adminCodewordFromHash();
     if (!isValidAdminToken(code)) return false;
     if (isEventAdmin()) return false;
+    if (eventRowForAdminCode(code)) return false;
     return true;
   }
 
@@ -702,7 +730,8 @@
     syncPushToggleUi();
   }
 
-  function openCreateEventBoxIfAdmin() {
+  async function openCreateEventBoxIfAdmin() {
+    if (await tryBindEventForAdminHash()) return;
     if (!canOpenCreateBox()) {
       hideCreateEventBox();
       return;
@@ -721,12 +750,15 @@
   }
 
   function refreshCreateBoxVisibility() {
-    if (canOpenCreateBox() && !eventId) {
-      const id = eventIdFromUrl();
-      if (!id || !eventsById.has(id)) openCreateEventBoxIfAdmin();
-      return;
-    }
-    if (!canOpenCreateBox()) hideCreateEventBox();
+    void (async () => {
+      if (await tryBindEventForAdminHash()) return;
+      if (canOpenCreateBox() && !eventId) {
+        const id = eventIdFromUrl();
+        if (!id || !eventsById.has(id)) await openCreateEventBoxIfAdmin();
+        return;
+      }
+      if (!canOpenCreateBox()) hideCreateEventBox();
+    })();
   }
 
   function attachAdminConfigSubscription() {
@@ -801,7 +833,8 @@
           syncAdminControls();
           return;
         }
-        openCreateEventBoxIfAdmin();
+        if (await tryBindEventForAdminHash()) return;
+        await openCreateEventBoxIfAdmin();
         return;
       }
       if (id === eventId && eventRef) {
@@ -829,7 +862,7 @@
   }
 
   async function createEventFromForm() {
-    if (!db || !canOpenCreateBox()) return;
+    if (!db) return;
     const name = String(eventNameEl.value || "").trim();
     const code = String(eventAdminCodeEl.value || "").trim();
       if (!name) {
@@ -844,6 +877,20 @@
       await showNotice("Admin code is missing.");
       return;
     }
+    const existingForCode = eventRowForAdminCode(code);
+    if (existingForCode) {
+      hashAdminCode = code;
+      await bindEvent(existingForCode.id, {
+        name: existingForCode.name,
+        adminCode: existingForCode.adminCode,
+        rideLocked: existingForCode.rideLocked === true
+      });
+      hideCreateEventBox();
+      applyInitialMode();
+      await showNotice("That token already has an event — opened it.");
+      return;
+    }
+    if (!canOpenCreateBox()) return;
     const id = eventSlug(name);
     if (!id) {
       await showNotice("Event name needs letters or numbers.");
