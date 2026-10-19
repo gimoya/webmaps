@@ -3252,7 +3252,7 @@
             ? `<div class="user-item-stale">Tracking paused.</div>`
             : "";
         const rank = placeRank.get(row.track.sessionId);
-        const name = rank != null
+        const name = row.finished && rank != null
           ? `<span class="chaser-place">${escapeHtml(placeListLabel(rank))}</span>${escapeHtml(row.track.name)}`
           : escapeHtml(row.track.name);
         const stop = admin && !row.finished
