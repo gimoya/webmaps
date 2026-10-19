@@ -619,6 +619,14 @@ body.panel-faded #panel-launcher {
   min-width: 0;
 }
 
+.user-item-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.user-item-stop,
 .user-item-del {
   flex-shrink: 0;
   font: inherit;
@@ -627,8 +635,20 @@ body.panel-faded #panel-launcher {
   border: 1px solid var(--color-border);
   border-radius: 4px;
   background: var(--color-bg-panel-elevated);
-  color: var(--color-danger);
   cursor: pointer;
+}
+
+.user-item-stop {
+  color: var(--color-text);
+}
+
+.user-item-stop:hover {
+  background: var(--color-ctrl-bg-hover, #4a4a54);
+  border-color: var(--color-text-muted);
+}
+
+.user-item-del {
+  color: var(--color-danger);
 }
 
 .user-item-del:hover {
@@ -741,6 +761,20 @@ body.map-zoom-low .chaser-callout-label {
   border-radius: 50%;
   border: 2px solid var(--color-white);
   box-shadow: 0 0 0 2px var(--color-marker-ring);
+}
+
+.chaser-start-bullet-icon {
+  background: transparent;
+  border: 0;
+}
+
+.chaser-start-bullet {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--color-white);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 
 .chaser-accuracy-ring {
@@ -1182,6 +1216,33 @@ body.is-writing .viewer-replay-stop[hidden] {
 
 body.is-replaying .viewer-replay-label {
   display: block;
+}
+
+.viewer-replay-scrub {
+  display: none;
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 18px;
+  z-index: 1000;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+body.is-replaying .viewer-replay-scrub:not([hidden]) {
+  display: block;
+}
+
+.viewer-replay-scrub input[type="range"] {
+  display: block;
+  width: 100%;
+  margin: 0;
+  accent-color: var(--color-ctrl-fg-active, #f3ef9a);
+  cursor: pointer;
 }
 
 .viewer-replay[aria-pressed="true"] {

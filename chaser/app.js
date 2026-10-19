@@ -13,12 +13,17 @@
   const WRITE_INTERVAL_MS = 5 * 1000;
   const SIGNAL_STALE_MS = 5 * 1000;
   const GAP_DOT_SEC = 20;
+  const GAP_DOT_M = 100;
+  /** First/last fraction of a time-gap run that stays visible (dashed); middle is omitted. */
+  const GAP_FADE_END = 0.3;
+  const GAP_FADE_STEPS = 10;
   const MIN_MOVE_M = 5;
   const MAX_SPEED_MPS = 30;
   const SIM_ACCURACY_M = 8;
   const SIM_SPEED_MIN_KMH = 10;
   const SIM_SPEED_MAX_KMH = 25;
   const TRACE_LINE_PAUSED = "..currently not tracking.";
+  const TRACE_LINE_FINISHED = "Track stopped/finished";
   const TRACE_LINE_WRITING = "Tracing points every 5s";
   const TRACE_LINE_SLOW = "Slow/no rider movement";
   const SESSIONS_COLLECTION = "trackingSessions";
@@ -598,6 +603,8 @@
   let replayFrame = 0;
   let replayLayer = null;
   let replayRuntime = null;
+  let replayScrubbing = false;
+  const REPLAY_SLIDER_MAX = 1000;
 
   addGpxLoadControl();
   addSessionCenterControl();
@@ -1082,6 +1089,15 @@
     document.getElementById("viewer-replay-stop").addEventListener("click", () => {
       if (replayActive) stopReplay();
     });
+    const replaySlider = replaySliderEl();
+    if (replaySlider) {
+      replaySlider.addEventListener("pointerdown", beginReplayScrub);
+      replaySlider.addEventListener("touchstart", beginReplayScrub, { passive: true });
+      replaySlider.addEventListener("input", onReplaySliderInput);
+      replaySlider.addEventListener("pointerup", endReplayScrub);
+      replaySlider.addEventListener("pointercancel", endReplayScrub);
+      replaySlider.addEventListener("change", endReplayScrub);
+    }
     document.getElementById("rider-cancel").addEventListener("click", () => {
       clearTimeout(riderCloseTimer);
       resetRiderForm();
@@ -1394,6 +1410,40 @@
       console.error("Failed to clear tracking sessions:", err);
       await showNotice("Tracking sessions could not be cleared.");
     }
+  }
+
+  async function adminStopTrackingSession(sessionId) {
+    if (!db || !eventRef || !isEventAdmin() || !sessionId) return;
+    if (!isMasterAdmin()) {
+      const code = adminCodewordFromHash();
+      if (!code || code !== eventAdminCode) return;
+    }
+    const track = tracksBySessionId.get(sessionId);
+    if (!track || track.finished === true) return;
+    const label = track.name ? track.name : sessionId;
+    const confirmed = await showNotice(
+      `Stop tracking {alias}? Their GPS writer will stop. The trace stays on the map.`,
+      { alias: label, confirmLabel: "Stop tracking", cancelLabel: "Cancel" }
+    );
+    if (!confirmed) return;
+
+    const sessionRef = eventRef.collection(SESSIONS_COLLECTION).doc(sessionId);
+    try {
+      await sessionRef.update({
+        finished: true,
+        endedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (err) {
+      console.error("Failed to admin-stop tracking session:", err);
+      await showNotice("Could not stop that rider.");
+      return;
+    }
+
+    track.finished = true;
+    if (track.pointsReady) dropPointsListener(track);
+    await lockPlacement(sessionId);
+    if (activeSessionRef && activeSessionRef.id === sessionId) clearWriter();
+    renderTracksAndPanel();
   }
 
   async function deleteTrackingSession(sessionId) {
@@ -2118,6 +2168,13 @@
   }
 
   function centerOnListedUser(event) {
+    const stopBtn = event.target.closest("[data-session-stop]");
+    if (stopBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      adminStopTrackingSession(stopBtn.dataset.sessionStop);
+      return;
+    }
     const delBtn = event.target.closest("[data-session-delete]");
     if (delBtn) {
       event.preventDefault();
@@ -2542,6 +2599,10 @@
         tracksLayer.removeLayer(track.marker);
         track.marker = null;
       }
+      if (track.startMarker) {
+        tracksLayer.removeLayer(track.startMarker);
+        track.startMarker = null;
+      }
       if (track.accuracyRing) {
         tracksLayer.removeLayer(track.accuracyRing);
         track.accuracyRing = null;
@@ -2579,21 +2640,21 @@
       interactive: false
     };
     actor.lines.clearLayers();
-    actor.lines.addLayer(L.polyline(
-      points.map((point) => [point.lat, point.lon]),
-      {
-        color: "#e0e0e0",
-        weight: 2.5,
-        opacity: 0.4,
-        lineCap: "round",
-        lineJoin: "round",
-        interactive: false
+    appendTraceRunsWithBackdrop(actor.lines, points, lineStyle);
+    const start = actor.source.points[0];
+    if (start) {
+      const startIcon = traceStartBulletIcon(actor.source.color);
+      if (!actor.startMarker) {
+        actor.startMarker = L.marker([start.lat, start.lon], {
+          icon: startIcon,
+          interactive: false,
+          keyboard: false
+        }).addTo(replayLayer);
+      } else {
+        actor.startMarker.setLatLng([start.lat, start.lon]);
+        actor.startMarker.setIcon(startIcon);
       }
-    ));
-    traceRuns(points).forEach((run) => {
-      const style = run.dotted ? { ...lineStyle, dashArray: "1 6" } : lineStyle;
-      actor.lines.addLayer(L.polyline(run.latLngs, style));
-    });
+    }
     const icon = traceMarkerIcon(actor.source.name, actor.source.color, actor.cup);
     if (!actor.marker) {
       actor.marker = L.marker([latest.lat, latest.lon], {
@@ -2607,10 +2668,27 @@
     actor.marker.setIcon(icon);
   }
 
+  function replaySliderEl() {
+    return document.getElementById("viewer-replay-slider");
+  }
+
+  function replayScrubEl() {
+    return document.getElementById("viewer-replay-scrub");
+  }
+
+  function syncReplaySlider(elapsedMs) {
+    const slider = replaySliderEl();
+    if (!slider || !replayRuntime || replayScrubbing) return;
+    const longest = Math.max(1, replayRuntime.longestMs);
+    const ratio = Math.min(1, Math.max(0, elapsedMs / longest));
+    slider.value = String(Math.round(ratio * REPLAY_SLIDER_MAX));
+  }
+
   function syncReplayControls() {
     const playBtn = document.getElementById("viewer-replay");
     const stopBtn = document.getElementById("viewer-replay-stop");
     const label = document.querySelector(".viewer-replay-label");
+    const scrub = replayScrubEl();
     document.body.classList.toggle("is-replaying", replayActive);
     document.body.classList.toggle("is-replay-paused", replayActive && replayPaused);
     if (playBtn) {
@@ -2627,6 +2705,7 @@
       }
     }
     if (stopBtn) stopBtn.hidden = !replayActive;
+    if (scrub) scrub.hidden = !replayActive;
     if (label) {
       label.textContent = !replayActive ? "replay" : (replayPaused ? "paused" : "replay");
     }
@@ -2639,39 +2718,64 @@
     return replayRuntime.baseElapsedMs + (now - replayRuntime.wallStart) * replayRuntime.speed;
   }
 
-  function tickReplay(now) {
-    if (!replayActive || replayPaused || !replayRuntime) return;
-    const elapsed = replayElapsedMs(now);
+  function clearReplayActor(actor) {
+    if (actor.marker && replayLayer) {
+      replayLayer.removeLayer(actor.marker);
+      actor.marker = null;
+    }
+    if (actor.startMarker && replayLayer) {
+      replayLayer.removeLayer(actor.startMarker);
+      actor.startMarker = null;
+    }
+    if (actor.lines) actor.lines.clearLayers();
+    actor.painted = 0;
+    actor.cup = "";
+  }
+
+  /** Apply source-time elapsed; returns true when every actor has shown all points. */
+  function applyReplayAtElapsed(elapsed) {
+    if (!replayRuntime) return true;
     const actors = replayRuntime.actors;
     let finished = true;
-    let moved = false;
     actors.forEach((actor) => {
       const points = actor.source.points;
-      let count = actor.shown;
+      let count = 0;
       while (count < points.length && points[count].recordedAtMs - actor.source.t0 <= elapsed) {
         count += 1;
       }
       if (count < points.length) finished = false;
-      if (count !== actor.shown) moved = true;
       actor.shown = count;
     });
-    if (!moved) {
-      if (finished) {
-        stopReplay();
-        return;
-      }
-      replayFrame = requestAnimationFrame(tickReplay);
-      return;
-    }
     const cups = marksFromOrder(placementCurrent && placementCurrent.order);
     actors.forEach((actor) => {
-      if (!actor.shown) return;
+      if (!actor.shown) {
+        clearReplayActor(actor);
+        return;
+      }
       const cup = cups.get(actor.source.sessionId) || "";
       if (actor.marker && actor.cup === cup && actor.painted === actor.shown) return;
       actor.cup = cup;
       actor.painted = actor.shown;
       paintReplayActor(actor);
     });
+    return finished;
+  }
+
+  function seekReplay(elapsedMs) {
+    if (!replayActive || !replayRuntime) return;
+    const longest = Math.max(0, replayRuntime.longestMs);
+    const elapsed = Math.min(longest, Math.max(0, elapsedMs));
+    replayRuntime.baseElapsedMs = elapsed;
+    replayRuntime.wallStart = performance.now();
+    applyReplayAtElapsed(elapsed);
+    syncReplaySlider(elapsed);
+  }
+
+  function tickReplay(now) {
+    if (!replayActive || replayPaused || !replayRuntime || replayScrubbing) return;
+    const elapsed = replayElapsedMs(now);
+    const finished = applyReplayAtElapsed(elapsed);
+    syncReplaySlider(elapsed);
     if (finished) {
       stopReplay();
       return;
@@ -2696,20 +2800,29 @@
     }
     replayActive = true;
     replayPaused = false;
+    replayScrubbing = false;
     hideLiveTraceLayers();
     replayLayer = L.layerGroup().addTo(map);
     replayRuntime = {
-      speed: longestMs / REPLAY_DURATION_MS,
+      speed: Math.max(longestMs, 1) / REPLAY_DURATION_MS,
+      longestMs: Math.max(longestMs, 1),
       baseElapsedMs: 0,
       wallStart: performance.now(),
       actors: sources.map((source) => ({
         source,
         shown: 0,
+        painted: 0,
         cup: "",
         lines: L.layerGroup().addTo(replayLayer),
-        marker: null
+        marker: null,
+        startMarker: null
       }))
     };
+    const slider = replaySliderEl();
+    if (slider) {
+      slider.max = String(REPLAY_SLIDER_MAX);
+      slider.value = "0";
+    }
     syncReplayControls();
     replayFrame = requestAnimationFrame(tickReplay);
   }
@@ -2721,11 +2834,13 @@
     replayPaused = true;
     cancelAnimationFrame(replayFrame);
     replayFrame = 0;
+    syncReplaySlider(replayRuntime.baseElapsedMs);
     syncReplayControls();
   }
 
   function resumeReplay() {
     if (!replayActive || !replayPaused || !replayRuntime) return;
+    replayScrubbing = false;
     replayPaused = false;
     replayRuntime.wallStart = performance.now();
     syncReplayControls();
@@ -2736,6 +2851,7 @@
     if (!replayActive) return;
     replayActive = false;
     replayPaused = false;
+    replayScrubbing = false;
     cancelAnimationFrame(replayFrame);
     replayFrame = 0;
     replayRuntime = null;
@@ -2745,6 +2861,27 @@
       replayLayer = null;
     }
     renderTracksAndPanel();
+  }
+
+  function beginReplayScrub() {
+    if (!replayActive || !replayRuntime) return;
+    replayScrubbing = true;
+    if (!replayPaused) pauseReplay();
+  }
+
+  function onReplaySliderInput() {
+    if (!replayActive || !replayRuntime) return;
+    const slider = replaySliderEl();
+    if (!slider) return;
+    if (!replayScrubbing) beginReplayScrub();
+    const ratio = Number(slider.value) / REPLAY_SLIDER_MAX;
+    seekReplay(ratio * replayRuntime.longestMs);
+  }
+
+  function endReplayScrub() {
+    if (!replayScrubbing) return;
+    replayScrubbing = false;
+    // Stay paused; Play resumes from this scrub position at default speed.
   }
 
   function renderTrack(track) {
@@ -2767,15 +2904,6 @@
     } else {
       track.lines.clearLayers();
     }
-
-    track.lines.addLayer(L.polyline(latLngs, {
-      color: "#e0e0e0",
-      weight: 2.5,
-      opacity: 0.4,
-      lineCap: "round",
-      lineJoin: "round",
-      interactive: false
-    }));
 
     const hit = L.polyline(latLngs, {
       color: track.color,
@@ -2801,14 +2929,10 @@
     );
     track.lines.addLayer(hit);
 
-    traceRuns(track.points).forEach((run) => {
-      const style = run.dotted
-        ? { ...lineStyle, dashArray: "1 6" }
-        : lineStyle;
-      track.lines.addLayer(L.polyline(run.latLngs, style));
-    });
+    appendTraceRunsWithBackdrop(track.lines, track.points, lineStyle);
 
     upsertAccuracyRing(track, latestPoint);
+    upsertStartBullet(track, track.points[0]);
     upsertMarker(track, latestPoint);
   }
 
@@ -2819,7 +2943,7 @@
 
     const runs = [];
     for (let index = 1; index < points.length; index += 1) {
-      const dotted = gapSec(points[index], points[index - 1]) > GAP_DOT_SEC;
+      const dotted = isGapSegment(points[index - 1], points[index]);
       const end = [points[index].lat, points[index].lon];
       const last = runs[runs.length - 1];
       if (last && last.dotted === dotted) {
@@ -2832,6 +2956,76 @@
       }
     }
     return runs;
+  }
+
+  /** Gap style if time > 20s OR distance > 100 m (teleports that still passed the speed filter). */
+  function isGapSegment(previous, current) {
+    const sec = gapSec(current, previous);
+    if (sec != null && sec > GAP_DOT_SEC) return true;
+    return haversineMeters(
+      [previous.lat, previous.lon],
+      [current.lat, current.lon]
+    ) > GAP_DOT_M;
+  }
+
+  /** Split a gap run into short dashed stubs with opacity 1→0 then 0→1 on the ends; middle omitted. */
+  function dottedFadeChunks(latLngs) {
+    if (!latLngs || latLngs.length < 2) return [];
+    const total = courseDistance(latLngs);
+    if (!(total > 0)) return [];
+    const chunks = [];
+    const pushSlice = (t0, t1, opacity) => {
+      if (opacity < 0.05) return;
+      const a = pointAtDistance(latLngs, t0 * total);
+      const b = pointAtDistance(latLngs, t1 * total);
+      if (!a || !b) return;
+      if (a[0] === b[0] && a[1] === b[1]) return;
+      chunks.push({ latLngs: [a, b], opacity });
+    };
+    for (let i = 0; i < GAP_FADE_STEPS; i += 1) {
+      const t0 = (GAP_FADE_END * i) / GAP_FADE_STEPS;
+      const t1 = (GAP_FADE_END * (i + 1)) / GAP_FADE_STEPS;
+      const mid = (t0 + t1) / 2;
+      pushSlice(t0, t1, 1 - mid / GAP_FADE_END);
+    }
+    for (let i = 0; i < GAP_FADE_STEPS; i += 1) {
+      const t0 = 1 - GAP_FADE_END + (GAP_FADE_END * i) / GAP_FADE_STEPS;
+      const t1 = 1 - GAP_FADE_END + (GAP_FADE_END * (i + 1)) / GAP_FADE_STEPS;
+      const mid = (t0 + t1) / 2;
+      pushSlice(t0, t1, (mid - (1 - GAP_FADE_END)) / GAP_FADE_END);
+    }
+    return chunks;
+  }
+
+  function appendTraceRun(layerGroup, run, lineStyle) {
+    if (!run || !run.latLngs || run.latLngs.length < 2) return;
+    if (!run.dotted) {
+      layerGroup.addLayer(L.polyline(run.latLngs, lineStyle));
+      return;
+    }
+    const baseOpacity = lineStyle.opacity != null ? lineStyle.opacity : 1;
+    dottedFadeChunks(run.latLngs).forEach((chunk) => {
+      layerGroup.addLayer(L.polyline(chunk.latLngs, {
+        ...lineStyle,
+        dashArray: "1 6",
+        opacity: baseOpacity * chunk.opacity
+      }));
+    });
+  }
+
+  const TRACE_BACKDROP_STYLE = {
+    color: "#e0e0e0",
+    weight: 2.5,
+    opacity: 0.4,
+    lineCap: "round",
+    lineJoin: "round",
+    interactive: false
+  };
+
+  function appendTraceRunsWithBackdrop(layerGroup, points, lineStyle) {
+    const runs = traceRuns(points);
+    runs.forEach((run) => appendTraceRun(layerGroup, run, TRACE_BACKDROP_STYLE));
+    runs.forEach((run) => appendTraceRun(layerGroup, run, lineStyle));
   }
 
   function upsertAccuracyRing(track, point) {
@@ -2882,7 +3076,7 @@
   }
 
   function traceStatusLine(track) {
-    if (track.finished) return TRACE_LINE_PAUSED;
+    if (track.finished) return TRACE_LINE_FINISHED;
     if (activeSessionRef && track.sessionId === activeSessionRef.id) return writerTraceLine;
     if (signalStaleFor(track)) return TRACE_LINE_PAUSED;
     return TRACE_LINE_WRITING;
@@ -2923,6 +3117,30 @@
     });
   }
 
+  function traceStartBulletIcon(color) {
+    return L.divIcon({
+      className: "chaser-start-bullet-icon",
+      html: `<span class="chaser-start-bullet" style="background:${color}"></span>`,
+      iconSize: [10, 10],
+      iconAnchor: [5, 5]
+    });
+  }
+
+  function upsertStartBullet(track, point) {
+    if (!point) return;
+    const icon = traceStartBulletIcon(track.color);
+    if (!track.startMarker) {
+      track.startMarker = L.marker([point.lat, point.lon], {
+        icon,
+        interactive: false,
+        keyboard: false
+      }).addTo(tracksLayer);
+      return;
+    }
+    track.startMarker.setLatLng([point.lat, point.lon]);
+    track.startMarker.setIcon(icon);
+  }
+
   function upsertMarker(track, point) {
     const icon = traceMarkerIcon(track.name, track.color, placeCups.get(track.sessionId) || "");
     const popup = markerPopup(track, point);
@@ -2949,6 +3167,7 @@
 
     if (track.unsubscribePoints) track.unsubscribePoints();
     if (track.marker) tracksLayer.removeLayer(track.marker);
+    if (track.startMarker) tracksLayer.removeLayer(track.startMarker);
     if (track.accuracyRing) tracksLayer.removeLayer(track.accuracyRing);
     if (track.lines) tracksLayer.removeLayer(track.lines);
     tracksBySessionId.delete(sessionId);
@@ -3036,15 +3255,21 @@
         const name = rank != null
           ? `<span class="chaser-place">${escapeHtml(placeListLabel(rank))}</span>${escapeHtml(row.track.name)}`
           : escapeHtml(row.track.name);
+        const stop = admin && !row.finished
+          ? `<button type="button" class="user-item-stop" data-session-stop="${escapeHtml(row.track.sessionId)}" title="Stop tracking">Stop</button>`
+          : "";
         const del = admin
           ? `<button type="button" class="user-item-del" data-session-delete="${escapeHtml(row.track.sessionId)}" title="Delete Rider">Del</button>`
+          : "";
+        const actions = (stop || del)
+          ? `<div class="user-item-actions">${stop}${del}</div>`
           : "";
 
       return `
           <li class="user-item${row.own ? " is-tracking" : ""}" data-track-id="${escapeHtml(row.track.sessionId)}"${sessionAttribute} style="border-left-color:${row.track.color}">
             <div class="user-item-head">
               <div class="user-item-name notice-alias" style="color:${row.track.color}">${name}</div>
-              ${del}
+              ${actions}
           </div>
             ${warning}
             <div class="user-item-meta">${row.meta}</div>

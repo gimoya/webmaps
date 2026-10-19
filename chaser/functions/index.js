@@ -265,7 +265,7 @@ ${codeHtml}
 
 function keepTokenNotice() {
   const guide = `${CHASER_PUBLIC_BASE.value().replace(/\/$/, "")}/home.html?tab=admins#admin-browser-urls`;
-  return `<p class="warn"><strong>Admins can control the app also through a normal browser — for this, keep this 5-character token.</strong> Bookmakr and use it with the URL hash <code>#admin=TOKEN</code>. Do not share the token or that URL publicly. For DEtail on working wuth URL hashes, see: <a href="${escapeHtml(guide)}">Browser / URL details</a> (Event Creation).</p>`;
+  return `<p class="warn"><strong>Admins can control the app also through a normal browser — for this, keep this 5-character token.</strong> Bookmark and use it with the URL hash <code>#admin=TOKEN</code>. Do not share the token or that URL publicly. For DEtail on working wuth URL hashes, see: <a href="${escapeHtml(guide)}">Browser / URL details</a> (Event Creation).</p>`;
 }
 
 function formatPurchaseAt(ms) {
