@@ -235,9 +235,16 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: clamp(30px, 7vw, 42px);
+    font-size: clamp(14px, 5.5vw, 24px); /* match .trails-welcome-head-line */
     line-height: 1;
     padding: 0;
+}
+
+.trails-welcome-head-gem-img {
+    height: 2em;
+    width: auto;
+    object-fit: contain;
+    display: block;
 }
 
 .trails-welcome-box h3 {
@@ -565,6 +572,14 @@ header h1 {
     text-shadow: 
         3px 3px 0 #000;
     display: inline-block;
+}
+
+.header-gem {
+    height: 1em;
+    width: auto;
+    vertical-align: -0.28em;
+    display: inline-block;
+    margin-right: 0.15em;
 }
 
 @media (max-width: 480px) and (orientation: portrait) {
