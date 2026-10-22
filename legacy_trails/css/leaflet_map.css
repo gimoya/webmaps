@@ -503,6 +503,22 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
     padding: 8px 10px;
 }
 
+.trailPopupClass .trail-popup-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+    align-items: stretch;
+}
+
+.trailPopupClass .trail-popup-actions .legacy-action-btn {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    margin-top: 0;
+    padding: 8px 6px;
+    font-size: 13px;
+}
+
 /*** General ***/
 
 html, body {

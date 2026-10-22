@@ -889,6 +889,7 @@ map.on('popupopen', function (e) {
 	legacyMountPopupCloseInFrame(e.popup);
 	legacyEnsureGpxDownloadUrl(e.popup);
 	legacyBindGpxKofiReminder(e.popup);
+	legacyBindTrailFeedbackMailto(e.popup);
 });
 map.on('popupclose', function (e) {
 	legacyRevokeGpxDownloadUrl(e.popup);
@@ -1277,6 +1278,35 @@ function legacyBindGpxKofiReminder(popup) {
 	});
 }
 
+var LEGACY_FEEDBACK_EMAIL = 'office@tiroltrailhead.com';
+
+function legacyBindTrailFeedbackMailto(popup) {
+	var el = popup && popup.getElement();
+	if (!el || !el.classList.contains('trailPopupClass')) {
+		return;
+	}
+	var link = el.querySelector('.trail-feedback-link');
+	if (!link || link._legacyFeedbackBound) {
+		return;
+	}
+	link._legacyFeedbackBound = true;
+	link.addEventListener('click', function (e) {
+		e.preventDefault();
+		var mailto = link.getAttribute('href');
+		var openMail = function () {
+			if (mailto) window.location.href = mailto;
+		};
+		if (navigator.clipboard && navigator.clipboard.writeText) {
+			navigator.clipboard.writeText(LEGACY_FEEDBACK_EMAIL).then(function () {
+				legacyShowMapToast('E-Mail kopiert');
+				openMail();
+			}, openMail);
+		} else {
+			openMail();
+		}
+	});
+}
+
 function legacyDismissWelcomePanel(overlay) {
 	if (!overlay) return;
 	var active = document.activeElement;
@@ -1449,15 +1479,22 @@ $.getJSON('data/my_trails_z.geojson', function(json) {
 		}
 		
 		// GPX blob URL is created lazily on popupopen (see legacyEnsureGpxDownloadUrl)
+		var trailName = feature.properties.name || '';
 		var gpxLink = document.createElement("a");
 		gpxLink.className = "legacy-action-btn gpx-download-link";
-		gpxLink.download = feature.properties.name + ".gpx";
-		gpxLink.textContent = "GPX-Download";
+		gpxLink.download = trailName + ".gpx";
+		gpxLink.textContent = "GPX";
+
+		var feedbackLink = document.createElement("a");
+		feedbackLink.className = "legacy-action-btn trail-feedback-link";
+		feedbackLink.href = "mailto:webmap@tiroltrailhead.com?subject=" +
+			encodeURIComponent("Feedback zu " + trailName);
+		feedbackLink.textContent = "Feedback";
 		
 		var popupContent = 
-			'<p><div class="pop_cont_name">' + feature.properties.name + '</div></p>' +
+			'<p><div class="pop_cont_name">' + trailName + '</div></p>' +
 			'<div class="pop_cont_text">' + feature.properties.Trail_Text + '</div>' +
-			gpxLink.outerHTML +
+			'<div class="trail-popup-actions">' + gpxLink.outerHTML + feedbackLink.outerHTML + '</div>' +
 			'<div class="kofi_reminder">' +
 				'<p>👾 Dein GPX-Track wird heruntergeladen..</p>' +
 				'<div class="legacy-panel-rule" aria-hidden="true"></div>' +
