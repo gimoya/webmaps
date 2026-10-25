@@ -18,8 +18,8 @@ OUT = Path(__file__).resolve().parent.parent
 SOURCE_USUAL = OUT / "icon_source.png"
 SOURCE_PWA = OUT / "icon_source_pwa.png"
 
-# Extra inset on PWA homescreen icons (~4% each side → content at 92%)
-PWA_CONTENT_FRAC = 0.92
+# Extra inset on PWA homescreen icons
+PWA_CONTENT_FRAC = 0.90
 
 USUAL_SIZES = {
 	"favicon-16x16.png": 16,
@@ -51,7 +51,7 @@ def resize_square(square: Image.Image, dim: int) -> Image.Image:
 
 def resize_padded(square: Image.Image, dim: int, content_frac: float) -> Image.Image:
 	"""Resize with transparent padding so content fills content_frac of the canvas."""
-	out = Image.new("RGBA", (dim, dim), (0, 0, 0, 0))
+	out = Image.new("RGBA", (dim, dim), (34, 34, 34, 255))
 	inner = max(1, int(round(dim * content_frac)))
 	scaled = square.resize((inner, inner), Image.Resampling.LANCZOS)
 	off = (dim - inner) // 2
@@ -93,6 +93,8 @@ def main() -> None:
 	)
 	print("wrote favicon.ico")
 	print("sources left untouched")
+	print(f"PWA icon padding fraction was: {100 - PWA_CONTENT_FRAC}")
+	input("Press Enter to exit...")
 
 
 if __name__ == "__main__":
