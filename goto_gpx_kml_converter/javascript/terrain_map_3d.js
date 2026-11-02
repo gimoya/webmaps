@@ -162,6 +162,7 @@
 		this._labelSyncBound = false;
 		this._trailBoundsByName = null;
 		this._userGpxData = EMPTY_FC;
+		this._pointsData = EMPTY_FC;
 		this._flashTimer = null;
 		this._popup = null;
 		this._viewportResizeBound = false;
@@ -392,24 +393,46 @@
 	TerrainMap3D.prototype.prefetchTrails = function () {
 		if (this._trailsPromise) return this._trailsPromise;
 		if (!this._trailsData) this._trailsData = EMPTY_FC;
+		if (!this._pointsData) this._pointsData = EMPTY_FC;
 		if (!this._labelData) this._labelData = EMPTY_FC;
 		if (!this._trailBoundsByName) this._trailBoundsByName = Object.create(null);
 		this._trailsPromise = Promise.resolve(this._trailsData);
 		return this._trailsPromise;
 	};
 
+	function splitLineAndPointFeatures(features) {
+		var lines = [];
+		var points = [];
+		for (var i = 0; i < features.length; i++) {
+			var f = features[i];
+			if (!f || !f.geometry) continue;
+			var t = f.geometry.type;
+			if (t === 'Point') points.push(f);
+			else if (t === 'LineString' || t === 'MultiLineString') lines.push(f);
+		}
+		return {
+			lines: { type: 'FeatureCollection', features: lines },
+			points: { type: 'FeatureCollection', features: points }
+		};
+	}
+
 	/** Replace displayed tracks (uploaded converter FeatureCollection). */
 	TerrainMap3D.prototype.setTracks = function (fc) {
 		var data = fc && fc.type === 'FeatureCollection' ? fc : EMPTY_FC;
 		var features = (data.features || []).slice();
 		cleanTrailFeatureNames(features);
-		this._trailsData = { type: 'FeatureCollection', features: features };
-		var labelPack = buildTrailLabelPoints(features);
+		var split = splitLineAndPointFeatures(features);
+		this._trailsData = split.lines;
+		this._pointsData = split.points;
+		var labelPack = buildTrailLabelPoints(split.lines.features);
 		this._labelData = labelPack.labels;
 		this._trailBoundsByName = labelPack.boundsByName;
 		this._trailsPromise = Promise.resolve(this._trailsData);
 		if (this.map && this.map.getSource('trails')) {
 			this.map.getSource('trails').setData(this._trailsData);
+		}
+		if (this.map && this.map.getSource('points')) {
+			this.map.getSource('points').setData(this._pointsData);
 		}
 		if (this.visible) this._syncVisibleLabelMarkers();
 	};
@@ -554,6 +577,23 @@
 							'line-color': '#000000',
 							'line-width': 18,
 							'line-opacity': 0
+						}
+					});
+
+					self.map.addSource('points', {
+						type: 'geojson',
+						data: self._pointsData || EMPTY_FC
+					});
+					self.map.addLayer({
+						id: 'points-circle',
+						type: 'circle',
+						source: 'points',
+						paint: {
+							'circle-radius': 7,
+							'circle-color': '#00b9fe',
+							'circle-opacity': 0.95,
+							'circle-stroke-width': 2,
+							'circle-stroke-color': '#2f2f2f'
 						}
 					});
 

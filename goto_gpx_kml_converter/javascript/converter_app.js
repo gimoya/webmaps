@@ -346,6 +346,19 @@
 					type: 'LineString',
 					coordinates: rcoords
 				}, sourceFile));
+			} else if (ln === 'wpt') {
+				var lat = parseFloat(n.getAttribute('lat'));
+				var lon = parseFloat(n.getAttribute('lon'));
+				if (!isFinite(lat) || !isFinite(lon)) continue;
+				var wptName = childText(n, 'name') || sourceFile || 'Waypoint';
+				var wptDesc = childText(n, 'desc');
+				var eleStr = childText(n, 'ele');
+				var ele = eleStr ? parseFloat(eleStr) : NaN;
+				var wptCoord = isFinite(ele) ? [lon, lat, ele] : [lon, lat];
+				out.push(makeTrack(wptName, wptDesc, {
+					type: 'Point',
+					coordinates: wptCoord
+				}, sourceFile));
 			}
 		}
 		return out;
@@ -373,10 +386,32 @@
 			var f = features[i];
 			if (!f || !f.geometry) continue;
 			var props = f.properties || {};
-			var name = props.name || sourceFile || 'KML Track';
+			var name = props.name || sourceFile || 'KML Feature';
 			var desc = props.description || props.desc || '';
 			if (typeof desc !== 'string') desc = String(desc || '');
-			var lines = lineCoordsFromGeom(f.geometry);
+			var g = f.geometry;
+			if (g.type === 'Point') {
+				var pc = g.coordinates;
+				if (!pc || pc.length < 2) continue;
+				out.push(makeTrack(name, desc, {
+					type: 'Point',
+					coordinates: pc.slice()
+				}, sourceFile));
+				continue;
+			}
+			if (g.type === 'MultiPoint') {
+				var mpts = g.coordinates || [];
+				for (var p = 0; p < mpts.length; p++) {
+					var mpc = mpts[p];
+					if (!mpc || mpc.length < 2) continue;
+					out.push(makeTrack(name, desc, {
+						type: 'Point',
+						coordinates: mpc.slice()
+					}, sourceFile));
+				}
+				continue;
+			}
+			var lines = lineCoordsFromGeom(g);
 			for (var L = 0; L < lines.length; L++) {
 				var coords = lines[L];
 				if (!coords || coords.length < 2) continue;
@@ -512,9 +547,6 @@
 		}
 		if (added) {
 			pruneSelection();
-			if (!selectedIds.length) {
-				selectedIds = [tracks[tracks.length - 1].id];
-			}
 			syncSelectionUi();
 			fitMapToTracks();
 		}
@@ -528,7 +560,7 @@
 		}
 		if (added && !failed) showToast(added + ' track' + (added === 1 ? '' : 's') + ' loaded');
 		else if (added && failed) showToast(added + ' loaded, ' + failed + ' failed');
-		else showToast('No tracks found');
+		else showToast('No tracks or points found');
 	}
 
 	/** Toggle: add if not selected, remove if already selected. */
@@ -569,8 +601,10 @@
 			var btn = document.createElement('button');
 			btn.type = 'button';
 			btn.className = 'converter-track-item' + (isSelected(t.id) ? ' is-selected' : '');
-			btn.textContent = t.name || '(unnamed)';
-			btn.title = (isSelected(t.id) ? 'Deselect: ' : 'Add to selection: ') + (t.name || '(unnamed)');
+			var isPoint = t.geometry && t.geometry.type === 'Point';
+			var label = t.name || '(unnamed)';
+			btn.textContent = (isPoint ? '• ' : '') + label;
+			btn.title = (isSelected(t.id) ? 'Deselect: ' : 'Add to selection: ') + label;
 			btn.dataset.id = t.id;
 			btn.addEventListener('click', function (ev) {
 				var id = ev.currentTarget.dataset.id;
@@ -601,6 +635,16 @@
 			opacity: 0.95,
 			lineCap: 'round',
 			lineJoin: 'round'
+		};
+	}
+
+	function pointMarkerStyle(selected) {
+		return {
+			radius: selected ? 8 : 6,
+			color: selected ? '#1a1a1a' : '#2f2f2f',
+			weight: 2,
+			fillColor: selected ? '#ff5f1f' : '#00b9fe',
+			fillOpacity: 0.95
 		};
 	}
 
@@ -650,6 +694,11 @@
 			out.push([c[1], c[0]]);
 		}
 		return out;
+	}
+
+	function pointToLatLng(coordinates) {
+		if (!coordinates || coordinates.length < 2) return null;
+		return [coordinates[1], coordinates[0]];
 	}
 
 	function isGapSegment(prev, curr) {
@@ -746,11 +795,21 @@
 			var selected = isSelected(t.id);
 			var group = L.layerGroup();
 			group._converterTrackId = t.id;
-			var latLngs = geoCoordsToLatLngs(t.geometry && t.geometry.coordinates);
 			var onClick = (function (id) {
 				return function () { toggleTrack(id); };
 			})(t.id);
-			appendTraceRunsWithBackdrop(group, latLngs, lineStyle(selected), onClick);
+			var geom = t.geometry;
+			if (geom && geom.type === 'Point') {
+				var ll = pointToLatLng(geom.coordinates);
+				if (ll) {
+					var marker = L.circleMarker(ll, pointMarkerStyle(selected));
+					marker.on('click', onClick);
+					group.addLayer(marker);
+				}
+			} else {
+				var latLngs = geoCoordsToLatLngs(geom && geom.coordinates);
+				appendTraceRunsWithBackdrop(group, latLngs, lineStyle(selected), onClick);
+			}
 			tracksLayer.addLayer(group);
 		}
 	}

@@ -19,7 +19,7 @@ SOURCE_USUAL = OUT / "icon_source.png"
 SOURCE_PWA = OUT / "icon_source_pwa.png"
 
 # Extra inset on PWA homescreen icons
-PWA_CONTENT_FRAC = 0.90
+PWA_CONTENT_FRAC = 0.89
 
 USUAL_SIZES = {
 	"favicon-16x16.png": 16,
