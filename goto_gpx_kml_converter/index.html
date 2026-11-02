@@ -37,7 +37,7 @@
   <aside id="converter-panel" class="converter-panel legacy-panel-frame" aria-label="Track converter">
     <div class="legacy-panel-inner converter-panel-inner">
       <h2>Tracks</h2>
-      <p class="converter-hint">Upload GPX, KML, ZIP, or KMZ. Edit name &amp; description, then download.</p>
+      <p class="converter-hint">Upload GPX, KML, ZIP, or KMZ. Click tracks to multi-select; click again to deselect. Name/description edit when exactly one is selected.</p>
 
       <input type="file" id="converter-file-input" accept=".gpx,.kml,.zip,.kmz,application/gpx+xml,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz,application/zip" multiple hidden>
 
@@ -46,21 +46,21 @@
       <ul id="converter-track-list" class="converter-track-list" aria-label="Loaded tracks"></ul>
 
       <label class="converter-field-label" for="converter-name">Name</label>
-      <input type="text" id="converter-name" class="converter-field" disabled autocomplete="off" title="Track name written into GPX/KML">
+      <input type="text" id="converter-name" class="converter-field" disabled autocomplete="off" title="Edit when exactly one track is selected">
 
       <label class="converter-field-label" for="converter-desc">Description</label>
-      <textarea id="converter-desc" class="converter-field converter-desc" rows="2" disabled title="Track description written into GPX/KML"></textarea>
+      <textarea id="converter-desc" class="converter-field converter-desc" rows="2" disabled title="Edit when exactly one track is selected"></textarea>
 
       <div class="converter-btn-row">
-        <button type="button" class="legacy-action-btn" id="converter-dl-gpx" disabled title="Download selected track as GPX">GPX</button>
-        <button type="button" class="legacy-action-btn" id="converter-dl-kml" disabled title="Download selected track as KML">KML</button>
+        <button type="button" class="legacy-action-btn" id="converter-dl-gpx" disabled title="Download selected track(s) as GPX (ZIP if several)">GPX</button>
+        <button type="button" class="legacy-action-btn" id="converter-dl-kml" disabled title="Download selected track(s) as KML (ZIP if several)">KML</button>
       </div>
       <div class="converter-btn-row">
         <button type="button" class="legacy-action-btn" id="converter-dl-zip-gpx" disabled title="Download all tracks as a ZIP of GPX files">All ZIP (GPX)</button>
         <button type="button" class="legacy-action-btn" id="converter-dl-zip-kml" disabled title="Download all tracks as a ZIP of KML files">All ZIP (KML)</button>
       </div>
       <div class="converter-btn-row">
-        <button type="button" class="legacy-action-btn converter-btn-danger" id="converter-remove" disabled title="Remove the selected track">Remove</button>
+        <button type="button" class="legacy-action-btn converter-btn-danger" id="converter-remove" disabled title="Remove selected track(s) and clear selection">Remove</button>
         <button type="button" class="legacy-action-btn converter-btn-danger" id="converter-clear" disabled title="Remove all loaded tracks">Clear all</button>
       </div>
     </div>

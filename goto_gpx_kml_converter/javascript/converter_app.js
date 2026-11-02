@@ -20,7 +20,8 @@
 	};
 
 	var tracks = [];
-	var selectedId = null;
+	/** Multi-select: click adds, click again removes. */
+	var selectedIds = [];
 	var _idSeq = 1;
 	var tracksLayer = null;
 	var _suppressFieldSync = false;
@@ -201,8 +202,8 @@
 	});
 
 	nameInput.addEventListener('input', function () {
-		if (_suppressFieldSync || !selectedId) return;
-		var t = findTrack(selectedId);
+		if (_suppressFieldSync || selectedIds.length !== 1) return;
+		var t = findTrack(selectedIds[0]);
 		if (!t) return;
 		t.name = nameInput.value;
 		refreshTrackList();
@@ -210,8 +211,8 @@
 		syncTracksTo3D();
 	});
 	descInput.addEventListener('input', function () {
-		if (_suppressFieldSync || !selectedId) return;
-		var t = findTrack(selectedId);
+		if (_suppressFieldSync || selectedIds.length !== 1) return;
+		var t = findTrack(selectedIds[0]);
 		if (!t) return;
 		t.description = descInput.value;
 	});
@@ -251,9 +252,28 @@
 		return null;
 	}
 
+	function isSelected(id) {
+		return selectedIds.indexOf(id) !== -1;
+	}
+
+	function selectedTracks() {
+		var out = [];
+		for (var i = 0; i < selectedIds.length; i++) {
+			var t = findTrack(selectedIds[i]);
+			if (t) out.push(t);
+		}
+		return out;
+	}
+
 	function selectedTrackName() {
-		var t = findTrack(selectedId);
-		return t ? t.name : null;
+		var list = selectedTracks();
+		return list.length === 1 ? list[0].name : null;
+	}
+
+	function pruneSelection() {
+		selectedIds = selectedIds.filter(function (id) {
+			return !!findTrack(id);
+		});
 	}
 
 	function sanitizeFileBase(raw) {
@@ -491,13 +511,11 @@
 			}
 		}
 		if (added) {
-			if (!selectedId) selectTrack(tracks[tracks.length - 1].id);
-			else {
-				refreshTrackList();
-				redrawMapLayers();
-				syncTracksTo3D();
-				updateButtons();
+			pruneSelection();
+			if (!selectedIds.length) {
+				selectedIds = [tracks[tracks.length - 1].id];
 			}
+			syncSelectionUi();
 			fitMapToTracks();
 		}
 		if (tooLarge.length) {
@@ -513,19 +531,28 @@
 		else showToast('No tracks found');
 	}
 
-	function selectTrack(id) {
-		selectedId = id;
-		var t = findTrack(id);
+	/** Toggle: add if not selected, remove if already selected. */
+	function toggleTrack(id) {
+		if (!id || !findTrack(id)) return;
+		var idx = selectedIds.indexOf(id);
+		if (idx >= 0) selectedIds.splice(idx, 1);
+		else selectedIds.push(id);
+		syncSelectionUi();
+	}
+
+	function syncSelectionUi() {
+		pruneSelection();
 		_suppressFieldSync = true;
-		if (t) {
+		if (selectedIds.length === 1) {
+			var t = findTrack(selectedIds[0]);
 			nameInput.disabled = false;
 			descInput.disabled = false;
-			nameInput.value = t.name;
-			descInput.value = t.description;
+			nameInput.value = t ? t.name : '';
+			descInput.value = t ? t.description : '';
 		} else {
 			nameInput.disabled = true;
 			descInput.disabled = true;
-			nameInput.value = '';
+			nameInput.value = selectedIds.length ? '(' + selectedIds.length + ' selected)' : '';
 			descInput.value = '';
 		}
 		_suppressFieldSync = false;
@@ -541,14 +568,15 @@
 			var li = document.createElement('li');
 			var btn = document.createElement('button');
 			btn.type = 'button';
-			btn.className = 'converter-track-item' + (t.id === selectedId ? ' is-selected' : '');
+			btn.className = 'converter-track-item' + (isSelected(t.id) ? ' is-selected' : '');
 			btn.textContent = t.name || '(unnamed)';
-			btn.title = 'Select track: ' + (t.name || '(unnamed)');
+			btn.title = (isSelected(t.id) ? 'Deselect: ' : 'Add to selection: ') + (t.name || '(unnamed)');
 			btn.dataset.id = t.id;
 			btn.addEventListener('click', function (ev) {
-				selectTrack(ev.currentTarget.dataset.id);
-				var tr = findTrack(ev.currentTarget.dataset.id);
-				if (tr) fitToGeometry(tr.geometry);
+				var id = ev.currentTarget.dataset.id;
+				toggleTrack(id);
+				var tr = findTrack(id);
+				if (tr && isSelected(id)) fitToGeometry(tr.geometry);
 			});
 			li.appendChild(btn);
 			trackListEl.appendChild(li);
@@ -556,7 +584,7 @@
 	}
 
 	function updateButtons() {
-		var hasSel = !!findTrack(selectedId);
+		var hasSel = selectedTracks().length > 0;
 		var hasAny = tracks.length > 0;
 		dlGpxBtn.disabled = !hasSel;
 		dlKmlBtn.disabled = !hasSel;
@@ -715,12 +743,12 @@
 		tracksLayer.clearLayers();
 		for (var i = 0; i < tracks.length; i++) {
 			var t = tracks[i];
-			var selected = t.id === selectedId;
+			var selected = isSelected(t.id);
 			var group = L.layerGroup();
 			group._converterTrackId = t.id;
 			var latLngs = geoCoordsToLatLngs(t.geometry && t.geometry.coordinates);
 			var onClick = (function (id) {
-				return function () { selectTrack(id); };
+				return function () { toggleTrack(id); };
 			})(t.id);
 			appendTraceRunsWithBackdrop(group, latLngs, lineStyle(selected), onClick);
 			tracksLayer.addLayer(group);
@@ -781,26 +809,15 @@
 		setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
 	}
 
-	function downloadSelected(format) {
-		var t = findTrack(selectedId);
-		if (!t) return;
-		var xml = featureXml(t, format);
-		var mime = format === 'gpx' ? 'application/gpx+xml' : 'application/vnd.google-earth.kml+xml';
-		var blob = new Blob([xml], { type: mime });
-		triggerDownload(blob, sanitizeFileBase(t.name) + '.' + format);
-		showToast(format.toUpperCase() + ' downloaded');
-	}
-
-	async function downloadAllZip(format) {
-		if (!tracks.length) return;
+	function zipTracks(list, format, zipName) {
 		if (typeof JSZip === 'undefined') {
 			showToast('JSZip missing');
-			return;
+			return Promise.resolve();
 		}
 		var zip = new JSZip();
 		var used = Object.create(null);
-		for (var i = 0; i < tracks.length; i++) {
-			var t = tracks[i];
+		for (var i = 0; i < list.length; i++) {
+			var t = list[i];
 			var base = sanitizeFileBase(t.name);
 			var n = 1;
 			var fileName = base + '.' + format;
@@ -811,25 +828,49 @@
 			used[fileName] = true;
 			zip.file(fileName, featureXml(t, format));
 		}
-		var blob = await zip.generateAsync({ type: 'blob' });
-		triggerDownload(blob, 'tracks_' + format + '.zip');
-		showToast('ZIP downloaded');
+		return zip.generateAsync({ type: 'blob' }).then(function (blob) {
+			triggerDownload(blob, zipName);
+			showToast('ZIP downloaded');
+		});
+	}
+
+	function downloadSelected(format) {
+		var list = selectedTracks();
+		if (!list.length) return;
+		if (list.length === 1) {
+			var t = list[0];
+			var xml = featureXml(t, format);
+			var mime = format === 'gpx' ? 'application/gpx+xml' : 'application/vnd.google-earth.kml+xml';
+			triggerDownload(new Blob([xml], { type: mime }), sanitizeFileBase(t.name) + '.' + format);
+			showToast(format.toUpperCase() + ' downloaded');
+			return;
+		}
+		zipTracks(list, format, 'selected_' + format + '.zip');
+	}
+
+	function downloadAllZip(format) {
+		if (!tracks.length) return;
+		zipTracks(tracks, format, 'tracks_' + format + '.zip');
 	}
 
 	function removeSelected() {
-		if (!selectedId) return;
-		tracks = tracks.filter(function (t) { return t.id !== selectedId; });
-		selectedId = tracks.length ? tracks[0].id : null;
-		selectTrack(selectedId);
+		var list = selectedTracks();
+		if (!list.length) return;
+		var removeSet = Object.create(null);
+		for (var i = 0; i < list.length; i++) removeSet[list[i].id] = true;
+		var n = list.length;
+		tracks = tracks.filter(function (t) { return !removeSet[t.id]; });
+		selectedIds = [];
+		syncSelectionUi();
 		syncTracksTo3D();
 		if (tracks.length) fitMapToTracks();
-		showToast('Track removed');
+		showToast(n === 1 ? 'Track removed' : n + ' tracks removed');
 	}
 
 	function clearAll() {
 		tracks = [];
-		selectedId = null;
-		selectTrack(null);
+		selectedIds = [];
+		syncSelectionUi();
 		syncTracksTo3D();
 		showToast('Cleared');
 	}
