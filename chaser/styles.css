@@ -1017,6 +1017,27 @@ body.install-required .notice-dialog {
   font-weight: 400;
 }
 
+.install-gate-cta {
+  display: inline-block;
+  margin: 0.25rem 0 1rem;
+  padding: 0.65rem 1.1rem;
+  border: 1px solid rgba(243, 239, 154, 0.55);
+  border-radius: 2px;
+  background: rgba(243, 239, 154, 0.12);
+  color: #f3ef9a;
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.35rem;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  line-height: 1.2;
+}
+
+.install-gate-cta:hover,
+.install-gate-cta:focus-visible {
+  background: rgba(243, 239, 154, 0.22);
+  outline: none;
+}
+
 .install-gate-lead,
 .install-gate-note {
   margin: 0 0 1rem;

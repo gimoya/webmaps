@@ -2,7 +2,7 @@
   "name": "Chaser",
   "short_name": "Chaser",
   "description": "Live multi-user GPS map",
-  "start_url": "./",
+  "start_url": "./home.html",
   "display": "standalone",
   "background_color": "#222226",
   "theme_color": "#222226",

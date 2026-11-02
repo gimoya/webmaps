@@ -3,7 +3,7 @@ importScripts("./firebase-config.js");
 importScripts("https://www.gstatic.com/firebasejs/12.8.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/12.8.0/firebase-messaging-compat.js");
 
-const CACHE_NAME = "chaser-v8";
+const CACHE_NAME = "chaser-v9";
 const TILE_CACHE_NAME = "chaser-tiles";
 const MAX_CACHE_SIZE = 50 * 1024 * 1024;
 const TILE_EVICTION_DELAY_MS = 3000;
@@ -11,6 +11,9 @@ const TILE_EVICTION_DELAY_MS = 3000;
 const urlsToCache = [
   "./",
   "./index.html",
+  "./home.html",
+  "./home.css",
+  "./chaser-title.css",
   "./styles.css",
   "./track-grade.js",
   "./gpx.js",

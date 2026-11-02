@@ -99,12 +99,23 @@
     return "";
   }
 
-  if (!isStandaloneApp() && !adminCodewordFromHash()) {
+  const hasEventInUrl = Boolean(
+    String(new URLSearchParams(window.location.search).get("event") || "").trim()
+  );
+  const hasAdminHash = Boolean(adminCodewordFromHash());
+
+  if (!isStandaloneApp() && !hasAdminHash) {
     if (sessionStorage.getItem(PAGE_FADE_KEY) === "1") {
       sessionStorage.removeItem(PAGE_FADE_KEY);
       document.documentElement.classList.remove("page-fade-pending");
     }
     showInstallGate();
+    return;
+  }
+
+  // Installed app opened with no event (and not admin create): send to event list.
+  if (isStandaloneApp() && !hasEventInUrl && !hasAdminHash) {
+    window.location.replace("./home.html");
     return;
   }
 
