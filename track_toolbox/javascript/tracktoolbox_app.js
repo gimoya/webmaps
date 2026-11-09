@@ -2,7 +2,7 @@
 (function () {
 	'use strict';
 
-	var GEOTRACK_VERSION = '1.0.0';
+	var TRACKTOOLBOX_VERSION = '1.0.0';
 	var DEFAULT_CENTER = [47.2692, 11.4041];
 	var DEFAULT_ZOOM = 11;
 	var MAX_FILE_BYTES = 25 * 1024 * 1024;
@@ -50,14 +50,14 @@
 	var SELECT_POINT_HIT_R = 16;
 	var SELECT_COLOR = '#ff5f1f';
 	var EDIT_COLOR = '#ffe600';
-	var GEOTRACK_BROUTER_URL = (function () {
+	var TRACKTOOLBOX_BROUTER_URL = (function () {
 		try {
 			var q = new URLSearchParams(window.location.search).get('brouter');
 			if (q) return q;
 		} catch (e) { /* ignore */ }
 		return 'https://route.tiroltrailhead.com/brouter';
 	})();
-	var GEOTRACK_BROUTER_KEY = '02abf8f41a8f1ca689eb64b2221657cc475e2e45de57c11c';
+	var TRACKTOOLBOX_BROUTER_KEY = '02abf8f41a8f1ca689eb64b2221657cc475e2e45de57c11c';
 	var routeSnapControl = null;
 	var digitizePickBlocked = false;
 	var pointDrawActive = false;
@@ -71,12 +71,12 @@
 	map.setView(DEFAULT_CENTER, DEFAULT_ZOOM);
 
 	/* Tracks under edit hit under edit nodes. */
-	map.createPane('geotrackTrackPane');
-	map.getPane('geotrackTrackPane').style.zIndex = 400;
-	map.createPane('geotrackEditHitPane');
-	map.getPane('geotrackEditHitPane').style.zIndex = 450;
-	map.createPane('geotrackEditNodePane');
-	map.getPane('geotrackEditNodePane').style.zIndex = 650;
+	map.createPane('tracktoolboxTrackPane');
+	map.getPane('tracktoolboxTrackPane').style.zIndex = 400;
+	map.createPane('tracktoolboxEditHitPane');
+	map.getPane('tracktoolboxEditHitPane').style.zIndex = 450;
+	map.createPane('tracktoolboxEditNodePane');
+	map.getPane('tracktoolboxEditNodePane').style.zIndex = 650;
 	/* Route under stations so leg-hit SVG cannot steal waypoint drag. */
 	map.createPane('digitizeRoutePane');
 	map.getPane('digitizeRoutePane').style.zIndex = 655;
@@ -117,7 +117,7 @@
 	map.attributionControl = attribution;
 	attribution.addAttribution(
 		'<a href="https://tiroltrailhead.com">Tirol Trailhead</a>' +
-			' · <span class="legacy-attribution-version">v' + GEOTRACK_VERSION + '</span>'
+			' · <span class="legacy-attribution-version">v' + TRACKTOOLBOX_VERSION + '</span>'
 	);
 
 	var zoomControl = new L.Control.Zoom({
@@ -256,23 +256,23 @@
 		if (window.LegacyTerrain3D && window.LegacyTerrain3D.visible) exitTerrain3D();
 		else enterTerrain3D();
 	}
-	window.geotrackExitTerrain3D = exitTerrain3D;
+	window.tracktoolboxExitTerrain3D = exitTerrain3D;
 
-	tracksLayer = L.layerGroup([], { pane: 'geotrackTrackPane' }).addTo(map);
+	tracksLayer = L.layerGroup([], { pane: 'tracktoolboxTrackPane' }).addTo(map);
 
 	/* ---------- UI refs ---------- */
-	var fileInput = document.getElementById('geotrack-file-input');
-	var uploadBtn = document.getElementById('geotrack-upload-btn');
-	var trackListEl = document.getElementById('geotrack-track-list');
-	var nameInput = document.getElementById('geotrack-name');
-	var descInput = document.getElementById('geotrack-desc');
-	var selCountEl = document.getElementById('geotrack-sel-count');
-	var dlGpxBtn = document.getElementById('geotrack-dl-gpx');
-	var dlKmlBtn = document.getElementById('geotrack-dl-kml');
-	var removeBtn = document.getElementById('geotrack-remove');
-	var clearBtn = document.getElementById('geotrack-clear');
-	var searchInput = document.getElementById('geotrack-search');
-	var searchResultsEl = document.getElementById('geotrack-search-results');
+	var fileInput = document.getElementById('tracktoolbox-file-input');
+	var uploadBtn = document.getElementById('tracktoolbox-upload-btn');
+	var trackListEl = document.getElementById('tracktoolbox-track-list');
+	var nameInput = document.getElementById('tracktoolbox-name');
+	var descInput = document.getElementById('tracktoolbox-desc');
+	var selCountEl = document.getElementById('tracktoolbox-sel-count');
+	var dlGpxBtn = document.getElementById('tracktoolbox-dl-gpx');
+	var dlKmlBtn = document.getElementById('tracktoolbox-dl-kml');
+	var removeBtn = document.getElementById('tracktoolbox-remove');
+	var clearBtn = document.getElementById('tracktoolbox-clear');
+	var searchInput = document.getElementById('tracktoolbox-search');
+	var searchResultsEl = document.getElementById('tracktoolbox-search-results');
 
 	uploadBtn.addEventListener('click', function () { fileInput.click(); });
 	fileInput.addEventListener('change', function () {
@@ -383,7 +383,7 @@
 		searchResultsEl.hidden = false;
 		if (!_searchItems.length) {
 			var p = document.createElement('p');
-			p.className = 'geotrack-search-status';
+			p.className = 'tracktoolbox-search-status';
 			p.textContent = statusText || 'No matches';
 			searchResultsEl.appendChild(p);
 			return;
@@ -393,20 +393,20 @@
 			var li = document.createElement('li');
 			var btn = document.createElement('button');
 			btn.type = 'button';
-			btn.className = 'geotrack-search-item' + (i === _searchActiveIdx ? ' is-active' : '');
+			btn.className = 'tracktoolbox-search-item' + (i === _searchActiveIdx ? ' is-active' : '');
 			btn.setAttribute('role', 'option');
 			btn.dataset.idx = String(i);
 			var kind = document.createElement('span');
-			kind.className = 'geotrack-search-item-kind ' + (item.kind === 'track' ? 'is-track' : 'is-place');
+			kind.className = 'tracktoolbox-search-item-kind ' + (item.kind === 'track' ? 'is-track' : 'is-place');
 			kind.textContent = item.kind === 'track' ? 'Track' : 'Place';
 			var label = document.createElement('span');
-			label.className = 'geotrack-search-item-label';
+			label.className = 'tracktoolbox-search-item-label';
 			label.textContent = item.label;
 			btn.appendChild(kind);
 			btn.appendChild(label);
 			if (item.sub) {
 				var sub = document.createElement('span');
-				sub.className = 'geotrack-search-item-sub';
+				sub.className = 'tracktoolbox-search-item-sub';
 				sub.textContent = item.sub;
 				btn.appendChild(sub);
 			}
@@ -422,7 +422,7 @@
 		}
 		if (statusText) {
 			var st = document.createElement('p');
-			st.className = 'geotrack-search-status';
+			st.className = 'tracktoolbox-search-status';
 			st.textContent = statusText;
 			searchResultsEl.appendChild(st);
 		}
@@ -436,7 +436,7 @@
 		if (idx < 0) idx = _searchItems.length - 1;
 		if (idx >= _searchItems.length) idx = 0;
 		_searchActiveIdx = idx;
-		var nodes = searchResultsEl.querySelectorAll('.geotrack-search-item');
+		var nodes = searchResultsEl.querySelectorAll('.tracktoolbox-search-item');
 		for (var i = 0; i < nodes.length; i++) {
 			nodes[i].classList.toggle('is-active', i === _searchActiveIdx);
 		}
@@ -639,14 +639,14 @@
 
 	/* ---------- helpers ---------- */
 
-	var busyEl = document.getElementById('geotrack-busy');
+	var busyEl = document.getElementById('tracktoolbox-busy');
 	var _busyDepth = 0;
 
 	function setBusy(on) {
 		if (on) _busyDepth++;
 		else _busyDepth = Math.max(0, _busyDepth - 1);
 		var active = _busyDepth > 0;
-		document.documentElement.classList.toggle('geotrack-busy', active);
+		document.documentElement.classList.toggle('tracktoolbox-busy', active);
 		if (!busyEl) return;
 		busyEl.hidden = !active;
 		busyEl.classList.toggle('is-hidden', !active);
@@ -668,10 +668,10 @@
 			});
 	}
 
-	var welcomeOverlay = document.getElementById('geotrack-welcome-overlay');
-	var welcomeCloseBtn = document.getElementById('geotrack-welcome-close');
-	var kofiOverlay = document.getElementById('geotrack-kofi-overlay');
-	var kofiCloseBtn = document.getElementById('geotrack-kofi-close');
+	var welcomeOverlay = document.getElementById('tracktoolbox-welcome-overlay');
+	var welcomeCloseBtn = document.getElementById('tracktoolbox-welcome-close');
+	var kofiOverlay = document.getElementById('tracktoolbox-kofi-overlay');
+	var kofiCloseBtn = document.getElementById('tracktoolbox-kofi-close');
 
 	function showWelcomePanel() {
 		if (!welcomeOverlay) return;
@@ -1111,7 +1111,7 @@
 			var li = document.createElement('li');
 			var btn = document.createElement('button');
 			btn.type = 'button';
-			btn.className = 'geotrack-track-item' + (isSelected(t.id) ? ' is-selected' : '');
+			btn.className = 'tracktoolbox-track-item' + (isSelected(t.id) ? ' is-selected' : '');
 			var isPoint = t.geometry && t.geometry.type === 'Point';
 			var label = t.name || '(unnamed)';
 			btn.textContent = (isPoint ? '• ' : '') + label;
@@ -1286,7 +1286,7 @@
 	function appendTraceRun(layerGroup, run, style, onClick, dirColor) {
 		if (!run || !run.latLngs || run.latLngs.length < 2) return;
 		function addLine(latLngs, opts, withArrows) {
-			var pl = L.polyline(latLngs, Object.assign({ pane: 'geotrackTrackPane' }, opts));
+			var pl = L.polyline(latLngs, Object.assign({ pane: 'tracktoolboxTrackPane' }, opts));
 			if (onClick && opts.interactive !== false) pl.on('click', onClick);
 			layerGroup.addLayer(pl);
 			if (withArrows && dirColor) applyLegacyDirArrows(pl, dirColor);
@@ -1343,7 +1343,7 @@
 			var selected = isSelected(t.id) || (editMode && editSessionIds.indexOf(t.id) !== -1);
 			var editing = editMode && t.id === editTargetId;
 			var group = L.layerGroup();
-			group._geotrackTrackId = t.id;
+			group._tracktoolboxTrackId = t.id;
 			var onClick = (function (id) {
 				return function (ev) {
 					if (digitizePickBlocked) {
@@ -1375,7 +1375,7 @@
 				var ll = pointToLatLng(geom.coordinates);
 				if (ll) {
 					var hitPt = L.circleMarker(ll, {
-						pane: 'geotrackTrackPane',
+						pane: 'tracktoolboxTrackPane',
 						radius: SELECT_POINT_HIT_R,
 						weight: 0,
 						opacity: 0,
@@ -1389,7 +1389,7 @@
 					group.addLayer(hitPt);
 					var style = pointMarkerStyle(selected, editing);
 					style.interactive = false;
-					var marker = L.circleMarker(ll, Object.assign({ pane: 'geotrackTrackPane' }, style));
+					var marker = L.circleMarker(ll, Object.assign({ pane: 'tracktoolboxTrackPane' }, style));
 					group.addLayer(marker);
 				}
 			} else {
@@ -1405,13 +1405,13 @@
 				);
 				if (latLngs.length >= 2) {
 					var hitLine = L.polyline(latLngs, {
-						pane: 'geotrackTrackPane',
+						pane: 'tracktoolboxTrackPane',
 						weight: SELECT_HIT_WEIGHT,
 						opacity: 0,
 						interactive: !digitizePickBlocked,
 						lineCap: 'round',
 						lineJoin: 'round',
-						className: 'geotrack-select-hit'
+						className: 'tracktoolbox-select-hit'
 					});
 					if (!digitizePickBlocked) {
 						hitLine.on('click', onClick);
@@ -1557,15 +1557,15 @@
 		return tag === 'input' || tag === 'textarea' || el.isContentEditable;
 	}
 
-	var editToolboxEl = document.getElementById('geotrack-edit-toolbox');
-	var editCloseBtn = document.getElementById('geotrack-edit-close');
-	var confirmEl = document.getElementById('geotrack-confirm');
-	var confirmMsg = document.getElementById('geotrack-confirm-msg');
-	var confirmYes = document.getElementById('geotrack-confirm-yes');
-	var confirmNo = document.getElementById('geotrack-confirm-no');
+	var editToolboxEl = document.getElementById('tracktoolbox-edit-toolbox');
+	var editCloseBtn = document.getElementById('tracktoolbox-edit-close');
+	var confirmEl = document.getElementById('tracktoolbox-confirm');
+	var confirmMsg = document.getElementById('tracktoolbox-confirm-msg');
+	var confirmYes = document.getElementById('tracktoolbox-confirm-yes');
+	var confirmNo = document.getElementById('tracktoolbox-confirm-no');
 
-	editHitLayer = L.layerGroup([], { pane: 'geotrackEditHitPane' }).addTo(map);
-	editHandlesLayer = L.layerGroup([], { pane: 'geotrackEditNodePane' }).addTo(map);
+	editHitLayer = L.layerGroup([], { pane: 'tracktoolboxEditHitPane' }).addTo(map);
+	editHandlesLayer = L.layerGroup([], { pane: 'tracktoolboxEditNodePane' }).addTo(map);
 
 	map.on('contextmenu', function (e) {
 		L.DomEvent.preventDefault(e.originalEvent || e);
@@ -1577,7 +1577,7 @@
 		});
 	}
 
-	document.querySelectorAll('.geotrack-edit-tool').forEach(function (btn) {
+	document.querySelectorAll('.tracktoolbox-edit-tool').forEach(function (btn) {
 		btn.addEventListener('click', function () {
 			if (!editMode || btn.disabled || btn.hidden) return;
 			setEditTool(btn.getAttribute('data-tool'));
@@ -1619,7 +1619,7 @@
 	/** Points: n / d / df. LineStrings: all tools. */
 	function syncEditToolboxForGeometry() {
 		var pointOnly = isEditingPoint();
-		document.querySelectorAll('.geotrack-edit-tool').forEach(function (btn) {
+		document.querySelectorAll('.tracktoolbox-edit-tool').forEach(function (btn) {
 			var tool = btn.getAttribute('data-tool');
 			var allow = !pointOnly || isPointAllowedTool(tool);
 			btn.hidden = !allow;
@@ -1632,7 +1632,7 @@
 		if (isEditingPoint() && !isPointAllowedTool(tool)) tool = 'node';
 		editTool = tool || 'node';
 		syncEditToolboxForGeometry();
-		document.querySelectorAll('.geotrack-edit-tool').forEach(function (btn) {
+		document.querySelectorAll('.tracktoolbox-edit-tool').forEach(function (btn) {
 			btn.classList.toggle('is-active', btn.getAttribute('data-tool') === editTool);
 		});
 		rebuildEditChrome();
@@ -1736,7 +1736,7 @@
 		if (!pointDrawActive) return;
 		pointDrawActive = false;
 		map.off('click', onPointDrawClick);
-		L.DomUtil.removeClass(map.getContainer(), 'geotrack-point-crosshair');
+		L.DomUtil.removeClass(map.getContainer(), 'tracktoolbox-point-crosshair');
 		if (pointDrawBtn && pointDrawBtn.button) {
 			pointDrawBtn.button.classList.remove('legacy-ctrl-selected');
 		}
@@ -1755,7 +1755,7 @@
 			showToast('Point tool is 2D only');
 		}
 		pointDrawActive = true;
-		L.DomUtil.addClass(map.getContainer(), 'geotrack-point-crosshair');
+		L.DomUtil.addClass(map.getContainer(), 'tracktoolbox-point-crosshair');
 		map.on('click', onPointDrawClick);
 		if (pointDrawBtn && pointDrawBtn.button) {
 			pointDrawBtn.button.classList.add('legacy-ctrl-selected');
@@ -1981,12 +1981,12 @@
 
 	function makeEditNodeIcon(letter, role) {
 		var wide = letter.length > 1;
-		var cls = 'geotrack-edit-node geotrack-edit-node--' + role +
-			(wide ? ' geotrack-edit-node--wide' : '');
+		var cls = 'tracktoolbox-edit-node tracktoolbox-edit-node--' + role +
+			(wide ? ' tracktoolbox-edit-node--wide' : '');
 		var w = wide ? 18 : 14;
 		var h = 12;
 		return L.divIcon({
-			className: 'geotrack-edit-node-wrap',
+			className: 'tracktoolbox-edit-node-wrap',
 			html: '<span class="' + cls + '">' + letter + '</span>',
 			iconSize: [w, h],
 			iconAnchor: [w / 2, h / 2]
@@ -2029,7 +2029,7 @@
 		var letter = editToolLetter(editTool);
 		var marker = L.marker(ll, {
 			icon: makeEditNodeIcon(letter, role),
-			pane: 'geotrackEditNodePane',
+			pane: 'tracktoolboxEditNodePane',
 			interactive: true,
 			keyboard: false,
 			draggable: editTool === 'node'
@@ -2057,11 +2057,11 @@
 
 	function addEditHitPolyline(coords, onClick) {
 		var hit = L.polyline(geoCoordsToLatLngs(coords), {
-			pane: 'geotrackEditHitPane',
+			pane: 'tracktoolboxEditHitPane',
 			weight: EDIT_HIT_WEIGHT,
 			opacity: 0,
 			interactive: true,
-			className: 'geotrack-edit-hit'
+			className: 'tracktoolbox-edit-hit'
 		});
 		hit.on('click', function (e) {
 			L.DomEvent.stopPropagation(e);
@@ -2116,7 +2116,7 @@
 	function ensureEditPreviewLine(coords) {
 		clearEditPreviewLine();
 		_editPreviewLine = L.polyline(geoCoordsToLatLngs(coords), {
-			pane: 'geotrackEditHitPane',
+			pane: 'tracktoolboxEditHitPane',
 			color: EDIT_COLOR,
 			weight: 3.75,
 			opacity: 0.9,
@@ -2347,12 +2347,12 @@
 		showToast('Feature deleted');
 	}
 
-	var keysHelpEl = document.getElementById('geotrack-keys-help');
+	var keysHelpEl = document.getElementById('tracktoolbox-keys-help');
 	var shortcutsVisible = false;
 
 	function setShortcutsVisible(on) {
 		shortcutsVisible = !!on;
-		document.documentElement.classList.toggle('geotrack-show-keys', shortcutsVisible);
+		document.documentElement.classList.toggle('tracktoolbox-show-keys', shortcutsVisible);
 		if (keysHelpEl) {
 			keysHelpEl.hidden = !shortcutsVisible;
 			keysHelpEl.classList.toggle('is-hidden', !shortcutsVisible);
@@ -2585,9 +2585,9 @@
 	}
 
 	var POINT_DRAW_ICON =
-		'<span class="geotrack-point-tool-icon" aria-hidden="true">' +
-		'<span class="geotrack-point-tool-cross"></span>' +
-		'<span class="geotrack-point-tool-dot"></span>' +
+		'<span class="tracktoolbox-point-tool-icon" aria-hidden="true">' +
+		'<span class="tracktoolbox-point-tool-cross"></span>' +
+		'<span class="tracktoolbox-point-tool-dot"></span>' +
 		'</span>';
 	pointDrawBtn = L.easyButton({
 		position: 'topright',
@@ -2617,8 +2617,8 @@
 	if (typeof L.control.routeSnap === 'function') {
 		routeSnapControl = L.control.routeSnap({
 			position: 'topright',
-			routeUrl: GEOTRACK_BROUTER_URL,
-			routeKey: GEOTRACK_BROUTER_KEY,
+			routeUrl: TRACKTOOLBOX_BROUTER_URL,
+			routeKey: TRACKTOOLBOX_BROUTER_KEY,
 			profileKey: 'mtb',
 			waypointPane: 'digitizePane',
 			routePane: 'digitizeRoutePane'

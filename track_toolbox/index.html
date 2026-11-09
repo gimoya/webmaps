@@ -1,18 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>track 📐toolbox</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>track toolbox — GPX/KML editor, converter &amp; BRouter digitize</title>
+  <meta name="description" content="Free browser GPX and KML toolbox: upload, multi-select, convert, edit geometry, digitize with BRouter, add waypoints, and export — no install. By Tirol Trailhead.">
+  <meta name="keywords" content="GPX editor, KML editor, GPX to KML, KML to GPX, track editor, waypoint, BRouter, digitize route, MTB, Tirol Trailhead">
+  <meta name="author" content="Tirol Trailhead">
+  <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="theme-color" content="#00b9fe">
+  <meta name="color-scheme" content="dark">
+  <meta name="application-name" content="track toolbox">
+  <link rel="canonical" href="https://tiroltrailhead.com/webmaps/track_toolbox/">
+  <link rel="alternate" hreflang="en" href="https://tiroltrailhead.com/webmaps/track_toolbox/">
+  <link rel="icon" href="https://tiroltrailhead.com/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="https://tiroltrailhead.com/favicon.ico" type="image/x-icon">
+  <link rel="apple-touch-icon" href="https://tiroltrailhead.com/favicon.ico">
+  <link rel="manifest" href="manifest.webmanifest">
 
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Tirol Trailhead">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:url" content="https://tiroltrailhead.com/webmaps/track_toolbox/">
+  <meta property="og:title" content="track toolbox — GPX/KML editor &amp; converter">
+  <meta property="og:description" content="Load, convert, edit, and digitize GPX/KML tracks in the browser. Multi-select, geometry tools, BRouter routing, 3D terrain — free.">
+  <meta property="og:image" content="https://tiroltrailhead.com/tilt.jpg">
+  <meta property="og:image:alt" content="Tirol Trailhead — track toolbox">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="track toolbox — GPX/KML editor &amp; converter">
+  <meta name="twitter:description" content="Free in-browser GPX/KML load, edit, digitize (BRouter), and export. By Tirol Trailhead.">
+  <meta name="twitter:image" content="https://tiroltrailhead.com/tilt.jpg">
+
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link rel="preconnect" href="https://api.mapbox.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+  <link rel="dns-prefetch" href="https://kit.fontawesome.com">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "track toolbox",
+    "alternateName": "track 📐toolbox",
+    "url": "https://tiroltrailhead.com/webmaps/track_toolbox/",
+    "description": "Browser GPX/KML toolbox: upload, convert, multi-select, edit geometry, digitize with BRouter, add points, export GPX/KML.",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "Any",
+    "browserRequirements": "Requires JavaScript and a modern browser",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "EUR"
+    },
+    "creator": {
+      "@type": "Organization",
+      "name": "Tirol Trailhead",
+      "url": "https://tiroltrailhead.com"
+    },
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "Tirol Trailhead",
+      "url": "https://tiroltrailhead.com"
+    },
+    "keywords": "GPX, KML, track editor, BRouter, digitize, MTB"
+  }
+  </script>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" crossorigin="" />
   <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" crossorigin=""></script>
 
-  <link rel="stylesheet" href="//unpkg.com/leaflet-easybutton@2.0.0/src/easy-button.css">
-  <script src="//unpkg.com/leaflet-easybutton@2.0.0/src/easy-button.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-easybutton@2.0.0/src/easy-button.css">
+  <script src="https://unpkg.com/leaflet-easybutton@2.0.0/src/easy-button.js"></script>
 
   <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" />
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
@@ -31,30 +90,37 @@
 
   <link rel="stylesheet" href="css/leaflet_map.css" type="text/css" />
   <link rel="stylesheet" href="css/leaflet_route_snap.css" type="text/css" />
-  <link rel="stylesheet" href="css/geotrack.css" type="text/css" />
+  <link rel="stylesheet" href="css/tracktoolbox.css" type="text/css" />
 </head>
 <body>
-  <div id="geotrack-welcome-overlay" class="trails-welcome-overlay is-hidden" hidden aria-hidden="true" role="dialog" aria-labelledby="geotrack-welcome-title">
+  <noscript>
+    <div style="max-width:40rem;margin:2rem auto;padding:1rem;font-family:system-ui,sans-serif;color:#eee;background:#1e1e22">
+      <h1>track toolbox</h1>
+      <p>Free browser GPX/KML editor and converter by <a href="https://tiroltrailhead.com">Tirol Trailhead</a>: upload tracks and waypoints, multi-select, edit geometry, digitize routes with BRouter, and export GPX or KML. JavaScript is required.</p>
+      <p><a href="docs.html">Documentation</a></p>
+    </div>
+  </noscript>
+  <div id="tracktoolbox-welcome-overlay" class="trails-welcome-overlay is-hidden" hidden aria-hidden="true" role="dialog" aria-labelledby="tracktoolbox-welcome-title">
     <div class="trails-welcome-frame">
-      <button type="button" class="legacy-panel-close" id="geotrack-welcome-close" aria-label="Close"><span>&times;</span></button>
+      <button type="button" class="legacy-panel-close" id="tracktoolbox-welcome-close" aria-label="Close"><span>&times;</span></button>
       <div class="trails-welcome-box">
-        <h2 id="geotrack-welcome-title" class="geotrack-panel-title">track 📐toolbox</h2>
-        <p class="geotrack-welcome-blurb">Load, convert, and edit GPX/KML tracks in the browser.</p>
+        <h2 id="tracktoolbox-welcome-title" class="tracktoolbox-panel-title">track 📐toolbox</h2>
+        <p class="tracktoolbox-welcome-blurb">Free GPX/KML browser toolbox: upload, edit geometry, digitize with BRouter, add waypoints, convert and export...</p>
         <div class="legacy-panel-rule" aria-hidden="true"></div>
         <div class="trails-welcome-donate">
-          <p class="trails-welcome-donate-text">🤝 This toolbox is free for you, but servers and hosting cost money! 💸 A small contribution helps keep the project alive!</p>
+          <p class="trails-welcome-donate-text"><i>🤝 This toolbox is free for you, but servers and hosting cost money!<br>💸 A contribution from your side helps to keep the project alive!</i></p>
           <a href="https://ko-fi.com/C1C74GQ0I" class="legacy-action-btn" target="_blank" rel="noopener noreferrer">💓 SUPPORT! 👋</a>
         </div>
       </div>
     </div>
   </div>
 
-  <div id="geotrack-kofi-overlay" class="geotrack-kofi-overlay is-hidden" hidden aria-hidden="true" role="dialog" aria-labelledby="geotrack-kofi-title">
-    <div class="geotrack-kofi-frame legacy-panel-frame">
-      <button type="button" class="legacy-panel-close" id="geotrack-kofi-close" aria-label="Close"><span>&times;</span></button>
-      <div class="legacy-panel-inner geotrack-kofi-inner">
-        <div class="kofi_reminder geotrack-kofi-reminder">
-          <p id="geotrack-kofi-title" class="geotrack-panel-title">Your file is downloading…</p>
+  <div id="tracktoolbox-kofi-overlay" class="tracktoolbox-kofi-overlay is-hidden" hidden aria-hidden="true" role="dialog" aria-labelledby="tracktoolbox-kofi-title">
+    <div class="tracktoolbox-kofi-frame legacy-panel-frame">
+      <button type="button" class="legacy-panel-close" id="tracktoolbox-kofi-close" aria-label="Close"><span>&times;</span></button>
+      <div class="legacy-panel-inner tracktoolbox-kofi-inner">
+        <div class="kofi_reminder tracktoolbox-kofi-reminder">
+          <p id="tracktoolbox-kofi-title" class="tracktoolbox-panel-title">Your file is downloading…</p>
           <div class="legacy-panel-rule" aria-hidden="true"></div>
           <a class="legacy-action-btn" href="https://ko-fi.com/C1C74GQ0I" target="_blank" rel="noopener noreferrer">💓 SUPPORT 👋</a>
           <div class="legacy-panel-rule" aria-hidden="true"></div>
@@ -64,65 +130,63 @@
     </div>
   </div>
 
-  <header class="geotrack-header">
-    <h1>track 📐toolbox</h1>
-    <a class="geotrack-docs-link" href="docs.html" title="Documentation" target="_blank" rel="noopener noreferrer">Docs</a>
-  </header>
+  <aside id="tracktoolbox-panel" class="tracktoolbox-panel legacy-panel-frame" aria-label="Track toolbox">
+    <div class="legacy-panel-inner tracktoolbox-panel-inner">
+      <header class="tracktoolbox-header">
+        <h1>track 📐toolbox</h1>
+        <a class="tracktoolbox-docs-link" href="docs.html" title="Documentation" aria-label="Documentation" target="_blank" rel="noopener"><i class="fas fa-info-circle" aria-hidden="true"></i></a>
+      </header>
+      <p class="tracktoolbox-hint">Upload GPX, KML, ZIP, or KMZ (tracks and waypoints). Click to multi-select; click again to deselect. Right-click a feature to edit geometry. Name/description always edit the last selected feature. Free online GPX/KML converter and track editor.</p>
 
-  <aside id="geotrack-panel" class="geotrack-panel legacy-panel-frame" aria-label="Track toolbox">
-    <div class="legacy-panel-inner geotrack-panel-inner">
-      <h2>Tracks</h2>
-      <p class="geotrack-hint">Upload GPX, KML, ZIP, or KMZ (tracks and waypoints). Click to multi-select; click again to deselect. Right-click a feature to edit geometry. Name/description always edit the last selected feature.</p>
+      <input type="file" id="tracktoolbox-file-input" accept=".gpx,.kml,.zip,.kmz,application/gpx+xml,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz,application/zip" multiple hidden>
 
-      <input type="file" id="geotrack-file-input" accept=".gpx,.kml,.zip,.kmz,application/gpx+xml,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz,application/zip" multiple hidden>
+      <button type="button" class="legacy-action-btn" id="tracktoolbox-upload-btn" data-shortcut="u" title="Upload GPX, KML, ZIP, or KMZ files (u)">Upload files</button>
 
-      <button type="button" class="legacy-action-btn" id="geotrack-upload-btn" data-shortcut="u" title="Upload GPX, KML, ZIP, or KMZ files (u)">Upload files</button>
-
-      <div class="geotrack-search" role="search">
-        <label class="geotrack-field-label" for="geotrack-search">Search</label>
-        <input type="search" id="geotrack-search" class="geotrack-field" placeholder="Tracks (priority) or place…" autocomplete="off" spellcheck="false" title="Fuzzy search loaded tracks, then OSM Nominatim">
-        <ul id="geotrack-search-results" class="geotrack-search-results" hidden role="listbox" aria-label="Search results"></ul>
+      <div class="tracktoolbox-search" role="search">
+        <label class="tracktoolbox-field-label" for="tracktoolbox-search">Search</label>
+        <input type="search" id="tracktoolbox-search" class="tracktoolbox-field" placeholder="Tracks (priority) or place…" autocomplete="off" spellcheck="false" title="Fuzzy search loaded tracks, then OSM Nominatim">
+        <ul id="tracktoolbox-search-results" class="tracktoolbox-search-results" hidden role="listbox" aria-label="Search results"></ul>
       </div>
 
-      <p id="geotrack-sel-count" class="geotrack-sel-count" aria-live="polite" data-shortcut="Ctrl+A" title="Ctrl+A — select all / deselect all">0 selected</p>
-      <ul id="geotrack-track-list" class="geotrack-track-list" aria-label="Loaded tracks"></ul>
+      <p id="tracktoolbox-sel-count" class="tracktoolbox-sel-count" aria-live="polite" data-shortcut="Ctrl+A" title="Ctrl+A — select all / deselect all">0 selected</p>
+      <ul id="tracktoolbox-track-list" class="tracktoolbox-track-list" aria-label="Loaded tracks"></ul>
 
-      <label class="geotrack-field-label" for="geotrack-name">Name <span class="geotrack-field-hint">(last selected)</span></label>
-      <input type="text" id="geotrack-name" class="geotrack-field" disabled autocomplete="off" title="Edits the last selected feature">
+      <label class="tracktoolbox-field-label" for="tracktoolbox-name">Name <span class="tracktoolbox-field-hint">(last selected)</span></label>
+      <input type="text" id="tracktoolbox-name" class="tracktoolbox-field" disabled autocomplete="off" title="Edits the last selected feature">
 
-      <label class="geotrack-field-label" for="geotrack-desc">Description <span class="geotrack-field-hint">(last selected)</span></label>
-      <textarea id="geotrack-desc" class="geotrack-field geotrack-desc" rows="2" disabled title="Edits the last selected feature"></textarea>
+      <label class="tracktoolbox-field-label" for="tracktoolbox-desc">Description <span class="tracktoolbox-field-hint">(last selected)</span></label>
+      <textarea id="tracktoolbox-desc" class="tracktoolbox-field tracktoolbox-desc" rows="2" disabled title="Edits the last selected feature"></textarea>
 
-      <div class="geotrack-btn-row">
-        <button type="button" class="legacy-action-btn" id="geotrack-dl-gpx" disabled title="Download selected track(s) as GPX (ZIP if several)">GPX</button>
-        <button type="button" class="legacy-action-btn" id="geotrack-dl-kml" disabled title="Download selected track(s) as KML (ZIP if several)">KML</button>
+      <div class="tracktoolbox-btn-row">
+        <button type="button" class="legacy-action-btn" id="tracktoolbox-dl-gpx" disabled title="Download selected track(s) as GPX (ZIP if several)">GPX</button>
+        <button type="button" class="legacy-action-btn" id="tracktoolbox-dl-kml" disabled title="Download selected track(s) as KML (ZIP if several)">KML</button>
       </div>
-      <div class="geotrack-btn-row">
-        <button type="button" class="legacy-action-btn geotrack-btn-danger" id="geotrack-remove" disabled title="Remove selected track(s) and clear selection">Remove</button>
-        <button type="button" class="legacy-action-btn geotrack-btn-danger" id="geotrack-clear" disabled title="Remove all loaded tracks">Clear all</button>
+      <div class="tracktoolbox-btn-row">
+        <button type="button" class="legacy-action-btn tracktoolbox-btn-danger" id="tracktoolbox-remove" disabled title="Remove selected track(s) and clear selection">Remove</button>
+        <button type="button" class="legacy-action-btn tracktoolbox-btn-danger" id="tracktoolbox-clear" disabled title="Remove all loaded tracks">Clear all</button>
       </div>
     </div>
   </aside>
 
-  <aside id="geotrack-edit-toolbox" class="geotrack-edit-toolbox legacy-panel-frame is-hidden" aria-label="Geometry edit toolbox" hidden>
-    <div class="legacy-panel-inner geotrack-edit-inner">
-      <div class="geotrack-edit-head">
+  <aside id="tracktoolbox-edit-toolbox" class="tracktoolbox-edit-toolbox legacy-panel-frame is-hidden" aria-label="Geometry edit toolbox" hidden>
+    <div class="legacy-panel-inner tracktoolbox-edit-inner">
+      <div class="tracktoolbox-edit-head">
         <h2>Edit</h2>
-        <button type="button" class="geotrack-edit-close" id="geotrack-edit-close" data-shortcut="Esc" title="Discard edits and close (Esc)">&times;</button>
+        <button type="button" class="tracktoolbox-edit-close" id="tracktoolbox-edit-close" data-shortcut="Esc" title="Discard edits and close (Esc)">&times;</button>
       </div>
-      <p class="geotrack-edit-hint" data-shortcut="↵/Esc">keys · Enter/Esc</p>
-      <div class="geotrack-edit-tools" role="toolbar">
-        <button type="button" class="legacy-action-btn geotrack-edit-tool is-active" data-tool="node" data-shortcut="n" title="Node — drag / insert vertices (n)">n</button>
-        <button type="button" class="legacy-action-btn geotrack-edit-tool" data-tool="scissor" data-shortcut="s" title="Scissor — split LineString at click (s)">s</button>
-        <button type="button" class="legacy-action-btn geotrack-edit-tool" data-tool="trimBefore" data-shortcut="t" title="Trim before — delete everything before click (t)">_t</button>
-        <button type="button" class="legacy-action-btn geotrack-edit-tool" data-tool="trimAfter" data-shortcut="t" title="Trim after — delete everything after click (t)">t_</button>
-        <button type="button" class="legacy-action-btn geotrack-edit-tool geotrack-btn-danger" data-tool="delete" data-shortcut="d" title="Delete node — remove clicked vertex or point (d)">d</button>
-        <button type="button" class="legacy-action-btn geotrack-edit-tool geotrack-btn-danger" data-tool="deleteFeature" data-shortcut="f" title="Delete feature — remove whole Point or LineString (f)">df</button>
+      <p class="tracktoolbox-edit-hint" data-shortcut="↵/Esc">keys · Enter/Esc</p>
+      <div class="tracktoolbox-edit-tools" role="toolbar">
+        <button type="button" class="legacy-action-btn tracktoolbox-edit-tool is-active" data-tool="node" data-shortcut="n" title="Node — drag / insert vertices (n)">n</button>
+        <button type="button" class="legacy-action-btn tracktoolbox-edit-tool" data-tool="scissor" data-shortcut="s" title="Scissor — split LineString at click (s)">s</button>
+        <button type="button" class="legacy-action-btn tracktoolbox-edit-tool" data-tool="trimBefore" data-shortcut="t" title="Trim before — delete everything before click (t)">_t</button>
+        <button type="button" class="legacy-action-btn tracktoolbox-edit-tool" data-tool="trimAfter" data-shortcut="t" title="Trim after — delete everything after click (t)">t_</button>
+        <button type="button" class="legacy-action-btn tracktoolbox-edit-tool tracktoolbox-btn-danger" data-tool="delete" data-shortcut="d" title="Delete node — remove clicked vertex or point (d)">d</button>
+        <button type="button" class="legacy-action-btn tracktoolbox-edit-tool tracktoolbox-btn-danger" data-tool="deleteFeature" data-shortcut="f" title="Delete feature — remove whole Point or LineString (f)">df</button>
       </div>
     </div>
   </aside>
 
-  <aside id="geotrack-keys-help" class="geotrack-keys-help is-hidden" hidden aria-label="Keyboard shortcuts">
+  <aside id="tracktoolbox-keys-help" class="tracktoolbox-keys-help is-hidden" hidden aria-label="Keyboard shortcuts">
     <h3>Shortcuts <kbd>k</kbd></h3>
     <ul>
       <li><kbd>k</kbd> Show / hide this + badges</li>
@@ -141,20 +205,20 @@
     </ul>
   </aside>
 
-  <div id="geotrack-confirm" class="geotrack-confirm is-hidden" hidden role="dialog" aria-modal="true">
-    <div class="geotrack-confirm-box legacy-panel-frame">
+  <div id="tracktoolbox-confirm" class="tracktoolbox-confirm is-hidden" hidden role="dialog" aria-modal="true">
+    <div class="tracktoolbox-confirm-box legacy-panel-frame">
       <div class="legacy-panel-inner">
-        <p id="geotrack-confirm-msg" class="geotrack-confirm-msg"></p>
-        <div class="geotrack-btn-row">
-          <button type="button" class="legacy-action-btn" id="geotrack-confirm-yes">Yes</button>
-          <button type="button" class="legacy-action-btn" id="geotrack-confirm-no">No</button>
+        <p id="tracktoolbox-confirm-msg" class="tracktoolbox-confirm-msg"></p>
+        <div class="tracktoolbox-btn-row">
+          <button type="button" class="legacy-action-btn" id="tracktoolbox-confirm-yes">Yes</button>
+          <button type="button" class="legacy-action-btn" id="tracktoolbox-confirm-no">No</button>
         </div>
       </div>
     </div>
   </div>
 
-  <div id="geotrack-busy" class="geotrack-busy is-hidden" hidden aria-live="polite" aria-busy="false">
-    <div class="geotrack-busy-mark" title="Working…" aria-hidden="true">⏳</div>
+  <div id="tracktoolbox-busy" class="tracktoolbox-busy is-hidden" hidden aria-live="polite" aria-busy="false">
+    <div class="tracktoolbox-busy-mark" title="Working…" aria-hidden="true">⏳</div>
   </div>
 
   <main>
@@ -162,6 +226,6 @@
   </main>
 
   <script src="javascript/terrain_map_3d.js"></script>
-  <script src="javascript/geotrack_app.js"></script>
+  <script src="javascript/tracktoolbox_app.js"></script>
 </body>
 </html>

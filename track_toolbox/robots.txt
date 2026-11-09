@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://tiroltrailhead.com/webmaps/track_toolbox/sitemap.xml

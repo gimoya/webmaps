@@ -351,8 +351,8 @@
 			btn.addEventListener('click', function (ev) {
 				ev.preventDefault();
 				ev.stopPropagation();
-				if (typeof window.geotrackExitTerrain3D === 'function') {
-					window.geotrackExitTerrain3D();
+				if (typeof window.tracktoolboxExitTerrain3D === 'function') {
+					window.tracktoolboxExitTerrain3D();
 				}
 			});
 		}

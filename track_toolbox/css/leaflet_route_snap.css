@@ -1,23 +1,23 @@
 /* Digitize / RouteSnap / Point-draw control */
 .leaflet-container.legacy-routesnap-crosshair,
-.leaflet-container.geotrack-point-crosshair {
+.leaflet-container.tracktoolbox-point-crosshair {
 	cursor: crosshair;
 }
 
 /* Kill competing track/edit hit targets while digitize / point-draw is on
    (Leaflet SVG paths set their own pointer-events, so cascade to descendants). */
-.leaflet-container.legacy-routesnap-crosshair .leaflet-geotrackTrackPane,
-.leaflet-container.legacy-routesnap-crosshair .leaflet-geotrackTrackPane *,
-.leaflet-container.legacy-routesnap-crosshair .leaflet-geotrackEditHitPane,
-.leaflet-container.legacy-routesnap-crosshair .leaflet-geotrackEditHitPane *,
-.leaflet-container.legacy-routesnap-crosshair .leaflet-geotrackEditNodePane,
-.leaflet-container.legacy-routesnap-crosshair .leaflet-geotrackEditNodePane *,
-.leaflet-container.geotrack-point-crosshair .leaflet-geotrackTrackPane,
-.leaflet-container.geotrack-point-crosshair .leaflet-geotrackTrackPane *,
-.leaflet-container.geotrack-point-crosshair .leaflet-geotrackEditHitPane,
-.leaflet-container.geotrack-point-crosshair .leaflet-geotrackEditHitPane *,
-.leaflet-container.geotrack-point-crosshair .leaflet-geotrackEditNodePane,
-.leaflet-container.geotrack-point-crosshair .leaflet-geotrackEditNodePane * {
+.leaflet-container.legacy-routesnap-crosshair .leaflet-tracktoolboxTrackPane,
+.leaflet-container.legacy-routesnap-crosshair .leaflet-tracktoolboxTrackPane *,
+.leaflet-container.legacy-routesnap-crosshair .leaflet-tracktoolboxEditHitPane,
+.leaflet-container.legacy-routesnap-crosshair .leaflet-tracktoolboxEditHitPane *,
+.leaflet-container.legacy-routesnap-crosshair .leaflet-tracktoolboxEditNodePane,
+.leaflet-container.legacy-routesnap-crosshair .leaflet-tracktoolboxEditNodePane *,
+.leaflet-container.tracktoolbox-point-crosshair .leaflet-tracktoolboxTrackPane,
+.leaflet-container.tracktoolbox-point-crosshair .leaflet-tracktoolboxTrackPane *,
+.leaflet-container.tracktoolbox-point-crosshair .leaflet-tracktoolboxEditHitPane,
+.leaflet-container.tracktoolbox-point-crosshair .leaflet-tracktoolboxEditHitPane *,
+.leaflet-container.tracktoolbox-point-crosshair .leaflet-tracktoolboxEditNodePane,
+.leaflet-container.tracktoolbox-point-crosshair .leaflet-tracktoolboxEditNodePane * {
 	pointer-events: none !important;
 }
 

@@ -1,65 +1,91 @@
-/* Converter panel + header on top of legacy_trails map chrome */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;1,400&display=swap');
 
-.geotrack-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1001;
-  background: rgba(50, 50, 56, 0.92);
-  padding: 2px 12px 4px;
+/* Nav lives inside the toolbox panel (all viewports) */
+
+.tracktoolbox-header {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  z-index: auto;
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 12px;
-  pointer-events: none;
-  /* Beat copied leaflet_map.css `header { opacity:0 }` — always shown */
+  gap: 10px;
+  margin: 0 0 6px;
+  padding: 0 0 6px;
+  background: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  pointer-events: auto;
   opacity: 1;
   visibility: visible;
   transform: none;
 }
 
-.geotrack-header h1,
-.geotrack-panel-title {
+.tracktoolbox-header h1,
+.tracktoolbox-panel-title {
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-  font-size: clamp(20px, 3.2vw, 28px);
+  font-size: clamp(18px, 2.8vw, 24px);
   letter-spacing: 0.08em;
   line-height: 1.2;
   color: #fff;
   margin: 0;
-  padding: 2px 0;
+  padding: 0;
   text-shadow: 2px 2px 0 #000;
   font-weight: 700;
 }
 
-.geotrack-header h1 {
+/* Beat leaflet_map.css `header h1` (Trade Winds / inline-block / huge size) */
+.tracktoolbox-header h1 {
   flex: 1 1 auto;
+  min-width: 0;
+  display: block;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif !important;
+  font-size: clamp(18px, 2.8vw, 24px) !important;
+  letter-spacing: 0.08em !important;
+  line-height: 1.2 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.geotrack-panel-title {
+.tracktoolbox-panel-title {
   font-size: clamp(18px, 3vw, 24px);
   text-align: center;
+  margin-top: 0;
+  margin-bottom: 14px;
 }
 
-.geotrack-docs-link {
-  pointer-events: auto;
+.tracktoolbox-docs-link {
   flex: 0 0 auto;
-  margin-right: 4px;
-  padding: 2px 0;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
   border: none;
   background: none;
   color: #fff;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-  font-size: clamp(14px, 2.2vw, 18px);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  line-height: 1.2;
+  font-size: clamp(16px, 2.4vw, 20px);
+  line-height: 1;
   text-decoration: none;
   text-shadow: 2px 2px 0 #000;
   opacity: 0.85;
 }
 
-.geotrack-docs-link:hover {
-  color: #fff;
+/* Beat leaflet_map.css `.fa-info-circle { color: #313131 }` */
+.tracktoolbox-docs-link .fa-info-circle,
+.tracktoolbox-docs-link .fas {
+  color: #fff !important;
+  line-height: 1 !important;
+}
+
+.tracktoolbox-docs-link:hover,
+.tracktoolbox-docs-link:hover .fa-info-circle,
+.tracktoolbox-docs-link:hover .fas {
+  color: #fff !important;
   opacity: 1;
 }
 
@@ -67,7 +93,7 @@
   Desktop (14"+ laptop): compact so full form fits without panel scroll.
   Scroll remains available for short viewports / many tracks / mobile.
 */
-#geotrack-panel.geotrack-panel {
+#tracktoolbox-panel.tracktoolbox-panel {
   position: fixed;
   top: 50%;
   left: 12px;
@@ -81,7 +107,7 @@
   pointer-events: auto;
 }
 
-#geotrack-panel .geotrack-panel-inner {
+#tracktoolbox-panel .tracktoolbox-panel-inner {
   box-sizing: border-box;
   flex: 1 1 auto;
   min-height: 0;
@@ -93,50 +119,50 @@
   scrollbar-color: #5a5a64 #2a2a30;
 }
 
-#geotrack-panel .geotrack-panel-inner::before {
+#tracktoolbox-panel .tracktoolbox-panel-inner::before {
   content: none;
 }
 
-#geotrack-panel .geotrack-panel-inner::-webkit-scrollbar {
+#tracktoolbox-panel .tracktoolbox-panel-inner::-webkit-scrollbar {
   width: 8px;
 }
 
-#geotrack-panel .geotrack-panel-inner::-webkit-scrollbar-track {
+#tracktoolbox-panel .tracktoolbox-panel-inner::-webkit-scrollbar-track {
   background: #2a2a30;
 }
 
-#geotrack-panel .geotrack-panel-inner::-webkit-scrollbar-thumb {
+#tracktoolbox-panel .tracktoolbox-panel-inner::-webkit-scrollbar-thumb {
   background: #5a5a64;
   border-radius: 4px;
 }
 
-#geotrack-panel .geotrack-panel-inner::-webkit-scrollbar-thumb:hover {
+#tracktoolbox-panel .tracktoolbox-panel-inner::-webkit-scrollbar-thumb:hover {
   background: #7a7a86;
 }
 
-.geotrack-track-list {
+.tracktoolbox-track-list {
   scrollbar-width: thin;
   scrollbar-color: #5a5a64 #2a2a30;
 }
 
-.geotrack-track-list::-webkit-scrollbar {
+.tracktoolbox-track-list::-webkit-scrollbar {
   width: 8px;
 }
 
-.geotrack-track-list::-webkit-scrollbar-track {
+.tracktoolbox-track-list::-webkit-scrollbar-track {
   background: #2a2a30;
 }
 
-.geotrack-track-list::-webkit-scrollbar-thumb {
+.tracktoolbox-track-list::-webkit-scrollbar-thumb {
   background: #5a5a64;
   border-radius: 4px;
 }
 
-.geotrack-track-list::-webkit-scrollbar-thumb:hover {
+.tracktoolbox-track-list::-webkit-scrollbar-thumb:hover {
   background: #7a7a86;
 }
 
-#geotrack-panel .geotrack-panel-inner h2 {
+#tracktoolbox-panel .tracktoolbox-panel-inner h2 {
   margin: 0 0 2px;
   color: var(--legacy-panel-title);
   font-size: 17px;
@@ -144,29 +170,29 @@
   line-height: 1.2;
 }
 
-.geotrack-hint {
+.tracktoolbox-hint {
   margin: 0 0 6px;
   font-size: 12.5px;
   color: rgba(240, 240, 240, 0.75);
   line-height: 1.3;
 }
 
-#geotrack-panel .legacy-action-btn {
+#tracktoolbox-panel .legacy-action-btn {
   margin-top: 0;
   padding: 7px 8px;
   font-size: 14px;
 }
 
-#geotrack-upload-btn {
+#tracktoolbox-upload-btn {
   margin-top: 2px;
 }
 
-.geotrack-search {
+.tracktoolbox-search {
   position: relative;
   margin-top: 10px;
 }
 
-.geotrack-search-results {
+.tracktoolbox-search-results {
   list-style: none;
   margin: 4px 0 0;
   padding: 0;
@@ -178,11 +204,11 @@
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
-.geotrack-search-results[hidden] {
+.tracktoolbox-search-results[hidden] {
   display: none;
 }
 
-.geotrack-search-item {
+.tracktoolbox-search-item {
   display: block;
   width: 100%;
   text-align: left;
@@ -196,16 +222,16 @@
   cursor: pointer;
 }
 
-.geotrack-search-item:last-child {
+.tracktoolbox-search-item:last-child {
   border-bottom: none;
 }
 
-.geotrack-search-item:hover,
-.geotrack-search-item.is-active {
+.tracktoolbox-search-item:hover,
+.tracktoolbox-search-item.is-active {
   background: rgba(0, 185, 254, 0.18);
 }
 
-.geotrack-search-item-kind {
+.tracktoolbox-search-item-kind {
   display: block;
   font-size: 10px;
   font-weight: 700;
@@ -215,21 +241,21 @@
   margin-bottom: 2px;
 }
 
-.geotrack-search-item-kind.is-track {
+.tracktoolbox-search-item-kind.is-track {
   color: #00b9fe;
 }
 
-.geotrack-search-item-kind.is-place {
+.tracktoolbox-search-item-kind.is-place {
   color: rgba(232, 93, 76, 0.9);
 }
 
-.geotrack-search-item-label {
+.tracktoolbox-search-item-label {
   display: block;
   line-height: 1.25;
   word-break: break-word;
 }
 
-.geotrack-search-item-sub {
+.tracktoolbox-search-item-sub {
   display: block;
   margin-top: 2px;
   font-size: 11px;
@@ -237,15 +263,15 @@
   line-height: 1.2;
 }
 
-.geotrack-search-empty,
-.geotrack-search-status {
+.tracktoolbox-search-empty,
+.tracktoolbox-search-status {
   margin: 0;
   padding: 8px;
   font-size: 12px;
   color: rgba(240, 240, 240, 0.55);
 }
 
-.geotrack-sel-count {
+.tracktoolbox-sel-count {
   margin: 8px 0 4px;
   font-size: 12px;
   font-weight: 600;
@@ -253,13 +279,13 @@
   letter-spacing: 0.02em;
 }
 
-.geotrack-field-hint {
+.tracktoolbox-field-hint {
   font-weight: 500;
   font-size: 11px;
   color: rgba(240, 240, 240, 0.55);
 }
 
-.geotrack-track-list {
+.tracktoolbox-track-list {
   list-style: none;
   margin: 0 0 6px;
   padding: 0;
@@ -270,22 +296,22 @@
 }
 
 @media (min-height: 780px) {
-  .geotrack-track-list {
+  .tracktoolbox-track-list {
     max-height: min(280px, 32dvh);
   }
 }
 
 @media (min-height: 960px) {
-  .geotrack-track-list {
+  .tracktoolbox-track-list {
     max-height: min(360px, 38dvh);
   }
 }
 
-.geotrack-track-list:empty {
+.tracktoolbox-track-list:empty {
   display: none;
 }
 
-.geotrack-track-item {
+.tracktoolbox-track-item {
   display: block;
   width: 100%;
   text-align: left;
@@ -299,23 +325,23 @@
   cursor: pointer;
 }
 
-.geotrack-track-item:last-child {
+.tracktoolbox-track-item:last-child {
   border-bottom: none;
 }
 
-.geotrack-track-item:hover,
-.geotrack-track-item:focus-visible {
+.tracktoolbox-track-item:hover,
+.tracktoolbox-track-item:focus-visible {
   background: rgba(0, 185, 254, 0.14);
   outline: none;
 }
 
-.geotrack-track-item.is-selected {
+.tracktoolbox-track-item.is-selected {
   background: rgba(0, 185, 254, 0.28);
   color: #fff;
   font-weight: 600;
 }
 
-.geotrack-field-label {
+.tracktoolbox-field-label {
   display: block;
   margin: 5px 0 2px;
   font-size: 11px;
@@ -325,7 +351,7 @@
   color: rgba(240, 240, 240, 0.65);
 }
 
-.geotrack-field {
+.tracktoolbox-field {
   display: block;
   width: 100%;
   box-sizing: border-box;
@@ -339,28 +365,28 @@
   resize: vertical;
 }
 
-.geotrack-field:disabled {
+.tracktoolbox-field:disabled {
   opacity: 0.45;
 }
 
-.geotrack-field:focus {
+.tracktoolbox-field:focus {
   outline: none;
   border-color: rgba(0, 185, 254, 0.7);
   box-shadow: 0 0 0 2px rgba(0, 185, 254, 0.2);
 }
 
-.geotrack-desc {
+.tracktoolbox-desc {
   min-height: 44px;
   max-height: 72px;
 }
 
-.geotrack-btn-row {
+.tracktoolbox-btn-row {
   display: flex;
   gap: 5px;
   margin-top: 5px;
 }
 
-.geotrack-btn-row .legacy-action-btn {
+.tracktoolbox-btn-row .legacy-action-btn {
   flex: 1 1 0;
   width: auto;
   min-width: 0;
@@ -369,64 +395,195 @@
   font-size: 13px;
 }
 
-.geotrack-btn-danger {
+.tracktoolbox-btn-danger {
   color: #ffb4b4 !important;
 }
 
-.geotrack-panel .legacy-action-btn:disabled {
+.tracktoolbox-panel .legacy-action-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
   pointer-events: none;
 }
 
-/* Short / phone: keep scrollable compact sheet */
+/* Short landscape / compact height: bottom sheet */
 @media (max-width: 640px), (max-height: 700px) {
-  #geotrack-panel.geotrack-panel {
+  #tracktoolbox-panel.tracktoolbox-panel {
     top: auto;
     bottom: 10px;
     left: 8px;
     right: 8px;
     transform: none;
     width: auto;
-    max-height: min(46dvh, calc(100dvh - 56px));
+    max-height: min(46dvh, calc(100dvh - 24px));
     overflow: hidden !important;
   }
 
-  .geotrack-header h1 {
-    font-size: 18px;
+  .tracktoolbox-header h1 {
+    font-size: 17px !important;
   }
 
-  .geotrack-track-list {
+  .tracktoolbox-track-list {
     max-height: 72px;
   }
 }
 
-html.legacy-3d-active .geotrack-panel,
-html.legacy-3d-loading .geotrack-panel,
-html.legacy-3d-active .geotrack-header,
-html.legacy-3d-loading .geotrack-header,
-html.legacy-3d-active .geotrack-edit-toolbox,
-html.legacy-3d-loading .geotrack-edit-toolbox {
+/* Portrait: full-width top panel (nav is inside) */
+@media (orientation: portrait) {
+  .tracktoolbox-header h1 {
+    font-size: 17px !important;
+  }
+
+  #tracktoolbox-panel.tracktoolbox-panel {
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    bottom: auto;
+    transform: none;
+    width: auto;
+    max-width: none;
+    max-height: min(36dvh, calc(100dvh - 16px));
+    margin: 0 !important;
+    box-sizing: border-box;
+    /* Keep legacy gradient frame gutter + glow */
+    padding: 3px !important;
+    border: none;
+    border-radius: var(--legacy-panel-radius-outer, 10px) !important;
+    background: var(--legacy-panel-border-gradient);
+    background-size: 200% 200%;
+    animation: trailsWelcomeBorder 8s ease infinite;
+    box-shadow: var(--legacy-panel-frame-shadow);
+    overflow: hidden !important;
+  }
+
+  #tracktoolbox-panel .tracktoolbox-panel-inner {
+    border-radius: var(--legacy-panel-radius-inner, 8px) !important;
+    background-color: var(--legacy-panel-inner-bg, #323238);
+    background-image: var(--legacy-panel-inner-bg-image, none);
+    padding-top: 8px;
+  }
+
+  #tracktoolbox-panel .tracktoolbox-panel-inner h2 {
+    display: none;
+  }
+
+  .tracktoolbox-hint {
+    display: none;
+  }
+
+  .tracktoolbox-track-list {
+    max-height: 88px;
+  }
+
+  /* Map controls: horizontal strip above attribution (attr left alone) */
+  #map .leaflet-top.leaflet-right {
+    top: auto !important;
+    bottom: max(22px, calc(16px + env(safe-area-inset-bottom, 0px))) !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 6px;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 4px;
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  #map .leaflet-top.leaflet-right > .leaflet-control {
+    pointer-events: auto;
+    float: none !important;
+    clear: none !important;
+    margin: 0 !important;
+    position: relative !important;
+  }
+
+  #map .leaflet-control-zoom {
+    margin-top: 0 !important;
+    display: flex !important;
+    flex-direction: row;
+  }
+
+  #map .leaflet-control-zoom a {
+    float: none;
+    display: block;
+    border-bottom: none !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.22) !important;
+  }
+
+  #map .leaflet-control-zoom a:last-child {
+    border-right: none !important;
+  }
+
+  #map .leaflet-bar a,
+  #map .leaflet-bar button,
+  #map .leaflet-bar .easy-button-button,
+  #map .leaflet-control-locate a {
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    font-size: 13px;
+  }
+
+  #map .tracktoolbox-point-tool-icon {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* Digitize flyouts open above the bottom strip */
+  #map .legacy-routesnap-panel,
+  #map .legacy-routesnap-info {
+    top: auto;
+    bottom: calc(100% + 8px);
+    right: 0;
+    left: auto;
+    max-width: min(92vw, 300px);
+  }
+
+  #map .legacy-routesnap-info::before {
+    top: auto;
+    bottom: -10px;
+    right: 12px;
+    left: auto;
+    width: 24px;
+    height: 10px;
+  }
+
+  .tracktoolbox-edit-toolbox {
+    top: auto;
+    bottom: calc(54px + env(safe-area-inset-bottom, 0px));
+    right: 8px;
+    transform: none;
+  }
+}
+
+html.legacy-3d-active .tracktoolbox-panel,
+html.legacy-3d-loading .tracktoolbox-panel,
+html.legacy-3d-active .tracktoolbox-edit-toolbox,
+html.legacy-3d-loading .tracktoolbox-edit-toolbox {
   z-index: 1200;
 }
 
 /* Shortcut badges + help (toggle with k)
    RouteSnap already uses overflow:visible; locate / easyButton sit in
    .leaflet-bar { overflow:hidden } which clips badges — open them while keys show. */
-html.geotrack-show-keys .leaflet-bar,
-html.geotrack-show-keys .leaflet-control-locate,
-html.geotrack-show-keys .easy-button-container,
-html.geotrack-show-keys .leaflet-control {
+html.tracktoolbox-show-keys .leaflet-bar,
+html.tracktoolbox-show-keys .leaflet-control-locate,
+html.tracktoolbox-show-keys .easy-button-container,
+html.tracktoolbox-show-keys .leaflet-control {
   overflow: visible !important;
 }
 
-html.geotrack-show-keys [data-shortcut] {
+html.tracktoolbox-show-keys [data-shortcut] {
   position: relative;
   z-index: 5;
   overflow: visible !important;
 }
 
-html.geotrack-show-keys [data-shortcut]::after {
+html.tracktoolbox-show-keys [data-shortcut]::after {
   content: attr(data-shortcut);
   position: absolute;
   top: -7px;
@@ -443,7 +600,7 @@ html.geotrack-show-keys [data-shortcut]::after {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
-.geotrack-keys-help {
+.tracktoolbox-keys-help {
   position: fixed;
   left: 50%;
   bottom: 16px;
@@ -460,27 +617,27 @@ html.geotrack-show-keys [data-shortcut]::after {
   pointer-events: none;
 }
 
-.geotrack-keys-help.is-hidden {
+.tracktoolbox-keys-help.is-hidden {
   display: none !important;
 }
 
-.geotrack-keys-help h3 {
+.tracktoolbox-keys-help h3 {
   margin: 0 0 6px;
   font-size: 13px;
   color: #00b9fe;
 }
 
-.geotrack-keys-help ul {
+.tracktoolbox-keys-help ul {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.geotrack-keys-help li {
+.tracktoolbox-keys-help li {
   margin: 3px 0;
 }
 
-.geotrack-keys-help kbd {
+.tracktoolbox-keys-help kbd {
   display: inline-block;
   padding: 1px 5px;
   border-radius: 3px;
@@ -490,7 +647,7 @@ html.geotrack-show-keys [data-shortcut]::after {
 }
 
 /* —— Edit toolbox —— */
-.geotrack-edit-toolbox {
+.tracktoolbox-edit-toolbox {
   position: fixed;
   top: 50%;
   transform: translateY(-50%);
@@ -501,29 +658,29 @@ html.geotrack-show-keys [data-shortcut]::after {
   pointer-events: auto;
 }
 
-.geotrack-edit-toolbox.is-hidden,
-.geotrack-confirm.is-hidden {
+.tracktoolbox-edit-toolbox.is-hidden,
+.tracktoolbox-confirm.is-hidden {
   display: none !important;
 }
 
-.geotrack-edit-inner {
+.tracktoolbox-edit-inner {
   padding: 8px;
 }
 
-.geotrack-edit-head {
+.tracktoolbox-edit-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 4px;
 }
 
-.geotrack-edit-head h2 {
+.tracktoolbox-edit-head h2 {
   margin: 0;
   font-size: 12px;
   color: #fff;
 }
 
-.geotrack-edit-close {
+.tracktoolbox-edit-close {
   border: none;
   background: transparent;
   color: #f0f0f0;
@@ -533,20 +690,20 @@ html.geotrack-show-keys [data-shortcut]::after {
   padding: 0 2px;
 }
 
-.geotrack-edit-hint {
+.tracktoolbox-edit-hint {
   margin: 4px 0 6px;
   font-size: 9px;
   color: rgba(240, 240, 240, 0.7);
   line-height: 1.3;
 }
 
-.geotrack-edit-tools {
+.tracktoolbox-edit-tools {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.geotrack-edit-tools .legacy-action-btn {
+.tracktoolbox-edit-tools .legacy-action-btn {
   margin-top: 0;
   padding: 6px 2px;
   font-size: 13px;
@@ -555,27 +712,27 @@ html.geotrack-show-keys [data-shortcut]::after {
   letter-spacing: 0.02em;
 }
 
-.geotrack-edit-tool.is-active {
+.tracktoolbox-edit-tool.is-active {
   border-color: rgba(0, 185, 254, 0.75) !important;
   box-shadow: 0 0 0 1px rgba(0, 185, 254, 0.35);
   color: #fff !important;
 }
 
-.geotrack-edit-tool.is-hidden,
-.geotrack-edit-tool[hidden] {
+.tracktoolbox-edit-tool.is-hidden,
+.tracktoolbox-edit-tool[hidden] {
   display: none !important;
 }
 
 /* Edit node markers (above track / hit panes) */
-.leaflet-geotrackEditNodePane {
+.leaflet-tracktoolboxEditNodePane {
   z-index: 650;
 }
 
-.leaflet-geotrackEditHitPane {
+.leaflet-tracktoolboxEditHitPane {
   z-index: 450;
 }
 
-.leaflet-geotrackTrackPane {
+.leaflet-tracktoolboxTrackPane {
   z-index: 400;
 }
 
@@ -588,12 +745,12 @@ html.geotrack-show-keys [data-shortcut]::after {
   z-index: 670;
 }
 
-.geotrack-edit-node-wrap {
+.tracktoolbox-edit-node-wrap {
   background: transparent !important;
   border: none !important;
 }
 
-.geotrack-edit-node {
+.tracktoolbox-edit-node {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -611,7 +768,7 @@ html.geotrack-show-keys [data-shortcut]::after {
   pointer-events: none;
 }
 
-.geotrack-edit-node--wide {
+.tracktoolbox-edit-node--wide {
   width: 18px;
   height: 12px;
   border-radius: 2px;
@@ -619,23 +776,24 @@ html.geotrack-show-keys [data-shortcut]::after {
   letter-spacing: -0.04em;
 }
 
-.geotrack-edit-node--start {
+.tracktoolbox-edit-node--start {
   background: #2ecc71;
   color: #0b1f14;
 }
 
-.geotrack-edit-node--end {
+.tracktoolbox-edit-node--end {
   background: #e74c3c;
   color: #fff;
   border-color: #3a0c0c;
 }
 
-.geotrack-edit-node--mid {
+.tracktoolbox-edit-node--mid {
   background: #fff;
   color: #111;
 }
 
-.geotrack-welcome-blurb {
+.tracktoolbox-welcome-blurb {
+  text-align: center;
   margin: 8px 0 0;
   font-size: 14px;
   font-weight: 500;
@@ -643,7 +801,17 @@ html.geotrack-show-keys [data-shortcut]::after {
   color: var(--legacy-panel-text, rgba(240, 240, 240, 0.88));
 }
 
-.geotrack-kofi-overlay {
+#tracktoolbox-welcome-overlay .trails-welcome-donate-text,
+#tracktoolbox-welcome-overlay .trails-welcome-donate-text i {
+  font-family: 'Nunito', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  font-style: italic;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+}
+
+.tracktoolbox-kofi-overlay {
   position: fixed;
   inset: 0;
   z-index: 2050;
@@ -656,21 +824,21 @@ html.geotrack-show-keys [data-shortcut]::after {
   box-sizing: border-box;
 }
 
-.geotrack-kofi-overlay.is-hidden {
+.tracktoolbox-kofi-overlay.is-hidden {
   display: none !important;
 }
 
-.geotrack-kofi-frame {
+.tracktoolbox-kofi-frame {
   position: relative;
   width: min(320px, calc(100vw - 32px));
 }
 
-.geotrack-kofi-inner {
+.tracktoolbox-kofi-inner {
   box-sizing: border-box;
   padding: 14px 16px 16px;
 }
 
-.geotrack-kofi-reminder {
+.tracktoolbox-kofi-reminder {
   opacity: 1;
   visibility: visible;
   position: relative;
@@ -687,21 +855,21 @@ html.geotrack-show-keys [data-shortcut]::after {
   text-align: center;
 }
 
-.geotrack-kofi-reminder p {
+.tracktoolbox-kofi-reminder p {
   margin: 0;
   color: inherit;
 }
 
-.geotrack-kofi-reminder .legacy-action-btn {
+.tracktoolbox-kofi-reminder .legacy-action-btn {
   animation: kofi-support-pulse 2.6s ease-in-out infinite;
 }
 
-.geotrack-kofi-reminder .legacy-action-btn:hover,
-.geotrack-kofi-reminder .legacy-action-btn:focus-visible {
+.tracktoolbox-kofi-reminder .legacy-action-btn:hover,
+.tracktoolbox-kofi-reminder .legacy-action-btn:focus-visible {
   animation-play-state: paused;
 }
 
-.geotrack-kofi-frame .legacy-panel-close {
+.tracktoolbox-kofi-frame .legacy-panel-close {
   position: absolute;
   top: 6px;
   right: 6px;
@@ -709,7 +877,7 @@ html.geotrack-show-keys [data-shortcut]::after {
 }
 
 /* Busy / long-running ops */
-.geotrack-busy {
+.tracktoolbox-busy {
   position: fixed;
   inset: 0;
   z-index: 2100;
@@ -721,17 +889,17 @@ html.geotrack-show-keys [data-shortcut]::after {
   cursor: wait;
 }
 
-.geotrack-busy.is-hidden {
+.tracktoolbox-busy.is-hidden {
   display: none !important;
 }
 
-html.geotrack-busy,
-html.geotrack-busy body,
-html.geotrack-busy * {
+html.tracktoolbox-busy,
+html.tracktoolbox-busy body,
+html.tracktoolbox-busy * {
   cursor: wait !important;
 }
 
-.geotrack-busy-mark {
+.tracktoolbox-busy-mark {
   width: 52px;
   height: 52px;
   border-radius: 10px;
@@ -743,17 +911,17 @@ html.geotrack-busy * {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   font-size: 26px;
   line-height: 1;
-  animation: geotrack-hourglass 1.2s ease-in-out infinite;
+  animation: tracktoolbox-hourglass 1.2s ease-in-out infinite;
 }
 
-@keyframes geotrack-hourglass {
+@keyframes tracktoolbox-hourglass {
   0%, 100% { transform: rotate(0deg); }
   40% { transform: rotate(0deg); }
   50% { transform: rotate(180deg); }
   90% { transform: rotate(180deg); }
 }
 
-.geotrack-confirm {
+.tracktoolbox-confirm {
   position: fixed;
   inset: 0;
   z-index: 2000;
@@ -764,29 +932,29 @@ html.geotrack-busy * {
   pointer-events: auto;
 }
 
-.geotrack-confirm-box {
+.tracktoolbox-confirm-box {
   width: min(340px, calc(100vw - 32px));
 }
 
-.geotrack-confirm-box .legacy-panel-inner {
+.tracktoolbox-confirm-box .legacy-panel-inner {
   box-sizing: border-box;
   padding: 14px 16px 16px;
 }
 
-.geotrack-confirm-msg {
+.tracktoolbox-confirm-msg {
   margin: 0 0 12px;
   color: #f0f0f0;
   font-size: 14px;
   line-height: 1.4;
 }
 
-.geotrack-confirm-box .geotrack-btn-row {
+.tracktoolbox-confirm-box .tracktoolbox-btn-row {
   margin-top: 4px;
   gap: 8px;
 }
 
 /* Docs page */
-.geotrack-docs-page {
+.tracktoolbox-docs-page {
   max-width: 720px;
   margin: 0 auto;
   padding: 24px 18px 48px;
@@ -797,34 +965,34 @@ html.geotrack-busy * {
   box-sizing: border-box;
 }
 
-.geotrack-docs-page h1 {
+.tracktoolbox-docs-page h1 {
   margin: 0 0 8px;
   font-size: 1.6rem;
 }
 
-.geotrack-docs-page h2 {
+.tracktoolbox-docs-page h2 {
   margin: 1.4em 0 0.4em;
   font-size: 1.1rem;
   color: #00b9fe;
 }
 
-.geotrack-docs-page p,
-.geotrack-docs-page li {
+.tracktoolbox-docs-page p,
+.tracktoolbox-docs-page li {
   font-size: 0.95rem;
   line-height: 1.45;
   color: rgba(240, 240, 240, 0.88);
 }
 
-.geotrack-docs-page ul {
+.tracktoolbox-docs-page ul {
   padding-left: 1.2em;
   margin: 0.3em 0 0.6em;
 }
 
-.geotrack-docs-page a {
+.tracktoolbox-docs-page a {
   color: #00b9fe;
 }
 
-.geotrack-docs-page code {
+.tracktoolbox-docs-page code {
   font-size: 0.9em;
   background: rgba(255, 255, 255, 0.08);
   padding: 0.1em 0.35em;
@@ -832,7 +1000,7 @@ html.geotrack-busy * {
 }
 
 /* Add-Point control: center dot + crosshair */
-.geotrack-point-tool-icon {
+.tracktoolbox-point-tool-icon {
   position: relative;
   display: inline-block;
   width: 16px;
@@ -840,8 +1008,8 @@ html.geotrack-busy * {
   vertical-align: middle;
 }
 
-.geotrack-point-tool-cross::before,
-.geotrack-point-tool-cross::after {
+.tracktoolbox-point-tool-cross::before,
+.tracktoolbox-point-tool-cross::after {
   content: '';
   position: absolute;
   background: currentColor;
@@ -850,17 +1018,17 @@ html.geotrack-busy * {
   transform: translate(-50%, -50%);
 }
 
-.geotrack-point-tool-cross::before {
+.tracktoolbox-point-tool-cross::before {
   width: 14px;
   height: 2px;
 }
 
-.geotrack-point-tool-cross::after {
+.tracktoolbox-point-tool-cross::after {
   width: 2px;
   height: 14px;
 }
 
-.geotrack-point-tool-dot {
+.tracktoolbox-point-tool-dot {
   position: absolute;
   left: 50%;
   top: 50%;

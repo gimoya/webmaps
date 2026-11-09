@@ -671,7 +671,7 @@
 				fillColor: '#404040',
 				fillOpacity: 0.75,
 				interactive: false,
-				className: 'geotrack-brouter-coverage'
+				className: 'tracktoolbox-brouter-coverage'
 			}).addTo(this._map);
 		},
 

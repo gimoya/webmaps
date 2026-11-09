@@ -1,0 +1,24 @@
+{
+  "name": "track toolbox",
+  "short_name": "track toolbox",
+  "description": "GPX/KML load, convert, edit, Digitize (BRouter), and export in the browser.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1e1e22",
+  "theme_color": "#00b9fe",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "https://tiroltrailhead.com/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "https://tiroltrailhead.com/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
