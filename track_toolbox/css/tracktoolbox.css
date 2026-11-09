@@ -675,6 +675,22 @@ html.tracktoolbox-show-keys [data-shortcut]::after {
   display: none !important;
 }
 
+.tracktoolbox-edit-history {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.tracktoolbox-edit-history .tracktoolbox-edit-hist {
+  flex: 1 1 0;
+  margin-top: 0;
+  padding: 6px 2px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .tracktoolbox-edit-save {
   margin-top: 8px;
   padding: 6px 2px;
@@ -684,7 +700,7 @@ html.tracktoolbox-show-keys [data-shortcut]::after {
 }
 
 .tracktoolbox-edit-inner {
-  padding: 8px;
+  padding: 4px 8px 8px;
 }
 
 .tracktoolbox-edit-head {
@@ -692,6 +708,8 @@ html.tracktoolbox-show-keys [data-shortcut]::after {
   align-items: center;
   justify-content: space-between;
   gap: 4px;
+  margin-bottom: 10px;
+  padding-bottom: 0;
 }
 
 .tracktoolbox-edit-head h2 {

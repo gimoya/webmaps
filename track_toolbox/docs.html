@@ -80,7 +80,7 @@
   <h2>Files</h2>
   <ul>
     <li><strong>Upload files</strong> (<kbd>u</kbd>) — GPX, KML, ZIP, or KMZ (multiple). Tracks (LineString) and waypoints (Point). Max size per file applies; oversized files are rejected with a toast.</li>
-    <li><strong>GPX / KML</strong> — Download the current selection (ZIP if more than one).</li>
+    <li><strong>GPX / KML</strong> — Download the current selection. LineStrings: one file, or ZIP if several. Points: see <strong>Points</strong> below (never mixed into the same XML as a LineString).</li>
     <li><strong>Remove</strong> — Delete selected features.</li>
     <li><strong>Clear all</strong> — Remove every loaded feature.</li>
   </ul>
@@ -99,8 +99,12 @@
     <li>Toggle 3D terrain (Mapbox) via the map control; tracks/points sync into 3D. Edit mode forces 2D.</li>
   </ul>
 
-  <h2>Add Point</h2>
-  <p>Map control (point + crosshair), also <kbd>p</kbd>. Click the map to drop Point features into Tracks (named <code>Point N</code>). Stays on for multiple clicks; <strong>Esc</strong>, <kbd>p</kbd> again, or the control exits. Mutually exclusive with Digitize and edit; 2D-only.</p>
+  <h2>Points</h2>
+  <ul>
+    <li><strong>Add</strong> — Map control (point + crosshair), also <kbd>p</kbd>. Click the map to drop Point features into the list (named <code>Point N</code>). Stays on for multiple clicks; <strong>Esc</strong>, <kbd>p</kbd> again, or the control exits. Mutually exclusive with Digitize and edit; 2D-only.</li>
+    <li>Each click is its own list item (select / name / edit separately).</li>
+    <li><strong>Export</strong> — On GPX/KML download, all <em>selected</em> Points are written into <strong>one</strong> <code>points.gpx</code> or <code>points.kml</code> (many waypoints in a single file). Points and LineStrings are never mixed in the same document. If the selection also includes LineStrings, you get a ZIP: <code>points.*</code> plus one file per line.</li>
+  </ul>
 
   <h2>Digitize (BRouter)</h2>
   <p>Separate map control (route icon). Place waypoints, snap via BRouter (profiles / straight legs as in legacy_trails). The list button / save dialog <strong>adds a LineString to Tracks</strong> (no GPX download from digitize — export from the panel). Digitize is 2D-only; feature pick is blocked while active. Override endpoint with <code>?brouter=…</code>.</p>
@@ -136,7 +140,7 @@
   <ul>
     <li><strong>Save</strong> button (or <kbd>Enter</kbd>) — Save changes.</li>
     <li><strong>×</strong> (or <kbd>Esc</kbd>) — Discard (restores the session snapshot).</li>
-    <li><strong>Ctrl+Z / Ctrl+Y</strong> — Undo / redo within the session (keyboard).</li>
+    <li><strong>↶ / ↷</strong> buttons (or <kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd>) — Undo / redo within the session. Buttons are for mobile; shortcut badges show with <kbd>k</kbd> on desktop.</li>
     <li>Tool buttons on the edit panel (or <strong>n / s / d / f</strong> on keyboard; <code>f</code> = <code>df</code>; <strong>t</strong> toggles <code>t_</code> ↔ <code>_t</code>). Points: <strong>n</strong>, <strong>d</strong>, <strong>df</strong> only.</li>
     <li>Right-click / long-press another <em>session</em> feature (e.g. after a split) to switch the active target. Doing that on a non-session feature asks to discard and start a new session.</li>
   </ul>
@@ -155,7 +159,7 @@
   <h2>Notes</h2>
   <ul>
     <li>Scissor / trim apply only to LineStrings. Cuts too close to an endpoint are ignored.</li>
-    <li>On LineString edit enter, vertices are chord-simplified once (~every 20 m along-track). Those nodes (plus any you add) stay for the session — no re-thinning. Discard restores the dense original; save keeps the chords.</li>
+    <li>On LineString edit enter, vertices are chord-simplified once (~every 25 m along-track). Those nodes (plus any you add) stay for the session — no re-thinning. Discard restores the dense original; save keeps the chords.</li>
     <li>Discard restores the full track list from when the session started (including undoing splits and deletes in that session).</li>
     <li>Save commits the working geometry into the loaded set; then you can export as usual.</li>
   </ul>

@@ -39,7 +39,7 @@
 	var editHandlesLayer = null;
 	var editHitLayer = null;
 	var _editConfirmCb = null;
-	var EDIT_HIT_WEIGHT = 20;
+	var EDIT_HIT_WEIGHT = 25;
 	var EDIT_MIN_CUT_M = 1;
 	/** Screen-px radius around an existing vertex — click inside = no insert. */
 	var EDIT_NODE_PAD_PX = 12;
@@ -1445,26 +1445,54 @@
 		}
 	}
 
+	function gpxXmlOptions() {
+		return {
+			creator: 'track toolbox',
+			featureTitle: function (props) {
+				return (props && props.name) || 'Track';
+			},
+			featureDescription: function (props) {
+				if (!props) return '';
+				return props.description || props.desc || '';
+			}
+		};
+	}
+
 	function featureXml(t, format) {
 		var feature = trackToFeature(t);
-		if (format === 'gpx') {
-			return togpx(feature, {
-				creator: 'track toolbox',
-				featureTitle: function (props) {
-					return (props && props.name) || 'Track';
-				},
-				featureDescription: function (props) {
-					if (!props) return '';
-					return props.description || props.desc || '';
-				}
-			});
-		}
+		if (format === 'gpx') return togpx(feature, gpxXmlOptions());
 		return tokml(feature, {
 			name: 'name',
 			description: 'description',
 			documentName: t.name,
 			documentDescription: t.description
 		});
+	}
+
+	/** One GPX/KML document for many Features (Points → many wpt / Placemark). Never mix with lines here. */
+	function featuresXml(list, format, docName) {
+		var fc = {
+			type: 'FeatureCollection',
+			features: list.map(trackToFeature)
+		};
+		if (format === 'gpx') return togpx(fc, gpxXmlOptions());
+		return tokml(fc, {
+			name: 'name',
+			description: 'description',
+			documentName: docName || 'points',
+			documentDescription: ''
+		});
+	}
+
+	function partitionSelectedByGeom(list) {
+		var points = [];
+		var lines = [];
+		for (var i = 0; i < list.length; i++) {
+			var t = list[i];
+			if (t.geometry && t.geometry.type === 'Point') points.push(t);
+			else lines.push(t);
+		}
+		return { points: points, lines: lines };
 	}
 
 	function triggerDownload(blob, fileName) {
@@ -1478,16 +1506,10 @@
 		setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
 	}
 
-	function zipTracks(list, format, zipName) {
-		if (typeof JSZip === 'undefined') {
-			showToast('JSZip missing');
-			return Promise.resolve();
-		}
-		setBusy(true);
-		var zip = new JSZip();
-		var used = Object.create(null);
-		for (var i = 0; i < list.length; i++) {
-			var t = list[i];
+	function addLineFilesToZip(zip, lines, format, used) {
+		used = used || Object.create(null);
+		for (var i = 0; i < lines.length; i++) {
+			var t = lines[i];
 			var base = sanitizeFileBase(t.name);
 			var n = 1;
 			var fileName = base + '.' + format;
@@ -1498,6 +1520,22 @@
 			used[fileName] = true;
 			zip.file(fileName, featureXml(t, format));
 		}
+		return used;
+	}
+
+	function zipTracks(list, format, zipName, pointsList) {
+		if (typeof JSZip === 'undefined') {
+			showToast('JSZip missing');
+			return Promise.resolve();
+		}
+		setBusy(true);
+		var zip = new JSZip();
+		var used = Object.create(null);
+		if (pointsList && pointsList.length) {
+			used['points.' + format] = true;
+			zip.file('points.' + format, featuresXml(pointsList, format, 'points'));
+		}
+		addLineFilesToZip(zip, list, format, used);
 		return zip.generateAsync({ type: 'blob' }).then(function (blob) {
 			triggerDownload(blob, zipName);
 			showToast('ZIP downloaded');
@@ -1507,19 +1545,36 @@
 		});
 	}
 
+	function downloadXmlBlob(xml, format, fileName) {
+		var mime = format === 'gpx' ? 'application/gpx+xml' : 'application/vnd.google-earth.kml+xml';
+		triggerDownload(new Blob([xml], { type: mime }), fileName);
+		showToast(format.toUpperCase() + ' downloaded');
+		showKofiDownloadReminder();
+	}
+
 	function downloadSelected(format) {
 		var list = selectedTracks();
 		if (!list.length) return;
-		if (list.length === 1) {
-			var t = list[0];
-			var xml = featureXml(t, format);
-			var mime = format === 'gpx' ? 'application/gpx+xml' : 'application/vnd.google-earth.kml+xml';
-			triggerDownload(new Blob([xml], { type: mime }), sanitizeFileBase(t.name) + '.' + format);
-			showToast(format.toUpperCase() + ' downloaded');
-			showKofiDownloadReminder();
+		var parts = partitionSelectedByGeom(list);
+		var points = parts.points;
+		var lines = parts.lines;
+
+		/* Points never share a document with LineStrings. All selected points → one file. */
+		if (points.length && !lines.length) {
+			downloadXmlBlob(featuresXml(points, format, 'points'), format, 'points.' + format);
 			return;
 		}
-		zipTracks(list, format, 'selected_' + format + '.zip');
+		if (!points.length && lines.length === 1) {
+			var t = lines[0];
+			downloadXmlBlob(featureXml(t, format), format, sanitizeFileBase(t.name) + '.' + format);
+			return;
+		}
+		if (!points.length && lines.length > 1) {
+			zipTracks(lines, format, 'selected_' + format + '.zip');
+			return;
+		}
+		/* Mixed selection: ZIP with points.{ext} + one file per LineString */
+		zipTracks(lines, format, 'selected_' + format + '.zip', points);
 	}
 
 	function removeSelected() {
@@ -1561,6 +1616,8 @@
 	var mainPanelEl = document.getElementById('tracktoolbox-panel');
 	var editCloseBtn = document.getElementById('tracktoolbox-edit-close');
 	var editSaveBtn = document.getElementById('tracktoolbox-edit-save');
+	var editUndoBtn = document.getElementById('tracktoolbox-edit-undo');
+	var editRedoBtn = document.getElementById('tracktoolbox-edit-redo');
 	var confirmEl = document.getElementById('tracktoolbox-confirm');
 	var confirmMsg = document.getElementById('tracktoolbox-confirm-msg');
 	var confirmYes = document.getElementById('tracktoolbox-confirm-yes');
@@ -1581,6 +1638,18 @@
 	if (editSaveBtn) {
 		editSaveBtn.addEventListener('click', function () {
 			askSaveAndExit();
+		});
+	}
+	if (editUndoBtn) {
+		editUndoBtn.addEventListener('click', function () {
+			if (!editMode || editUndoBtn.disabled) return;
+			editUndo();
+		});
+	}
+	if (editRedoBtn) {
+		editRedoBtn.addEventListener('click', function () {
+			if (!editMode || editRedoBtn.disabled) return;
+			editRedo();
 		});
 	}
 
@@ -1661,6 +1730,11 @@
 		}
 	}
 
+	function syncEditHistoryButtons() {
+		if (editUndoBtn) editUndoBtn.disabled = !editMode || !editUndoStack.length;
+		if (editRedoBtn) editRedoBtn.disabled = !editMode || !editRedoStack.length;
+	}
+
 	function pushUndo() {
 		editUndoStack.push({
 			tracks: deepClone(tracks),
@@ -1670,6 +1744,7 @@
 		});
 		if (editUndoStack.length > EDIT_UNDO_MAX) editUndoStack.shift();
 		editRedoStack = [];
+		syncEditHistoryButtons();
 	}
 
 	function restoreEditState(state) {
@@ -1686,6 +1761,7 @@
 		syncSelectionUi();
 		syncTracksTo3D();
 		setEditTool(editTool);
+		syncEditHistoryButtons();
 	}
 
 	function editUndo() {
@@ -1872,6 +1948,7 @@
 			selectedIds = [id];
 			showEditToolbox(true);
 			setEditTool('node');
+			syncEditHistoryButtons();
 			syncSelectionUi();
 			syncTracksTo3D();
 			showToast('Edit mode');
@@ -1889,6 +1966,7 @@
 		clearEditPreviewLine();
 		editHandlesLayer.clearLayers();
 		editHitLayer.clearLayers();
+		syncEditHistoryButtons();
 		showEditToolbox(false);
 		hideConfirm();
 		if (!silent) {
