@@ -1,0 +1,626 @@
+/* Digitize / RouteSnap / Point-draw control */
+.leaflet-container.legacy-routesnap-crosshair,
+.leaflet-container.geotrack-point-crosshair {
+	cursor: crosshair;
+}
+
+/* Kill competing track/edit hit targets while digitize / point-draw is on
+   (Leaflet SVG paths set their own pointer-events, so cascade to descendants). */
+.leaflet-container.legacy-routesnap-crosshair .leaflet-geotrackTrackPane,
+.leaflet-container.legacy-routesnap-crosshair .leaflet-geotrackTrackPane *,
+.leaflet-container.legacy-routesnap-crosshair .leaflet-geotrackEditHitPane,
+.leaflet-container.legacy-routesnap-crosshair .leaflet-geotrackEditHitPane *,
+.leaflet-container.legacy-routesnap-crosshair .leaflet-geotrackEditNodePane,
+.leaflet-container.legacy-routesnap-crosshair .leaflet-geotrackEditNodePane *,
+.leaflet-container.geotrack-point-crosshair .leaflet-geotrackTrackPane,
+.leaflet-container.geotrack-point-crosshair .leaflet-geotrackTrackPane *,
+.leaflet-container.geotrack-point-crosshair .leaflet-geotrackEditHitPane,
+.leaflet-container.geotrack-point-crosshair .leaflet-geotrackEditHitPane *,
+.leaflet-container.geotrack-point-crosshair .leaflet-geotrackEditNodePane,
+.leaflet-container.geotrack-point-crosshair .leaflet-geotrackEditNodePane * {
+	pointer-events: none !important;
+}
+
+/* While BRouter fetch is in flight: no waypoint/leg click-drag counteractions. */
+.leaflet-container.legacy-routesnap-routing {
+	cursor: wait;
+}
+
+.leaflet-container.legacy-routesnap-routing .legacy-routesnap-wp,
+.leaflet-container.legacy-routesnap-routing .legacy-routesnap-leg-hit {
+	pointer-events: none !important;
+}
+
+.legacy-routesnap {
+	position: relative;
+	overflow: visible !important;
+}
+
+.legacy-routesnap-info {
+	position: absolute;
+	top: 0;
+	right: calc(100% + 8px);
+	left: auto;
+	width: 240px;
+	padding: 10px 12px;
+	background-color: var(--legacy-panel-inner-bg, #323238);
+	background-image: var(--legacy-panel-inner-bg-image, none);
+	color: var(--legacy-panel-text, #f0f0f0);
+	border: 2px solid rgba(255, 255, 255, 0.55);
+	border-radius: var(--legacy-panel-radius-inner, 8px);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+	font: 12px/1.4 var(--legacy-panel-font, system-ui, sans-serif);
+	z-index: 1000;
+	pointer-events: auto;
+}
+
+/* Hit-bridge toward the Digitize button */
+.legacy-routesnap-info::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	right: -10px;
+	width: 10px;
+}
+
+.legacy-routesnap-info strong {
+	display: block;
+	margin-bottom: 6px;
+	font-size: 13px;
+}
+
+.legacy-routesnap-info ul {
+	margin: 0;
+	padding-left: 1.1em;
+}
+
+.legacy-routesnap-info li {
+	margin: 0.25em 0;
+}
+
+.legacy-routesnap-info kbd {
+	display: inline-block;
+	padding: 0 4px;
+	border: 1px solid rgba(255, 255, 255, 0.35);
+	border-radius: 3px;
+	background: #2a2a30;
+	font: 11px/1.4 ui-monospace, Consolas, monospace;
+}
+
+.legacy-routesnap-panel {
+	position: absolute;
+	top: 0;
+	right: calc(100% + 8px);
+	left: auto;
+	min-width: 268px;
+	width: max(268px, min(92vw, 300px));
+	max-width: min(92vw, 300px);
+	padding: 10px;
+	background-color: var(--legacy-panel-inner-bg, #323238);
+	background-image: var(--legacy-panel-inner-bg-image, none);
+	color: var(--legacy-panel-text, #f0f0f0);
+	border: 2px solid rgba(255, 255, 255, 0.55);
+	border-radius: var(--legacy-panel-radius-inner, 8px);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+	font: 12px/1.35 var(--legacy-panel-font, system-ui, sans-serif);
+	z-index: 1;
+	box-sizing: border-box;
+}
+
+.legacy-routesnap-tools {
+	display: flex;
+	gap: 4px;
+	margin-bottom: 8px;
+}
+
+.legacy-routesnap-tool {
+	flex: 1;
+	height: 28px;
+	margin: 0;
+	padding: 0;
+	border: 1px solid rgba(255, 255, 255, 0.28);
+	border-radius: 3px;
+	background: #2a2a30;
+	color: #f0f0f0;
+	cursor: pointer;
+}
+
+.legacy-routesnap-tool:hover:not(:disabled),
+.legacy-routesnap-tool:focus:not(:disabled) {
+	background: #3a3a42;
+	color: #fff;
+}
+
+.legacy-routesnap-tool:disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+
+/* Shared on-state for tool buttons (Δ, Gerade+Elev pen, …) */
+.legacy-routesnap-tool.is-active {
+	background: #00b9fe !important;
+	color: #1e1e22 !important;
+	border-color: #7adfff !important;
+	box-shadow: 0 0 0 2px rgba(0, 185, 254, 0.55);
+}
+
+/* Gerade exkl. Höhe pen only — amber override */
+.legacy-routesnap-tool.is-active.is-pen-skip {
+	background: #c9a227 !important;
+	color: #1e1e22 !important;
+	border-color: #e8d48b !important;
+	box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.55);
+}
+
+.legacy-routesnap-leg-hit {
+	cursor: grab;
+}
+
+.legacy-routesnap-leg-hit:active {
+	cursor: grabbing;
+}
+
+/* Save dialog */
+.legacy-routesnap-dialog-overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 2000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 16px;
+	background: rgba(10, 10, 12, 0.55);
+	backdrop-filter: blur(2px);
+	box-sizing: border-box;
+}
+
+.legacy-routesnap-dialog-frame {
+	width: min(92vw, 360px);
+	padding: 2px;
+}
+
+.legacy-routesnap-dialog-box {
+	padding: 16px 18px 14px;
+	box-sizing: border-box;
+}
+
+.legacy-routesnap-dialog-title {
+	margin: 0 0 8px;
+	font-family: var(--legacy-panel-font, system-ui, sans-serif);
+	font-size: 17px;
+	font-weight: 700;
+	color: var(--legacy-panel-title, #fff);
+	letter-spacing: 0.01em;
+}
+
+.legacy-routesnap-dialog-label {
+	display: block;
+	margin: 0 0 6px;
+	font-size: 11px;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: rgba(240, 240, 240, 0.7);
+}
+
+.legacy-routesnap-dialog-name-row {
+	display: flex;
+	align-items: stretch;
+	margin: 0 0 12px;
+	border-radius: 8px;
+	background: var(--legacy-panel-accent-box-bg, linear-gradient(180deg, rgba(0, 185, 254, 0.14), rgba(255, 255, 255, 0.04)));
+	border: var(--legacy-panel-accent-box-border, 1px dashed rgba(255, 255, 255, 0.22));
+	overflow: hidden;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.legacy-routesnap-dialog-name-row:focus-within {
+	border-style: solid;
+	border-color: rgba(0, 185, 254, 0.7);
+	box-shadow: 0 0 0 2px rgba(0, 185, 254, 0.2);
+}
+
+.legacy-routesnap-dialog-name {
+	flex: 1;
+	min-width: 0;
+	height: 38px;
+	margin: 0;
+	padding: 0 12px;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	color: #ffffff;
+	font: 600 14px/1.2 var(--legacy-panel-font, system-ui, sans-serif);
+	box-sizing: border-box;
+	-webkit-appearance: none;
+	appearance: none;
+	-webkit-user-select: text;
+	user-select: text;
+}
+
+.legacy-routesnap-dialog-name::placeholder {
+	color: rgba(240, 240, 240, 0.4);
+	font-weight: 500;
+}
+
+.legacy-routesnap-dialog-name:focus {
+	outline: none;
+}
+
+.legacy-routesnap-dialog-ext {
+	display: flex;
+	align-items: center;
+	flex: 0 0 auto;
+	padding: 0 12px;
+	border-left: 1px solid rgba(255, 255, 255, 0.14);
+	background: rgba(0, 0, 0, 0.18);
+	color: rgba(122, 223, 255, 0.95);
+	font: 600 13px/1 var(--legacy-panel-font, system-ui, sans-serif);
+	letter-spacing: 0.02em;
+}
+
+.legacy-routesnap-dialog-meta {
+	margin: 0 0 14px;
+	font-size: 12px;
+	color: rgba(240, 240, 240, 0.7);
+}
+
+.legacy-routesnap-dialog-meta + .legacy-routesnap-dialog-meta {
+	margin-top: -8px;
+}
+
+.legacy-routesnap-dialog-elev {
+	margin-bottom: 8px;
+	font-variant-numeric: tabular-nums;
+	color: rgba(240, 240, 240, 0.9);
+}
+
+.legacy-routesnap-elev-block {
+	margin-top: 8px;
+}
+
+.legacy-routesnap-elev-toggle {
+	font: 700 15px/1 var(--legacy-panel-font, system-ui, sans-serif);
+}
+
+.legacy-routesnap-elev-toggle-label {
+	display: block;
+	line-height: 1;
+	/* Δ glyph sits high in the em box — nudge down for optical center */
+	transform: translateY(1px);
+}
+
+.legacy-routesnap-elev-body[hidden] {
+	display: none !important;
+}
+
+.legacy-routesnap-elev-body {
+	margin-top: 0;
+}
+
+.legacy-routesnap-elev-meta {
+	margin: 0 0 4px;
+	font-size: 11px;
+	line-height: 1.35;
+	font-variant-numeric: tabular-nums;
+	color: rgba(240, 240, 240, 0.9);
+	word-break: break-word;
+}
+
+.legacy-routesnap-elev-chart,
+.legacy-routesnap-dialog-spark {
+	overflow-x: auto;
+	overflow-y: hidden;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: thin;
+	scrollbar-color: #5a5a64 #2a2a30;
+}
+
+.legacy-routesnap-elev-chart {
+	margin: 0 0 2px;
+	padding-right: 10px;
+	box-sizing: border-box;
+	border-radius: 6px;
+}
+
+.legacy-routesnap-dialog-spark {
+	margin: 0 0 12px;
+}
+
+.legacy-routesnap-elev-chart::-webkit-scrollbar,
+.legacy-routesnap-dialog-spark::-webkit-scrollbar {
+	height: 8px;
+}
+
+.legacy-routesnap-elev-chart::-webkit-scrollbar-track,
+.legacy-routesnap-dialog-spark::-webkit-scrollbar-track {
+	background: #2a2a30;
+}
+
+.legacy-routesnap-elev-chart::-webkit-scrollbar-thumb,
+.legacy-routesnap-dialog-spark::-webkit-scrollbar-thumb {
+	background: #5a5a64;
+	border-radius: 4px;
+}
+
+.legacy-routesnap-elev-chart::-webkit-scrollbar-thumb:hover,
+.legacy-routesnap-dialog-spark::-webkit-scrollbar-thumb:hover {
+	background: #7a7a86;
+}
+
+.legacy-routesnap-sparkline {
+	position: relative;
+	display: block;
+	width: max-content;
+	max-width: none;
+	min-height: 56px;
+	/* padding-right keeps the plot frame / last grid clear of scroll clip */
+	padding: 2px 16px 2px 2px;
+	box-sizing: content-box;
+	/* no border-radius here — it clips SVG strokes at the plot’s right edge */
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	overflow: visible;
+	touch-action: pan-x;
+}
+
+.legacy-routesnap-elev-loupe {
+	position: absolute;
+	top: 0;
+	left: 0;
+	z-index: 5;
+	width: 72px;
+	pointer-events: none;
+	filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+}
+
+.legacy-routesnap-elev-loupe[hidden] {
+	display: none !important;
+}
+
+.legacy-routesnap-elev-loupe-svg {
+	display: block;
+	width: 72px;
+	height: 72px;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.75);
+	background: rgba(40, 40, 46, 0.95);
+	box-sizing: border-box;
+	overflow: hidden;
+}
+
+.legacy-routesnap-elev-loupe-readout {
+	position: absolute;
+	left: 50%;
+	top: calc(100% + 2px);
+	transform: translateX(-50%);
+	padding: 1px 4px;
+	border-radius: 3px;
+	background: rgba(20, 20, 24, 0.85);
+	color: #f0f0f0;
+	font: 600 10px/1.2 var(--legacy-panel-font, system-ui, sans-serif);
+	font-variant-numeric: tabular-nums;
+	text-align: center;
+	white-space: nowrap;
+}
+
+.legacy-routesnap-sparkline-empty {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	min-width: 100%;
+	min-height: 88px;
+	font-size: 11px;
+	color: rgba(240, 240, 240, 0.5);
+	box-sizing: border-box;
+}
+
+.legacy-routesnap-sparkline-svg {
+	display: block;
+	width: auto;
+	height: auto;
+	max-width: none;
+	vertical-align: top;
+	cursor: crosshair;
+}
+
+.legacy-routesnap-elev-flash {
+	background: transparent !important;
+	border: none !important;
+}
+
+.legacy-routesnap-elev-flash-dot,
+.legacy-routesnap-elev-flash-ring {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	border-radius: 50%;
+	transform: translate(-50%, -50%);
+	pointer-events: none;
+}
+
+.legacy-routesnap-elev-flash-dot {
+	width: 16px;
+	height: 16px;
+	background: #ff3d00;
+	border: 2px solid #fff;
+	box-shadow:
+		0 0 0 2px rgba(255, 61, 0, 0.55),
+		0 1px 6px rgba(0, 0, 0, 0.45);
+}
+
+.legacy-routesnap-elev-flash-ring {
+	width: 16px;
+	height: 16px;
+	border: 3px solid rgba(255, 87, 34, 0.95);
+	animation: legacy-routesnap-elev-flash-pulse 1.2s ease-out 6;
+}
+
+@keyframes legacy-routesnap-elev-flash-pulse {
+	0% {
+		width: 16px;
+		height: 16px;
+		opacity: 1;
+	}
+	100% {
+		width: 110px;
+		height: 110px;
+		opacity: 0;
+	}
+}
+
+.legacy-routesnap-axis-label {
+	font-family: var(--legacy-panel-font, system-ui, sans-serif);
+}
+
+.legacy-routesnap-dialog-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	justify-content: flex-end;
+}
+
+.legacy-routesnap-dialog-btn {
+	margin: 0;
+	padding: 8px 12px;
+	border-radius: 6px;
+	font: 600 13px/1.2 var(--legacy-panel-font, system-ui, sans-serif);
+	cursor: pointer;
+}
+
+.legacy-routesnap-dialog-btn-ghost {
+	background: transparent;
+	border: 1px solid rgba(255, 255, 255, 0.28);
+	color: #f0f0f0;
+}
+
+.legacy-routesnap-dialog-btn-ghost:hover,
+.legacy-routesnap-dialog-btn-ghost:focus-visible {
+	background: rgba(255, 255, 255, 0.08);
+	border-color: rgba(255, 255, 255, 0.45);
+	outline: none;
+}
+
+.legacy-routesnap-dialog-btn-primary {
+	background: linear-gradient(180deg, rgba(0, 185, 254, 0.35), rgba(0, 185, 254, 0.18));
+	border: 1px solid rgba(0, 185, 254, 0.75);
+	color: #fff;
+}
+
+.legacy-routesnap-dialog-btn-primary:hover,
+.legacy-routesnap-dialog-btn-primary:focus-visible {
+	background: linear-gradient(180deg, rgba(0, 185, 254, 0.5), rgba(0, 185, 254, 0.28));
+	box-shadow: 0 2px 10px rgba(0, 185, 254, 0.3);
+	outline: none;
+}
+
+.legacy-routesnap-profile {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin-bottom: 6px;
+	font-size: 11px;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: rgba(240, 240, 240, 0.75);
+}
+
+.legacy-routesnap-profile select {
+	height: 28px;
+	padding: 0 6px;
+	border: 1px solid rgba(255, 255, 255, 0.28);
+	border-radius: 3px;
+	background: #2a2a30;
+	color: #f0f0f0;
+	font-size: 12px;
+	text-transform: none;
+	letter-spacing: 0;
+}
+
+.legacy-routesnap-status {
+	min-height: 2.6em;
+	font-size: 11px;
+	line-height: 1.35;
+	color: rgba(240, 240, 240, 0.85);
+	word-break: break-word;
+}
+
+/* Mobile: Digitize info + tools open left; portrait sits lower toward stack bottom */
+@media (max-width: 768px) {
+	.legacy-routesnap-info,
+	.legacy-routesnap-panel {
+		top: auto;
+		bottom: 0;
+	}
+
+	.legacy-routesnap-info::before {
+		top: auto;
+		bottom: 0;
+		height: 100%;
+	}
+}
+
+@media (max-width: 768px) and (orientation: portrait) {
+	.legacy-routesnap-info,
+	.legacy-routesnap-panel {
+		/* Digitize sits above GPX + 3D — drop panel toward lower-right corner */
+		bottom: -100px;
+	}
+}
+
+/* Wider portrait: give Digitize panel more horizontal room for tools + elev chart */
+@media (orientation: portrait) and (min-width: 480px) {
+	.legacy-routesnap-panel {
+		min-width: 320px;
+		width: max(320px, min(92vw, 380px));
+		max-width: min(92vw, 380px);
+	}
+}
+
+@media (orientation: portrait) and (min-width: 700px) {
+	.legacy-routesnap-panel {
+		min-width: 360px;
+		width: max(360px, min(92vw, 440px));
+		max-width: min(92vw, 440px);
+	}
+}
+
+.legacy-routesnap-wp-label {
+	background: transparent !important;
+	border: none !important;
+	box-shadow: none !important;
+	color: #1e1e22 !important;
+	font-weight: 700;
+	font-size: 10px;
+	padding: 0 !important;
+	margin: 0 !important;
+}
+
+.legacy-routesnap-wp-label::before {
+	display: none !important;
+}
+
+.legacy-routesnap-wp {
+	background: #ffe8e4;
+	border: 2px solid #e85d4c;
+	border-radius: 50%;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+	cursor: grab;
+}
+
+.legacy-routesnap-wp:active {
+	cursor: grabbing;
+}
+
+.legacy-routesnap-wp-num {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+	color: #1e1e22;
+	font: 700 10px/1 sans-serif;
+	user-select: none;
+	pointer-events: none;
+}

@@ -1,0 +1,791 @@
+/* Converter panel + header on top of legacy_trails map chrome */
+
+.geotrack-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1001;
+  background: rgba(50, 50, 56, 0.92);
+  padding: 2px 12px 4px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+  /* Beat copied leaflet_map.css `header { opacity:0 }` — always shown */
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+
+.geotrack-header h1,
+.geotrack-panel-title {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-size: clamp(20px, 3.2vw, 28px);
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  color: #fff;
+  margin: 0;
+  padding: 2px 0;
+  text-shadow: 2px 2px 0 #000;
+  font-weight: 700;
+}
+
+.geotrack-header h1 {
+  flex: 1 1 auto;
+}
+
+.geotrack-panel-title {
+  font-size: clamp(18px, 3vw, 24px);
+  text-align: center;
+}
+
+.geotrack-docs-link {
+  pointer-events: auto;
+  flex: 0 0 auto;
+  margin-right: 4px;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  color: #fff;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-size: clamp(14px, 2.2vw, 18px);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-decoration: none;
+  text-shadow: 2px 2px 0 #000;
+  opacity: 0.85;
+}
+
+.geotrack-docs-link:hover {
+  color: #fff;
+  opacity: 1;
+}
+
+/*
+  Desktop (14"+ laptop): compact so full form fits without panel scroll.
+  Scroll remains available for short viewports / many tracks / mobile.
+*/
+#geotrack-panel.geotrack-panel {
+  position: fixed;
+  top: 50px;
+  left: 12px;
+  z-index: 1002;
+  width: min(320px, calc(100vw - 24px));
+  max-height: calc(100dvh - 52px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+  pointer-events: auto;
+}
+
+#geotrack-panel .geotrack-panel-inner {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 10px 12px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: #5a5a64 #2a2a30;
+}
+
+#geotrack-panel .geotrack-panel-inner::before {
+  content: none;
+}
+
+#geotrack-panel .geotrack-panel-inner::-webkit-scrollbar {
+  width: 8px;
+}
+
+#geotrack-panel .geotrack-panel-inner::-webkit-scrollbar-track {
+  background: #2a2a30;
+}
+
+#geotrack-panel .geotrack-panel-inner::-webkit-scrollbar-thumb {
+  background: #5a5a64;
+  border-radius: 4px;
+}
+
+#geotrack-panel .geotrack-panel-inner::-webkit-scrollbar-thumb:hover {
+  background: #7a7a86;
+}
+
+.geotrack-track-list {
+  scrollbar-width: thin;
+  scrollbar-color: #5a5a64 #2a2a30;
+}
+
+.geotrack-track-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.geotrack-track-list::-webkit-scrollbar-track {
+  background: #2a2a30;
+}
+
+.geotrack-track-list::-webkit-scrollbar-thumb {
+  background: #5a5a64;
+  border-radius: 4px;
+}
+
+.geotrack-track-list::-webkit-scrollbar-thumb:hover {
+  background: #7a7a86;
+}
+
+#geotrack-panel .geotrack-panel-inner h2 {
+  margin: 0 0 2px;
+  color: var(--legacy-panel-title);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.geotrack-hint {
+  margin: 0 0 6px;
+  font-size: 12.5px;
+  color: rgba(240, 240, 240, 0.75);
+  line-height: 1.3;
+}
+
+#geotrack-panel .legacy-action-btn {
+  margin-top: 0;
+  padding: 7px 8px;
+  font-size: 14px;
+}
+
+#geotrack-upload-btn {
+  margin-top: 2px;
+}
+
+.geotrack-search {
+  position: relative;
+  margin-top: 10px;
+}
+
+.geotrack-search-results {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  max-height: 120px;
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  background: rgba(40, 40, 46, 0.98);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.geotrack-search-results[hidden] {
+  display: none;
+}
+
+.geotrack-search-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  color: var(--legacy-panel-text);
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 8px;
+  cursor: pointer;
+}
+
+.geotrack-search-item:last-child {
+  border-bottom: none;
+}
+
+.geotrack-search-item:hover,
+.geotrack-search-item.is-active {
+  background: rgba(0, 185, 254, 0.18);
+}
+
+.geotrack-search-item-kind {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(240, 240, 240, 0.5);
+  margin-bottom: 2px;
+}
+
+.geotrack-search-item-kind.is-track {
+  color: #00b9fe;
+}
+
+.geotrack-search-item-kind.is-place {
+  color: rgba(232, 93, 76, 0.9);
+}
+
+.geotrack-search-item-label {
+  display: block;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.geotrack-search-item-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: rgba(240, 240, 240, 0.55);
+  line-height: 1.2;
+}
+
+.geotrack-search-empty,
+.geotrack-search-status {
+  margin: 0;
+  padding: 8px;
+  font-size: 12px;
+  color: rgba(240, 240, 240, 0.55);
+}
+
+.geotrack-sel-count {
+  margin: 8px 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(240, 240, 240, 0.72);
+  letter-spacing: 0.02em;
+}
+
+.geotrack-field-hint {
+  font-weight: 500;
+  font-size: 11px;
+  color: rgba(240, 240, 240, 0.55);
+}
+
+.geotrack-track-list {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  max-height: 88px;
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+}
+
+@media (min-height: 780px) {
+  .geotrack-track-list {
+    max-height: min(280px, 32dvh);
+  }
+}
+
+@media (min-height: 960px) {
+  .geotrack-track-list {
+    max-height: min(360px, 38dvh);
+  }
+}
+
+.geotrack-track-list:empty {
+  display: none;
+}
+
+.geotrack-track-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  color: var(--legacy-panel-text);
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+.geotrack-track-item:last-child {
+  border-bottom: none;
+}
+
+.geotrack-track-item:hover,
+.geotrack-track-item:focus-visible {
+  background: rgba(0, 185, 254, 0.14);
+  outline: none;
+}
+
+.geotrack-track-item.is-selected {
+  background: rgba(0, 185, 254, 0.28);
+  color: #fff;
+  font-weight: 600;
+}
+
+.geotrack-field-label {
+  display: block;
+  margin: 5px 0 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(240, 240, 240, 0.65);
+}
+
+.geotrack-field {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--legacy-panel-font);
+  font-size: 14px;
+  color: #f0f0f0;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  padding: 5px 8px;
+  resize: vertical;
+}
+
+.geotrack-field:disabled {
+  opacity: 0.45;
+}
+
+.geotrack-field:focus {
+  outline: none;
+  border-color: rgba(0, 185, 254, 0.7);
+  box-shadow: 0 0 0 2px rgba(0, 185, 254, 0.2);
+}
+
+.geotrack-desc {
+  min-height: 44px;
+  max-height: 72px;
+}
+
+.geotrack-btn-row {
+  display: flex;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.geotrack-btn-row .legacy-action-btn {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  margin-top: 0;
+  padding: 6px 5px;
+  font-size: 13px;
+}
+
+.geotrack-btn-danger {
+  color: #ffb4b4 !important;
+}
+
+.geotrack-panel .legacy-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Short / phone: keep scrollable compact sheet */
+@media (max-width: 640px), (max-height: 700px) {
+  #geotrack-panel.geotrack-panel {
+    top: auto;
+    bottom: 10px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-height: min(46dvh, calc(100dvh - 56px));
+    overflow: hidden !important;
+  }
+
+  .geotrack-header h1 {
+    font-size: 18px;
+  }
+
+  .geotrack-track-list {
+    max-height: 72px;
+  }
+}
+
+html.legacy-3d-active .geotrack-panel,
+html.legacy-3d-loading .geotrack-panel,
+html.legacy-3d-active .geotrack-header,
+html.legacy-3d-loading .geotrack-header,
+html.legacy-3d-active .geotrack-edit-toolbox,
+html.legacy-3d-loading .geotrack-edit-toolbox {
+  z-index: 1200;
+}
+
+/* —— Edit toolbox —— */
+.geotrack-edit-toolbox {
+  position: fixed;
+  top: 50px;
+  /* Clear Leaflet topright control stack (~44px) + gap */
+  right: 64px;
+  z-index: 1003;
+  width: 72px;
+  pointer-events: auto;
+}
+
+.geotrack-edit-toolbox.is-hidden,
+.geotrack-confirm.is-hidden {
+  display: none !important;
+}
+
+.geotrack-edit-inner {
+  padding: 8px;
+}
+
+.geotrack-edit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.geotrack-edit-head h2 {
+  margin: 0;
+  font-size: 12px;
+  color: #fff;
+}
+
+.geotrack-edit-close {
+  border: none;
+  background: transparent;
+  color: #f0f0f0;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.geotrack-edit-hint {
+  margin: 4px 0 6px;
+  font-size: 9px;
+  color: rgba(240, 240, 240, 0.7);
+  line-height: 1.3;
+}
+
+.geotrack-edit-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.geotrack-edit-tools .legacy-action-btn {
+  margin-top: 0;
+  padding: 6px 2px;
+  font-size: 13px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.geotrack-edit-tool.is-active {
+  border-color: rgba(0, 185, 254, 0.75) !important;
+  box-shadow: 0 0 0 1px rgba(0, 185, 254, 0.35);
+  color: #fff !important;
+}
+
+.geotrack-edit-tool.is-hidden,
+.geotrack-edit-tool[hidden] {
+  display: none !important;
+}
+
+/* Edit node markers (above track / hit panes) */
+.leaflet-geotrackEditNodePane {
+  z-index: 650;
+}
+
+.leaflet-geotrackEditHitPane {
+  z-index: 450;
+}
+
+.leaflet-geotrackTrackPane {
+  z-index: 400;
+}
+
+/* Digitize: route under stations (leg hits must not cover WPs) */
+.leaflet-digitizeRoutePane {
+  z-index: 655;
+}
+
+.leaflet-digitizePane {
+  z-index: 670;
+}
+
+.geotrack-edit-node-wrap {
+  background: transparent !important;
+  border: none !important;
+}
+
+.geotrack-edit-node {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 12px;
+  padding: 0;
+  border-radius: 2px;
+  border: 1px solid #111;
+  background: #fff;
+  color: #111;
+  font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  user-select: none;
+  pointer-events: none;
+}
+
+.geotrack-edit-node--wide {
+  width: 18px;
+  height: 12px;
+  border-radius: 2px;
+  font-size: 10px;
+  letter-spacing: -0.04em;
+}
+
+.geotrack-edit-node--start {
+  background: #2ecc71;
+  color: #0b1f14;
+}
+
+.geotrack-edit-node--end {
+  background: #e74c3c;
+  color: #fff;
+  border-color: #3a0c0c;
+}
+
+.geotrack-edit-node--mid {
+  background: #fff;
+  color: #111;
+}
+
+.geotrack-welcome-blurb {
+  margin: 8px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--legacy-panel-text, rgba(240, 240, 240, 0.88));
+}
+
+.geotrack-kofi-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.geotrack-kofi-overlay.is-hidden {
+  display: none !important;
+}
+
+.geotrack-kofi-frame {
+  position: relative;
+  width: min(320px, calc(100vw - 32px));
+}
+
+.geotrack-kofi-inner {
+  box-sizing: border-box;
+  padding: 14px 16px 16px;
+}
+
+.geotrack-kofi-reminder {
+  opacity: 1;
+  visibility: visible;
+  position: relative;
+  inset: auto;
+  width: auto;
+  height: auto;
+  background: transparent;
+  padding: 0;
+  font-family: var(--legacy-panel-font, system-ui, sans-serif);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--legacy-panel-text, #f0f0f0);
+  text-align: center;
+}
+
+.geotrack-kofi-reminder p {
+  margin: 0;
+  color: inherit;
+}
+
+.geotrack-kofi-reminder .legacy-action-btn {
+  animation: kofi-support-pulse 2.6s ease-in-out infinite;
+}
+
+.geotrack-kofi-reminder .legacy-action-btn:hover,
+.geotrack-kofi-reminder .legacy-action-btn:focus-visible {
+  animation-play-state: paused;
+}
+
+.geotrack-kofi-frame .legacy-panel-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+}
+
+/* Busy / long-running ops */
+.geotrack-busy {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.2);
+  pointer-events: all;
+  cursor: wait;
+}
+
+.geotrack-busy.is-hidden {
+  display: none !important;
+}
+
+html.geotrack-busy,
+html.geotrack-busy body,
+html.geotrack-busy * {
+  cursor: wait !important;
+}
+
+.geotrack-busy-mark {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(50, 50, 56, 0.92);
+  border: 1px solid rgba(0, 185, 254, 0.45);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  font-size: 26px;
+  line-height: 1;
+  animation: geotrack-hourglass 1.2s ease-in-out infinite;
+}
+
+@keyframes geotrack-hourglass {
+  0%, 100% { transform: rotate(0deg); }
+  40% { transform: rotate(0deg); }
+  50% { transform: rotate(180deg); }
+  90% { transform: rotate(180deg); }
+}
+
+.geotrack-confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+}
+
+.geotrack-confirm-box {
+  width: min(340px, calc(100vw - 32px));
+}
+
+.geotrack-confirm-box .legacy-panel-inner {
+  box-sizing: border-box;
+  padding: 14px 16px 16px;
+}
+
+.geotrack-confirm-msg {
+  margin: 0 0 12px;
+  color: #f0f0f0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.geotrack-confirm-box .geotrack-btn-row {
+  margin-top: 4px;
+  gap: 8px;
+}
+
+/* Docs page */
+.geotrack-docs-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 18px 48px;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  color: #e8e8e8;
+  background: #1e1e22;
+  min-height: 100dvh;
+  box-sizing: border-box;
+}
+
+.geotrack-docs-page h1 {
+  margin: 0 0 8px;
+  font-size: 1.6rem;
+}
+
+.geotrack-docs-page h2 {
+  margin: 1.4em 0 0.4em;
+  font-size: 1.1rem;
+  color: #00b9fe;
+}
+
+.geotrack-docs-page p,
+.geotrack-docs-page li {
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: rgba(240, 240, 240, 0.88);
+}
+
+.geotrack-docs-page ul {
+  padding-left: 1.2em;
+  margin: 0.3em 0 0.6em;
+}
+
+.geotrack-docs-page a {
+  color: #00b9fe;
+}
+
+.geotrack-docs-page code {
+  font-size: 0.9em;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+/* Add-Point control: center dot + crosshair */
+.geotrack-point-tool-icon {
+  position: relative;
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+}
+
+.geotrack-point-tool-cross::before,
+.geotrack-point-tool-cross::after {
+  content: '';
+  position: absolute;
+  background: currentColor;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.geotrack-point-tool-cross::before {
+  width: 14px;
+  height: 2px;
+}
+
+.geotrack-point-tool-cross::after {
+  width: 2px;
+  height: 14px;
+}
+
+.geotrack-point-tool-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 1.5px rgba(50, 50, 56, 0.95);
+}

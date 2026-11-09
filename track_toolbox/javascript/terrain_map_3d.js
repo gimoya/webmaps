@@ -322,54 +322,67 @@
 		});
 	};
 
+	TerrainMap3D.prototype._showSwitchTo2dTip = function (lngLat) {
+		if (!this.map || !lngLat) return;
+		if (this._popup) this._popup.remove();
+
+		var tipHtml =
+			'<div class="legacy-3d-trail-tip-body">' +
+				'<p class="legacy-3d-trail-tip-text">' + CLICK_TIP + '</p>' +
+				'<button type="button" class="legacy-3d-tip-2d-btn" aria-label="Switch to 2D view">' +
+					'<i class="fas fa-map" aria-hidden="true"></i>' +
+					'<span>2D view</span>' +
+				'</button>' +
+			'</div>';
+
+		this._popup = new mapboxgl.Popup({
+			closeButton: true,
+			closeOnClick: true,
+			className: 'legacy-3d-trail-tip',
+			maxWidth: '300px',
+			offset: 12
+		})
+			.setLngLat(lngLat)
+			.setHTML(tipHtml)
+			.addTo(this.map);
+
+		var btn = this._popup.getElement().querySelector('.legacy-3d-tip-2d-btn');
+		if (btn) {
+			btn.addEventListener('click', function (ev) {
+				ev.preventDefault();
+				ev.stopPropagation();
+				if (typeof window.geotrackExitTerrain3D === 'function') {
+					window.geotrackExitTerrain3D();
+				}
+			});
+		}
+	};
+
 	TerrainMap3D.prototype._bindTrailClicks = function () {
 		var self = this;
 		var hitId = 'trails-hit';
 
-		this.map.on('click', hitId, function (e) {
+		function onFeaturePointer(e) {
 			if (!e.features || !e.features.length) return;
-			if (self._popup) self._popup.remove();
-
-			var trailName = e.features[0].properties && e.features[0].properties.name;
-
-			var tipHtml =
-				'<div class="legacy-3d-trail-tip-body">' +
-					'<p class="legacy-3d-trail-tip-text">' + CLICK_TIP + '</p>' +
-					'<button type="button" class="legacy-3d-tip-2d-btn" aria-label="Switch to 2D view">' +
-						'<i class="fas fa-map" aria-hidden="true"></i>' +
-						'<span>2D view</span>' +
-					'</button>' +
-				'</div>';
-
-			self._popup = new mapboxgl.Popup({
-				closeButton: true,
-				closeOnClick: true,
-				className: 'legacy-3d-trail-tip',
-				maxWidth: '300px',
-				offset: 12
-			})
-				.setLngLat(e.lngLat)
-				.setHTML(tipHtml)
-				.addTo(self.map);
-
-			var btn = self._popup.getElement().querySelector('.legacy-3d-tip-2d-btn');
-			if (btn) {
-				btn.addEventListener('click', function (ev) {
-					ev.preventDefault();
-					ev.stopPropagation();
-					if (typeof window.converterExitTerrain3D === 'function') {
-						window.converterExitTerrain3D();
-					}
-				});
+			if (e.originalEvent) {
+				e.originalEvent.preventDefault();
 			}
-		});
+			self._showSwitchTo2dTip(e.lngLat);
+		}
 
-		this.map.on('mouseenter', hitId, function () {
-			self.map.getCanvas().style.cursor = 'pointer';
-		});
-		this.map.on('mouseleave', hitId, function () {
-			self.map.getCanvas().style.cursor = '';
-		});
+		var layers = [hitId, 'points-circle'];
+		for (var i = 0; i < layers.length; i++) {
+			(function (layerId) {
+				self.map.on('click', layerId, onFeaturePointer);
+				self.map.on('contextmenu', layerId, onFeaturePointer);
+				self.map.on('mouseenter', layerId, function () {
+					self.map.getCanvas().style.cursor = 'pointer';
+				});
+				self.map.on('mouseleave', layerId, function () {
+					self.map.getCanvas().style.cursor = '';
+				});
+			})(layers[i]);
+		}
 	};
 
 	TerrainMap3D.prototype._waitSettled = function () {

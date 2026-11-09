@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>track 📐toolbox — Docs</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#00b9fe">
+  <link rel="stylesheet" href="css/geotrack.css" type="text/css" />
+</head>
+<body class="geotrack-docs-page">
+  <h1>track 📐toolbox</h1>
+  <p>Load, select, convert, and edit GPX/KML tracks and waypoints in the browser.</p>
+
+  <h2>Files</h2>
+  <ul>
+    <li><strong>Upload files</strong> — GPX, KML, ZIP, or KMZ (multiple). Tracks (LineString) and waypoints (Point). Max size per file applies; oversized files are rejected with a toast.</li>
+    <li><strong>GPX / KML</strong> — Download the current selection (ZIP if more than one).</li>
+    <li><strong>Remove</strong> — Delete selected features.</li>
+    <li><strong>Clear all</strong> — Remove every loaded feature.</li>
+  </ul>
+
+  <h2>Selection &amp; metadata</h2>
+  <ul>
+    <li>Click a feature on the map or in the list to multi-select; click again to deselect.</li>
+    <li><strong>Name</strong> / <strong>Description</strong> always edit the <em>last</em> selected feature. Selection count is shown above the list.</li>
+    <li>Selected lines use the highlight style; points use a larger circle marker (also in 3D).</li>
+    <li><strong>Search</strong> — Fuzzy-match loaded tracks (name / description / source; always listed first), then OSM Nominatim places. Enter / click selects a track or flies to a place.</li>
+  </ul>
+
+  <h2>Map</h2>
+  <ul>
+    <li>2D Leaflet map with locate control and the usual base layers from the shared map CSS.</li>
+    <li>Toggle 3D terrain (Mapbox) via the map control; tracks/points sync into 3D. Edit mode forces 2D.</li>
+  </ul>
+
+  <h2>Add Point</h2>
+  <p>Map control (point + crosshair). Click the map to drop Point features into Tracks (named <code>Point N</code>). Stays on for multiple clicks; <strong>Esc</strong> or the control again exits. Mutually exclusive with Digitize and edit; 2D-only.</p>
+
+  <h2>Digitize (BRouter)</h2>
+  <p>Separate map control (route icon). Place waypoints, snap via BRouter (profiles / straight legs as in legacy_trails). The list button / save dialog <strong>adds a LineString to Tracks</strong> (no GPX download from digitize — export from the panel). Digitize is 2D-only; feature pick is blocked while active. Override endpoint with <code>?brouter=…</code>.</p>
+  <ul>
+    <li>Clear window = BRouter coverage; grey veil outside (Alps AT–CH–IT; lon 5–20°, lat 40–50°).</li>
+    <li>Stations farther than ~75 km crow-flies are refused (too slow / heavy for the router).</li>
+    <li><strong>Esc</strong> while a leg is routing cancels that request and keeps a straight chord between the last stations.</li>
+    <li><strong>Ctrl+Z / Ctrl+Y</strong> — Undo / redo last station edit (add, move, insert, clear).</li>
+  </ul>
+
+  <h2>Edit geometry</h2>
+  <p>Right-click a feature to open the edit toolbox. One edit session per start; tools switch without leaving the session.</p>
+  <ul>
+    <li><strong>Enter</strong> — Confirm and save changes.</li>
+    <li><strong>Esc</strong> / <strong>×</strong> — Confirm and discard (restores the session snapshot).</li>
+    <li><strong>Ctrl+Z / Ctrl+Y</strong> — Undo / redo within the session.</li>
+    <li><strong>n / s / d / f</strong> — Switch tool (<code>f</code> = <code>df</code>). <strong>t</strong> toggles <code>t_</code> ↔ <code>_t</code>. Points: <strong>n</strong>, <strong>d</strong>, <strong>df</strong> only.</li>
+    <li>Right-click another <em>session</em> feature (e.g. after a split) to switch the active target. Right-click a non-session feature asks to discard and start a new session.</li>
+  </ul>
+
+  <h2>Edit tools</h2>
+  <p>Vertex markers stay visible in every tool (node pane above the line). Letter = active tool. Start vertex green, end vertex red. Points: <strong>n</strong>, <strong>d</strong>, <strong>df</strong>.</p>
+  <ul>
+    <li><strong>n</strong> — Node: drag vertices / Point; click the line away from vertices to insert. Elevation kept when present.</li>
+    <li><strong>s</strong> — Scissor: click the line or a mid vertex to split (not start/end). Both parts stay in the session; the later part becomes active.</li>
+    <li><strong>_t</strong> — Trim before: delete everything before the click.</li>
+    <li><strong>t_</strong> — Trim after: delete everything after the click.</li>
+    <li><strong>d</strong> — Delete node: click a vertex to remove it, or a Point to remove that feature (min. two vertices on a line).</li>
+    <li><strong>df</strong> (<kbd>f</kbd>) — Delete feature: click a session Point or LineString to remove it whole. Empty session closes.</li>
+  </ul>
+
+  <h2>Notes</h2>
+  <ul>
+    <li>Scissor / trim apply only to LineStrings. Cuts too close to an endpoint are ignored.</li>
+    <li>On LineString edit enter, vertices are chord-simplified once (~every 20 m along-track). Those nodes (plus any you add) stay for the session — no re-thinning. Discard restores the dense original; save keeps the chords.</li>
+    <li>Discard restores the full track list from when the session started (including undoing splits and deletes in that session).</li>
+    <li>Save commits the working geometry into the loaded set; then you can export as usual.</li>
+  </ul>
+</body>
+</html>
