@@ -293,6 +293,8 @@
 	var _searchItems = [];
 	var _searchActiveIdx = -1;
 	var _searchQuery = '';
+	/** null = no filter (show all). Else map of matching track id → true. */
+	var _trackFilterIds = null;
 
 	function foldSearch(s) {
 		return String(s || '')
@@ -303,7 +305,7 @@
 			.trim();
 	}
 
-	/** Higher = better match; -1 = no match. */
+	/** Higher = better match; -1 = no match. Contiguous substrings only (no gapped subsequence). */
 	function fuzzyScore(query, haystack) {
 		var q = foldSearch(query);
 		var h = foldSearch(haystack);
@@ -317,33 +319,19 @@
 			var score = 700;
 			for (var t = 0; t < tokens.length; t++) {
 				var ti = h.indexOf(tokens[t]);
-				if (ti < 0) {
-					score = -1;
-					break;
-				}
+				if (ti < 0) return -1;
 				score -= Math.min(ti, 40);
 			}
-			if (score >= 0) return score;
+			return score;
 		}
-		var qi = 0;
-		var gaps = 0;
-		var last = -1;
-		for (var hi = 0; hi < h.length && qi < q.length; hi++) {
-			if (h.charAt(hi) === q.charAt(qi)) {
-				if (last >= 0) gaps += hi - last - 1;
-				last = hi;
-				qi++;
-			}
-		}
-		if (qi < q.length) return -1;
-		return Math.max(1, 400 - gaps * 2 - Math.min(h.length - q.length, 120));
+		return -1;
 	}
 
 	function trackSearchHaystack(t) {
 		return [t.name, t.description, t.sourceFile].filter(Boolean).join(' ');
 	}
 
-	function searchTracksLocal(query) {
+	function matchingTracksAll(query) {
 		var out = [];
 		for (var i = 0; i < tracks.length; i++) {
 			var t = tracks[i];
@@ -361,8 +349,44 @@
 			if (b.score !== a.score) return b.score - a.score;
 			return String(a.label).localeCompare(String(b.label));
 		});
+		return out;
+	}
+
+	function searchTracksLocal(query) {
+		var out = matchingTracksAll(query);
 		if (out.length > SEARCH_TRACK_LIMIT) out.length = SEARCH_TRACK_LIMIT;
 		return out;
+	}
+
+	function isTrackVisible(id) {
+		if (_trackFilterIds == null) return true;
+		if (editMode && editSessionIds.indexOf(id) !== -1) return true;
+		return !!_trackFilterIds[id];
+	}
+
+	function visibleTracks() {
+		var out = [];
+		for (var i = 0; i < tracks.length; i++) {
+			if (isTrackVisible(tracks[i].id)) out.push(tracks[i]);
+		}
+		return out;
+	}
+
+	function applyTrackFilterFromQuery(query) {
+		var q = foldSearch(query);
+		if (!q) {
+			_trackFilterIds = null;
+			return;
+		}
+		var mapIds = Object.create(null);
+		var hits = matchingTracksAll(query);
+		for (var i = 0; i < hits.length; i++) mapIds[hits[i].id] = true;
+		_trackFilterIds = mapIds;
+	}
+
+	function syncFilterAndUi(query) {
+		applyTrackFilterFromQuery(query);
+		syncSelectionUi();
 	}
 
 	function hideSearchResults() {
@@ -401,7 +425,7 @@
 			btn.dataset.idx = String(i);
 			var kind = document.createElement('span');
 			kind.className = 'tracktoolbox-search-item-kind ' + (item.kind === 'track' ? 'is-track' : 'is-place');
-			kind.textContent = item.kind === 'track' ? 'Track' : 'Place';
+			kind.textContent = item.kind === 'track' ? 'Feature' : 'Place';
 			var label = document.createElement('span');
 			label.className = 'tracktoolbox-search-item-label';
 			label.textContent = item.label;
@@ -534,8 +558,10 @@
 		var q = foldSearch(query);
 		if (!q) {
 			hideSearchResults();
+			syncFilterAndUi('');
 			return;
 		}
+		syncFilterAndUi(query);
 		var trackItems = searchTracksLocal(query);
 		renderSearchResults(
 			trackItems,
@@ -567,9 +593,11 @@
 		var q = foldSearch(raw);
 		if (!q) {
 			hideSearchResults();
+			syncFilterAndUi('');
 			return;
 		}
-		/* Tracks update immediately; Nominatim debounced via runSearch timer. */
+		/* Filter + track hits immediately; Nominatim debounced via runSearch timer. */
+		syncFilterAndUi(raw);
 		var trackItems = searchTracksLocal(raw);
 		renderSearchResults(
 			trackItems,
@@ -775,6 +803,7 @@
 	}
 
 	function pruneSelection() {
+		/* Keep selection across Search/Filter changes — only drop deleted tracks. */
 		selectedIds = selectedIds.filter(function (id) {
 			return !!findTrack(id);
 		});
@@ -953,7 +982,7 @@
 	function tracksToFeatureCollection() {
 		return {
 			type: 'FeatureCollection',
-			features: tracks.map(trackToFeature)
+			features: visibleTracks().map(trackToFeature)
 		};
 	}
 
@@ -1075,7 +1104,7 @@
 	/** Toggle: add if not selected, remove if already selected. */
 	function toggleTrack(id) {
 		if (editMode || digitizePickBlocked) return;
-		if (!id || !findTrack(id)) return;
+		if (!id || !findTrack(id) || !isTrackVisible(id)) return;
 		var idx = selectedIds.indexOf(id);
 		if (idx >= 0) selectedIds.splice(idx, 1);
 		else selectedIds.push(id);
@@ -1087,7 +1116,14 @@
 		_suppressFieldSync = true;
 		var n = selectedIds.length;
 		if (selCountEl) {
-			selCountEl.textContent = n === 1 ? '1 selected' : n + ' selected';
+			var selTxt = n === 1 ? '1 selected' : n + ' selected';
+			if (_trackFilterIds != null) {
+				var f = visibleTracks().length;
+				var filTxt = f === 1 ? '1 filtered' : f + ' filtered';
+				selCountEl.textContent = selTxt + ' / ' + filTxt;
+			} else {
+				selCountEl.textContent = selTxt;
+			}
 		}
 		var t = lastSelectedTrack();
 		if (t) {
@@ -1109,8 +1145,9 @@
 
 	function refreshTrackList() {
 		trackListEl.innerHTML = '';
-		for (var i = 0; i < tracks.length; i++) {
-			var t = tracks[i];
+		var list = visibleTracks();
+		for (var i = 0; i < list.length; i++) {
+			var t = list[i];
 			var li = document.createElement('li');
 			var btn = document.createElement('button');
 			btn.type = 'button';
@@ -1122,6 +1159,7 @@
 			btn.dataset.id = t.id;
 			btn.addEventListener('click', function (ev) {
 				var id = ev.currentTarget.dataset.id;
+				if (!isTrackVisible(id)) return;
 				toggleTrack(id);
 				var tr = findTrack(id);
 				if (tr && isSelected(id)) fitToGeometry(tr.geometry);
@@ -1342,6 +1380,7 @@
 		tracksLayer.clearLayers();
 		for (var i = 0; i < tracks.length; i++) {
 			var base = tracks[i];
+			if (!isTrackVisible(base.id)) continue;
 			var t = displayTrackForId(base.id) || base;
 			var selected = isSelected(t.id) || (editMode && editSessionIds.indexOf(t.id) !== -1);
 			var editing = editMode && t.id === editTargetId;
@@ -1358,6 +1397,7 @@
 						onEditFeatureClick(id, ev);
 						return;
 					}
+					if (!isTrackVisible(id)) return;
 					toggleTrack(id);
 				};
 			})(t.id);
@@ -1555,16 +1595,49 @@
 		showKofiDownloadReminder();
 	}
 
+	function isExportCollectionMode() {
+		var el = document.getElementById('tracktoolbox-export-collection');
+		return !!(el && el.checked);
+	}
+
 	function downloadSelected(format) {
 		var list = selectedTracks();
 		if (!list.length) return;
 		var parts = partitionSelectedByGeom(list);
 		var points = parts.points;
 		var lines = parts.lines;
+		var collection = isExportCollectionMode();
 
-		/* Points never share a document with LineStrings. All selected points → one file. */
+		/* Points never share a document with LineStrings. */
 		if (points.length && !lines.length) {
 			downloadXmlBlob(featuresXml(points, format, 'points'), format, 'points.' + format);
+			return;
+		}
+		if (collection && !points.length && lines.length) {
+			downloadXmlBlob(
+				featuresXml(lines, format, 'tracks'),
+				format,
+				(lines.length === 1 ? sanitizeFileBase(lines[0].name) : 'tracks') + '.' + format
+			);
+			return;
+		}
+		if (collection && points.length && lines.length) {
+			/* One tracks file + one points file — still no geometry mix in a single XML */
+			if (typeof JSZip === 'undefined') {
+				showToast('JSZip missing');
+				return;
+			}
+			setBusy(true);
+			var zip = new JSZip();
+			zip.file('tracks.' + format, featuresXml(lines, format, 'tracks'));
+			zip.file('points.' + format, featuresXml(points, format, 'points'));
+			zip.generateAsync({ type: 'blob' }).then(function (blob) {
+				triggerDownload(blob, 'selected_' + format + '.zip');
+				showToast('ZIP downloaded');
+				showKofiDownloadReminder();
+			}).finally(function () {
+				setBusy(false);
+			});
 			return;
 		}
 		if (!points.length && lines.length === 1) {
@@ -1576,7 +1649,7 @@
 			zipTracks(lines, format, 'selected_' + format + '.zip');
 			return;
 		}
-		/* Mixed selection: ZIP with points.{ext} + one file per LineString */
+		/* Mixed + separate: ZIP with points.{ext} + one file per LineString */
 		zipTracks(lines, format, 'selected_' + format + '.zip', points);
 	}
 
@@ -1590,7 +1663,6 @@
 		selectedIds = [];
 		syncSelectionUi();
 		syncTracksTo3D();
-		if (tracks.length) fitMapToTracks();
 		showToast(n === 1 ? 'Feature removed..' : n + ' features removed..');
 	}
 
@@ -2575,18 +2647,21 @@
 			showToast('Finish digitize / edit first');
 			return;
 		}
-		if (!tracks.length) {
-			showToast('No tracks loaded');
+		var visible = visibleTracks();
+		if (!visible.length) {
+			showToast(_trackFilterIds != null ? 'No filtered tracks' : 'No tracks loaded');
 			return;
 		}
-		var allSelected = selectedIds.length === tracks.length;
+		var allSelected =
+			selectedIds.length === visible.length &&
+			visible.every(function (t) { return isSelected(t.id); });
 		if (allSelected) {
 			selectedIds = [];
 			syncSelectionUi();
 			showToast('All deselected');
 			return;
 		}
-		selectedIds = tracks.map(function (t) { return t.id; });
+		selectedIds = visible.map(function (t) { return t.id; });
 		syncSelectionUi();
 		showToast('All selected');
 	}

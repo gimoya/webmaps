@@ -73,14 +73,13 @@
   <link rel="stylesheet" href="css/tracktoolbox.css" type="text/css" />
 </head>
 <body class="tracktoolbox-docs-page">
-  <p><a href="./">Open track toolbox app</a></p>
   <h1>track 📐toolbox</h1>
   <p>Load, select, convert, and edit GPX/KML tracks and waypoints in the browser.</p>
 
   <h2>Files</h2>
   <ul>
     <li><strong>Upload files</strong> (<kbd>u</kbd>) — GPX, KML, ZIP, or KMZ (multiple). Tracks (LineString) and waypoints (Point). Max size per file applies; oversized files are rejected with a toast.</li>
-    <li><strong>GPX / KML</strong> — Download the current selection. LineStrings: one file, or ZIP if several. Points: see <strong>Points</strong> below (never mixed into the same XML as a LineString).</li>
+    <li><strong>GPX / KML</strong> — Download the current selection. <strong>Separate files</strong> (default): one LineString per file (ZIP if several). <strong>Feature collection</strong>: all selected LineStrings in one <code>tracks.gpx</code>/<code>tracks.kml</code>. Points: see <strong>Points</strong> (never mixed into the same XML as a LineString; mixed selection → ZIP with <code>tracks.*</code> + <code>points.*</code>).</li>
     <li><strong>Remove</strong> — Delete selected features.</li>
     <li><strong>Clear all</strong> — Remove every loaded feature.</li>
   </ul>
@@ -90,7 +89,7 @@
     <li>Click a feature on the map or in the list to multi-select; click again to deselect.</li>
     <li><strong>Name</strong> / <strong>Description</strong> always edit the <em>last</em> selected feature. Selection count is shown above the list.</li>
     <li>Selected lines use the highlight style; points use a larger circle marker (also in 3D).</li>
-    <li><strong>Search</strong> — Fuzzy-match loaded tracks (name / description / source; always listed first), then OSM Nominatim places. Enter / click selects a track or flies to a place.</li>
+    <li><strong>Search/Filter</strong> — Fuzzy-match loaded tracks (name / description / source). While the query is non-empty, only matching features stay on the map and in the list; others are hidden and not selectable (including <kbd>Ctrl+A</kbd>). Dropdown still lists track hits (priority) plus OSM Nominatim places — Enter / click selects a track or flies to a place. Clear the field to show everything again.</li>
   </ul>
 
   <h2>Map</h2>

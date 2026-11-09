@@ -144,8 +144,8 @@
       <button type="button" class="legacy-action-btn" id="tracktoolbox-upload-btn" data-shortcut="u" title="Upload GPX, KML, ZIP, or KMZ files (u)">Upload files</button>
 
       <div class="tracktoolbox-search" role="search">
-        <label class="tracktoolbox-field-label" for="tracktoolbox-search">Search</label>
-        <input type="search" id="tracktoolbox-search" class="tracktoolbox-field" placeholder="Tracks (priority) or place…" autocomplete="off" spellcheck="false" title="Fuzzy search loaded tracks, then OSM Nominatim">
+        <label class="tracktoolbox-field-label" for="tracktoolbox-search">Search/Filter</label>
+        <input type="search" id="tracktoolbox-search" class="tracktoolbox-field" placeholder="Filter tracks or find a place…" autocomplete="off" spellcheck="false" title="Fuzzy-filter loaded tracks on the map and list; Nominatim places in the dropdown">
         <ul id="tracktoolbox-search-results" class="tracktoolbox-search-results" hidden role="listbox" aria-label="Search results"></ul>
       </div>
 
@@ -158,9 +158,22 @@
       <label class="tracktoolbox-field-label" for="tracktoolbox-desc">Description <span class="tracktoolbox-field-hint">(last selected)</span></label>
       <textarea id="tracktoolbox-desc" class="tracktoolbox-field tracktoolbox-desc" rows="2" disabled title="Edits the last selected feature"></textarea>
 
+      <fieldset class="tracktoolbox-export-mode" role="radiogroup" aria-label="Download layout">
+        <legend class="tracktoolbox-field-label">Download</legend>
+        <label class="tracktoolbox-radio">
+          <input type="radio" name="tracktoolbox-export-mode" value="separate" checked>
+          Separate files
+        </label>
+        <p class="tracktoolbox-export-hint">Keep separate gpx/kml files</p>
+        <label class="tracktoolbox-radio">
+          <input type="radio" name="tracktoolbox-export-mode" value="collection" id="tracktoolbox-export-collection">
+          Feature collection
+        </label>
+        <p class="tracktoolbox-export-hint">All features in one gpx/kml file</p>
+      </fieldset>
       <div class="tracktoolbox-btn-row">
-        <button type="button" class="legacy-action-btn" id="tracktoolbox-dl-gpx" disabled title="Download selected track(s) as GPX (ZIP if several)">GPX</button>
-        <button type="button" class="legacy-action-btn" id="tracktoolbox-dl-kml" disabled title="Download selected track(s) as KML (ZIP if several)">KML</button>
+        <button type="button" class="legacy-action-btn" id="tracktoolbox-dl-gpx" disabled title="Download selected track(s) as GPX">GPX</button>
+        <button type="button" class="legacy-action-btn" id="tracktoolbox-dl-kml" disabled title="Download selected track(s) as KML">KML</button>
       </div>
       <div class="tracktoolbox-btn-row">
         <button type="button" class="legacy-action-btn tracktoolbox-btn-danger" id="tracktoolbox-remove" disabled title="Remove selected track(s) and clear selection">Remove</button>
