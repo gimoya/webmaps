@@ -1558,7 +1558,9 @@
 	}
 
 	var editToolboxEl = document.getElementById('tracktoolbox-edit-toolbox');
+	var mainPanelEl = document.getElementById('tracktoolbox-panel');
 	var editCloseBtn = document.getElementById('tracktoolbox-edit-close');
+	var editSaveBtn = document.getElementById('tracktoolbox-edit-save');
 	var confirmEl = document.getElementById('tracktoolbox-confirm');
 	var confirmMsg = document.getElementById('tracktoolbox-confirm-msg');
 	var confirmYes = document.getElementById('tracktoolbox-confirm-yes');
@@ -1574,6 +1576,11 @@
 	if (editCloseBtn) {
 		editCloseBtn.addEventListener('click', function () {
 			askDiscardAndExit();
+		});
+	}
+	if (editSaveBtn) {
+		editSaveBtn.addEventListener('click', function () {
+			askSaveAndExit();
 		});
 	}
 
@@ -1639,13 +1646,18 @@
 	}
 
 	function showEditToolbox(on) {
-		if (!editToolboxEl) return;
-		if (on) {
-			editToolboxEl.hidden = false;
-			editToolboxEl.classList.remove('is-hidden');
-		} else {
-			editToolboxEl.hidden = true;
-			editToolboxEl.classList.add('is-hidden');
+		if (editToolboxEl) {
+			if (on) {
+				editToolboxEl.hidden = false;
+				editToolboxEl.classList.remove('is-hidden');
+			} else {
+				editToolboxEl.hidden = true;
+				editToolboxEl.classList.add('is-hidden');
+			}
+		}
+		if (mainPanelEl) {
+			mainPanelEl.classList.toggle('is-hidden', !!on);
+			mainPanelEl.setAttribute('aria-hidden', on ? 'true' : 'false');
 		}
 	}
 

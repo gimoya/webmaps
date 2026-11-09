@@ -24,13 +24,13 @@
   <meta property="og:url" content="https://tiroltrailhead.com/webmaps/track_toolbox/">
   <meta property="og:title" content="track toolbox — GPX/KML editor &amp; converter">
   <meta property="og:description" content="Load, convert, edit, and digitize GPX/KML tracks in the browser. Multi-select, geometry tools, BRouter routing, 3D terrain — free.">
-  <meta property="og:image" content="https://tiroltrailhead.com/tilt.jpg">
+  <meta property="og:image" content="https://tiroltrailhead.com/webmaps/track_toolbox/card.jpg">
   <meta property="og:image:alt" content="Tirol Trailhead — track toolbox">
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="track toolbox — GPX/KML editor &amp; converter">
   <meta name="twitter:description" content="Free in-browser GPX/KML load, edit, digitize (BRouter), and export. By Tirol Trailhead.">
-  <meta name="twitter:image" content="https://tiroltrailhead.com/tilt.jpg">
+  <meta name="twitter:image" content="https://tiroltrailhead.com/webmaps/track_toolbox/card.jpg">
 
   <link rel="preconnect" href="https://unpkg.com" crossorigin>
   <link rel="preconnect" href="https://api.mapbox.com" crossorigin>
@@ -174,7 +174,7 @@
         <h2>Edit</h2>
         <button type="button" class="tracktoolbox-edit-close" id="tracktoolbox-edit-close" data-shortcut="Esc" title="Discard edits and close (Esc)">&times;</button>
       </div>
-      <p class="tracktoolbox-edit-hint" data-shortcut="↵/Esc">keys · Enter/Esc</p>
+      <p class="tracktoolbox-edit-hint" data-shortcut="↵/Esc">Enter save · Esc discard</p>
       <div class="tracktoolbox-edit-tools" role="toolbar">
         <button type="button" class="legacy-action-btn tracktoolbox-edit-tool is-active" data-tool="node" data-shortcut="n" title="Node — drag / insert vertices (n)">n</button>
         <button type="button" class="legacy-action-btn tracktoolbox-edit-tool" data-tool="scissor" data-shortcut="s" title="Scissor — split LineString at click (s)">s</button>
@@ -183,6 +183,7 @@
         <button type="button" class="legacy-action-btn tracktoolbox-edit-tool tracktoolbox-btn-danger" data-tool="delete" data-shortcut="d" title="Delete node — remove clicked vertex or point (d)">d</button>
         <button type="button" class="legacy-action-btn tracktoolbox-edit-tool tracktoolbox-btn-danger" data-tool="deleteFeature" data-shortcut="f" title="Delete feature — remove whole Point or LineString (f)">df</button>
       </div>
+      <button type="button" class="legacy-action-btn tracktoolbox-edit-save" id="tracktoolbox-edit-save" data-shortcut="↵" title="Save edits and close (Enter)">Save</button>
     </div>
   </aside>
 
