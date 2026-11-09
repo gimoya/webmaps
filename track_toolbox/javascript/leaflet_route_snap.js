@@ -140,6 +140,7 @@
 		'<li>Max ~75 km between stations (else refused)</li>' +
 		'<li>Esc while routing = cancel current leg</li>' +
 		'<li>Ctrl+Z / Ctrl+Y = undo / redo station edit</li>' +
+		'<li>r = toggle Digitize (off keeps route)</li>' +
 		'<li>Pen cycle: Route · straight+elev · straight skip elev</li>' +
 		'<li>Save → add LineString to Tracks</li>' +
 		'</ul>';
@@ -315,7 +316,7 @@
 			var root = L.DomUtil.create('div', 'leaflet-control leaflet-bar legacy-routesnap');
 			this._container = root;
 
-			this._toggleBtn = this._makeBarBtn(root, 'fa-route', 'Digitize', function () {
+			this._toggleBtn = this._makeBarBtn(root, 'fa-route', 'Digitize (r)', function () {
 				if (this._active) {
 					if (this._routeLatLngs.length >= 2) this._promptSave();
 					else this.deactivate();
@@ -617,9 +618,10 @@
 		_makeBarBtn: function (parent, icon, title, fn) {
 			var a = L.DomUtil.create('a', 'legacy-routesnap-toggle', parent);
 			a.href = '#';
-			a.removeAttribute('title');
+			a.title = title;
 			a.setAttribute('role', 'button');
 			a.setAttribute('aria-label', title);
+			a.setAttribute('data-shortcut', 'r');
 			a.innerHTML = '<i class="fas ' + icon + '" aria-hidden="true"></i>';
 			L.DomEvent.on(a, 'click', L.DomEvent.stop)
 				.on(a, 'click', fn, this);

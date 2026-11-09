@@ -69,11 +69,12 @@
 */
 #geotrack-panel.geotrack-panel {
   position: fixed;
-  top: 50px;
+  top: 50%;
   left: 12px;
+  transform: translateY(-50%);
   z-index: 1002;
   width: min(320px, calc(100vw - 24px));
-  max-height: calc(100dvh - 52px);
+  max-height: calc(100dvh - 24px);
   display: flex;
   flex-direction: column;
   overflow: hidden !important;
@@ -385,6 +386,7 @@
     bottom: 10px;
     left: 8px;
     right: 8px;
+    transform: none;
     width: auto;
     max-height: min(46dvh, calc(100dvh - 56px));
     overflow: hidden !important;
@@ -408,10 +410,90 @@ html.legacy-3d-loading .geotrack-edit-toolbox {
   z-index: 1200;
 }
 
+/* Shortcut badges + help (toggle with k)
+   RouteSnap already uses overflow:visible; locate / easyButton sit in
+   .leaflet-bar { overflow:hidden } which clips badges — open them while keys show. */
+html.geotrack-show-keys .leaflet-bar,
+html.geotrack-show-keys .leaflet-control-locate,
+html.geotrack-show-keys .easy-button-container,
+html.geotrack-show-keys .leaflet-control {
+  overflow: visible !important;
+}
+
+html.geotrack-show-keys [data-shortcut] {
+  position: relative;
+  z-index: 5;
+  overflow: visible !important;
+}
+
+html.geotrack-show-keys [data-shortcut]::after {
+  content: attr(data-shortcut);
+  position: absolute;
+  top: -7px;
+  right: -6px;
+  z-index: 20;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #00b9fe;
+  color: #0a1620;
+  font: 700 9px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.geotrack-keys-help {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 1100;
+  width: min(340px, calc(100vw - 24px));
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(40, 40, 46, 0.96);
+  border: 1px solid rgba(0, 185, 254, 0.45);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  color: #f0f0f0;
+  font: 12px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  pointer-events: none;
+}
+
+.geotrack-keys-help.is-hidden {
+  display: none !important;
+}
+
+.geotrack-keys-help h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: #00b9fe;
+}
+
+.geotrack-keys-help ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.geotrack-keys-help li {
+  margin: 3px 0;
+}
+
+.geotrack-keys-help kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.35);
+  font: 700 11px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
 /* —— Edit toolbox —— */
 .geotrack-edit-toolbox {
   position: fixed;
-  top: 50px;
+  top: 50%;
+  transform: translateY(-50%);
   /* Clear Leaflet topright control stack (~44px) + gap */
   right: 64px;
   z-index: 1003;

@@ -13,7 +13,7 @@
 
   <h2>Files</h2>
   <ul>
-    <li><strong>Upload files</strong> — GPX, KML, ZIP, or KMZ (multiple). Tracks (LineString) and waypoints (Point). Max size per file applies; oversized files are rejected with a toast.</li>
+    <li><strong>Upload files</strong> (<kbd>u</kbd>) — GPX, KML, ZIP, or KMZ (multiple). Tracks (LineString) and waypoints (Point). Max size per file applies; oversized files are rejected with a toast.</li>
     <li><strong>GPX / KML</strong> — Download the current selection (ZIP if more than one).</li>
     <li><strong>Remove</strong> — Delete selected features.</li>
     <li><strong>Clear all</strong> — Remove every loaded feature.</li>
@@ -34,7 +34,7 @@
   </ul>
 
   <h2>Add Point</h2>
-  <p>Map control (point + crosshair). Click the map to drop Point features into Tracks (named <code>Point N</code>). Stays on for multiple clicks; <strong>Esc</strong> or the control again exits. Mutually exclusive with Digitize and edit; 2D-only.</p>
+  <p>Map control (point + crosshair), also <kbd>p</kbd>. Click the map to drop Point features into Tracks (named <code>Point N</code>). Stays on for multiple clicks; <strong>Esc</strong>, <kbd>p</kbd> again, or the control exits. Mutually exclusive with Digitize and edit; 2D-only.</p>
 
   <h2>Digitize (BRouter)</h2>
   <p>Separate map control (route icon). Place waypoints, snap via BRouter (profiles / straight legs as in legacy_trails). The list button / save dialog <strong>adds a LineString to Tracks</strong> (no GPX download from digitize — export from the panel). Digitize is 2D-only; feature pick is blocked while active. Override endpoint with <code>?brouter=…</code>.</p>
@@ -42,12 +42,18 @@
     <li>Clear window = BRouter coverage; grey veil outside (Alps AT–CH–IT; lon 5–20°, lat 40–50°).</li>
     <li>Stations farther than ~75 km crow-flies are refused (too slow / heavy for the router).</li>
     <li><strong>Esc</strong> while a leg is routing cancels that request and keeps a straight chord between the last stations.</li>
+    <li><strong>r</strong> — Toggle Digitize. Second press exits (cancels in-flight leg like Esc, leaves waypoints/route on the map; no save prompt).</li>
     <li><strong>Ctrl+Z / Ctrl+Y</strong> — Undo / redo last station edit (add, move, insert, clear).</li>
   </ul>
 
   <h2>Edit geometry</h2>
-  <p>Right-click a feature to open the edit toolbox. One edit session per start; tools switch without leaving the session.</p>
+  <p>Right-click a feature, or press <kbd>e</kbd> with exactly one selected, to open the edit toolbox. One edit session per start; tools switch without leaving the session.</p>
   <ul>
+    <li><strong>e</strong> — Enter edit when exactly one feature is selected.</li>
+    <li><strong>Ctrl+A</strong> — Select all tracks; press again to deselect all.</li>
+    <li><strong>k</strong> — Show / hide shortcut badges and the shortcut cheat sheet.</li>
+    <li><strong>p</strong> — Toggle Add Point. <strong>l</strong> — Toggle GPS locate. <strong>r</strong> — Toggle Digitize. <strong>3</strong> — Toggle 3D terrain.</li>
+    <li><strong>+</strong> / <strong>-</strong> — Zoom in / out.</li>
     <li><strong>Enter</strong> — Confirm and save changes.</li>
     <li><strong>Esc</strong> / <strong>×</strong> — Confirm and discard (restores the session snapshot).</li>
     <li><strong>Ctrl+Z / Ctrl+Y</strong> — Undo / redo within the session.</li>

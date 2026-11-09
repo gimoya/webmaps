@@ -76,7 +76,7 @@
 
       <input type="file" id="geotrack-file-input" accept=".gpx,.kml,.zip,.kmz,application/gpx+xml,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz,application/zip" multiple hidden>
 
-      <button type="button" class="legacy-action-btn" id="geotrack-upload-btn" title="Upload GPX, KML, ZIP, or KMZ files">Upload files</button>
+      <button type="button" class="legacy-action-btn" id="geotrack-upload-btn" data-shortcut="u" title="Upload GPX, KML, ZIP, or KMZ files (u)">Upload files</button>
 
       <div class="geotrack-search" role="search">
         <label class="geotrack-field-label" for="geotrack-search">Search</label>
@@ -84,7 +84,7 @@
         <ul id="geotrack-search-results" class="geotrack-search-results" hidden role="listbox" aria-label="Search results"></ul>
       </div>
 
-      <p id="geotrack-sel-count" class="geotrack-sel-count" aria-live="polite">0 selected</p>
+      <p id="geotrack-sel-count" class="geotrack-sel-count" aria-live="polite" data-shortcut="Ctrl+A" title="Ctrl+A — select all / deselect all">0 selected</p>
       <ul id="geotrack-track-list" class="geotrack-track-list" aria-label="Loaded tracks"></ul>
 
       <label class="geotrack-field-label" for="geotrack-name">Name <span class="geotrack-field-hint">(last selected)</span></label>
@@ -108,18 +108,37 @@
     <div class="legacy-panel-inner geotrack-edit-inner">
       <div class="geotrack-edit-head">
         <h2>Edit</h2>
-        <button type="button" class="geotrack-edit-close" id="geotrack-edit-close" title="Discard edits and close">&times;</button>
+        <button type="button" class="geotrack-edit-close" id="geotrack-edit-close" data-shortcut="Esc" title="Discard edits and close (Esc)">&times;</button>
       </div>
-      <p class="geotrack-edit-hint">keys · Enter/Esc</p>
+      <p class="geotrack-edit-hint" data-shortcut="↵/Esc">keys · Enter/Esc</p>
       <div class="geotrack-edit-tools" role="toolbar">
-        <button type="button" class="legacy-action-btn geotrack-edit-tool is-active" data-tool="node" title="Node — drag / insert vertices">n</button>
-        <button type="button" class="legacy-action-btn geotrack-edit-tool" data-tool="scissor" title="Scissor — split LineString at click">s</button>
-        <button type="button" class="legacy-action-btn geotrack-edit-tool" data-tool="trimBefore" title="Trim before — delete everything before click">_t</button>
-        <button type="button" class="legacy-action-btn geotrack-edit-tool" data-tool="trimAfter" title="Trim after — delete everything after click">t_</button>
-        <button type="button" class="legacy-action-btn geotrack-edit-tool geotrack-btn-danger" data-tool="delete" title="Delete node — remove clicked vertex or point">d</button>
-        <button type="button" class="legacy-action-btn geotrack-edit-tool geotrack-btn-danger" data-tool="deleteFeature" title="Delete feature — remove whole Point or LineString">df</button>
+        <button type="button" class="legacy-action-btn geotrack-edit-tool is-active" data-tool="node" data-shortcut="n" title="Node — drag / insert vertices (n)">n</button>
+        <button type="button" class="legacy-action-btn geotrack-edit-tool" data-tool="scissor" data-shortcut="s" title="Scissor — split LineString at click (s)">s</button>
+        <button type="button" class="legacy-action-btn geotrack-edit-tool" data-tool="trimBefore" data-shortcut="t" title="Trim before — delete everything before click (t)">_t</button>
+        <button type="button" class="legacy-action-btn geotrack-edit-tool" data-tool="trimAfter" data-shortcut="t" title="Trim after — delete everything after click (t)">t_</button>
+        <button type="button" class="legacy-action-btn geotrack-edit-tool geotrack-btn-danger" data-tool="delete" data-shortcut="d" title="Delete node — remove clicked vertex or point (d)">d</button>
+        <button type="button" class="legacy-action-btn geotrack-edit-tool geotrack-btn-danger" data-tool="deleteFeature" data-shortcut="f" title="Delete feature — remove whole Point or LineString (f)">df</button>
       </div>
     </div>
+  </aside>
+
+  <aside id="geotrack-keys-help" class="geotrack-keys-help is-hidden" hidden aria-label="Keyboard shortcuts">
+    <h3>Shortcuts <kbd>k</kbd></h3>
+    <ul>
+      <li><kbd>k</kbd> Show / hide this + badges</li>
+      <li><kbd>+</kbd> / <kbd>-</kbd> Zoom in / out</li>
+      <li><kbd>u</kbd> Upload files</li>
+      <li><kbd>p</kbd> Add Point on / off</li>
+      <li><kbd>r</kbd> Digitize on / off (off keeps route)</li>
+      <li><kbd>l</kbd> GPS locate on / off</li>
+      <li><kbd>3</kbd> 3D terrain on / off</li>
+      <li><kbd>Esc</kbd> Cancel Digitize leg / exit Point</li>
+      <li><kbd>e</kbd> Edit (exactly 1 selected)</li>
+      <li><kbd>Ctrl+A</kbd> Select all / deselect all</li>
+      <li><kbd>n</kbd> <kbd>s</kbd> <kbd>t</kbd> <kbd>d</kbd> <kbd>f</kbd> Edit tools</li>
+      <li><kbd>Enter</kbd> Save edit · <kbd>Esc</kbd> Discard edit</li>
+      <li><kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd> Undo / redo (edit or Digitize)</li>
+    </ul>
   </aside>
 
   <div id="geotrack-confirm" class="geotrack-confirm is-hidden" hidden role="dialog" aria-modal="true">

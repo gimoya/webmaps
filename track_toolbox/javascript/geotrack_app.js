@@ -120,11 +120,17 @@
 			' · <span class="legacy-attribution-version">v' + GEOTRACK_VERSION + '</span>'
 	);
 
-	new L.Control.Zoom({
+	var zoomControl = new L.Control.Zoom({
 		position: 'topright',
-		zoomInTitle: 'Zoom in',
-		zoomOutTitle: 'Zoom out'
+		zoomInTitle: 'Zoom in (+)',
+		zoomOutTitle: 'Zoom out (-)'
 	}).addTo(map);
+	if (zoomControl && zoomControl._zoomInButton) {
+		zoomControl._zoomInButton.setAttribute('data-shortcut', '+');
+	}
+	if (zoomControl && zoomControl._zoomOutButton) {
+		zoomControl._zoomOutButton.setAttribute('data-shortcut', '-');
+	}
 
 	var centerView = L.easyButton({
 		position: 'topright',
@@ -169,8 +175,8 @@
 		}]
 	}).addTo(map);
 
-	L.control.locate({
-		strings: { title: 'Show GPS location' },
+	var locateControl = L.control.locate({
+		strings: { title: 'Show GPS location (l)' },
 		position: 'topright',
 		locateOptions: {
 			watch: true,
@@ -180,42 +186,60 @@
 			timeout: 20000
 		}
 	}).addTo(map);
+	if (locateControl && locateControl.getContainer) {
+		var locateRoot = locateControl.getContainer();
+		var locateLink = locateRoot && locateRoot.querySelector('a');
+		if (locateLink) {
+			locateLink.setAttribute('data-shortcut', 'l');
+			locateLink.title = 'Show GPS location (l)';
+		}
+	}
 
 	var terrain3dToggle = L.easyButton({
 		position: 'topright',
 		states: [{
 			stateName: 'terrain-3d-off',
 			icon: '<i class="fas fa-cube"></i>',
-			title: '3D terrain',
-			onClick: function (btn) {
-				if (!window.LegacyTerrain3D) return;
-				syncTracksTo3D();
-				if (terrain3dToggle.button) {
-					terrain3dToggle.button.classList.add('legacy-ctrl-selected');
-				}
-				window.LegacyTerrain3D.show(map, selectedTrackName()).then(function () {
-					btn.state('terrain-3d-on');
-				}).catch(function (err) {
-					console.error(err);
-					if (terrain3dToggle.button) {
-						terrain3dToggle.button.classList.remove('legacy-ctrl-selected');
-					}
-					showToast('3D view unavailable');
-				});
+			title: '3D terrain (3)',
+			onClick: function () {
+				enterTerrain3D();
 			}
 		}, {
 			stateName: 'terrain-3d-on',
 			icon: '<i class="fas fa-map"></i>',
-			title: '2D map',
-			onClick: function (btn) {
+			title: '2D map (3)',
+			onClick: function () {
 				exitTerrain3D();
-				btn.state('terrain-3d-off');
 			}
 		}]
 	});
 	terrain3dToggle.addTo(map);
 	if (terrain3dToggle.getContainer) {
 		terrain3dToggle.getContainer().classList.add('legacy-3d-toggle');
+	}
+	if (terrain3dToggle.button) {
+		terrain3dToggle.button.setAttribute('data-shortcut', '3');
+	}
+
+	function enterTerrain3D() {
+		if (!window.LegacyTerrain3D) return;
+		if (editMode || pointDrawActive || (routeSnapControl && routeSnapControl.isActive && routeSnapControl.isActive())) {
+			showToast('Finish digitize / edit first');
+			return;
+		}
+		syncTracksTo3D();
+		if (terrain3dToggle && terrain3dToggle.button) {
+			terrain3dToggle.button.classList.add('legacy-ctrl-selected');
+		}
+		window.LegacyTerrain3D.show(map, selectedTrackName()).then(function () {
+			if (terrain3dToggle) terrain3dToggle.state('terrain-3d-on');
+		}).catch(function (err) {
+			console.error(err);
+			if (terrain3dToggle && terrain3dToggle.button) {
+				terrain3dToggle.button.classList.remove('legacy-ctrl-selected');
+			}
+			showToast('3D view unavailable');
+		});
 	}
 
 	function exitTerrain3D() {
@@ -226,6 +250,11 @@
 				terrain3dToggle.button.classList.remove('legacy-ctrl-selected');
 			}
 		}
+	}
+
+	function toggleTerrain3D() {
+		if (window.LegacyTerrain3D && window.LegacyTerrain3D.visible) exitTerrain3D();
+		else enterTerrain3D();
 	}
 	window.geotrackExitTerrain3D = exitTerrain3D;
 
@@ -2318,6 +2347,39 @@
 		showToast('Feature deleted');
 	}
 
+	var keysHelpEl = document.getElementById('geotrack-keys-help');
+	var shortcutsVisible = false;
+
+	function setShortcutsVisible(on) {
+		shortcutsVisible = !!on;
+		document.documentElement.classList.toggle('geotrack-show-keys', shortcutsVisible);
+		if (keysHelpEl) {
+			keysHelpEl.hidden = !shortcutsVisible;
+			keysHelpEl.classList.toggle('is-hidden', !shortcutsVisible);
+		}
+	}
+
+	function toggleSelectAllTracks() {
+		if (editMode || digitizePickBlocked || pointDrawActive) {
+			showToast('Finish digitize / edit first');
+			return;
+		}
+		if (!tracks.length) {
+			showToast('No tracks loaded');
+			return;
+		}
+		var allSelected = selectedIds.length === tracks.length;
+		if (allSelected) {
+			selectedIds = [];
+			syncSelectionUi();
+			showToast('All deselected');
+			return;
+		}
+		selectedIds = tracks.map(function (t) { return t.id; });
+		syncSelectionUi();
+		showToast('All selected');
+	}
+
 	document.addEventListener('keydown', function (e) {
 		if (isTypingTarget(document.activeElement)) return;
 		if (
@@ -2336,6 +2398,11 @@
 			showToast('Point tool off');
 			return;
 		}
+		if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'a' || e.key === 'A')) {
+			e.preventDefault();
+			toggleSelectAllTracks();
+			return;
+		}
 		if (
 			routeSnapControl &&
 			typeof routeSnapControl.isActive === 'function' &&
@@ -2351,6 +2418,101 @@
 			if (rk === 'y' || rk === 'Y' || ((rk === 'z' || rk === 'Z') && e.shiftKey)) {
 				e.preventDefault();
 				routeSnapControl.redoStation();
+				return;
+			}
+		}
+		if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+			if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') {
+				e.preventDefault();
+				map.zoomIn();
+				return;
+			}
+			if (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract') {
+				e.preventDefault();
+				map.zoomOut();
+				return;
+			}
+			var gk = e.key.toLowerCase();
+			if (gk === 'k') {
+				e.preventDefault();
+				setShortcutsVisible(!shortcutsVisible);
+				showToast(shortcutsVisible ? 'Shortcuts on' : 'Shortcuts off');
+				return;
+			}
+			if (gk === 'r') {
+				e.preventDefault();
+				if (!routeSnapControl) return;
+				if (typeof routeSnapControl.isActive === 'function' && routeSnapControl.isActive()) {
+					if (typeof routeSnapControl.isRouting === 'function' && routeSnapControl.isRouting()) {
+						routeSnapControl.cancelRouting();
+					}
+					routeSnapControl.deactivate();
+					showToast('Digitize off · route kept');
+					return;
+				}
+				if (editMode) {
+					showToast('Finish edit before digitize');
+					return;
+				}
+				deactivatePointDraw();
+				routeSnapControl.activate();
+				return;
+			}
+			if (gk === 'p') {
+				e.preventDefault();
+				if (pointDrawActive) {
+					deactivatePointDraw();
+					showToast('Point tool off');
+					return;
+				}
+				if (editMode) {
+					showToast('Finish edit before adding points');
+					return;
+				}
+				activatePointDraw();
+				if (pointDrawBtn) pointDrawBtn.state('point-draw-on');
+				return;
+			}
+			if (gk === 'l') {
+				e.preventDefault();
+				if (!locateControl) return;
+				if (locateControl._active) {
+					locateControl.stop();
+					showToast('GPS off');
+				} else {
+					locateControl.start();
+					showToast('GPS on');
+				}
+				return;
+			}
+			if (gk === '3') {
+				e.preventDefault();
+				toggleTerrain3D();
+				return;
+			}
+			if (gk === 'u') {
+				e.preventDefault();
+				if (editMode) {
+					showToast('Finish edit before upload');
+					return;
+				}
+				fileInput.click();
+				return;
+			}
+			if (gk === 'e') {
+				e.preventDefault();
+				if (editMode) return;
+				if (digitizePickBlocked || pointDrawActive) {
+					showToast('Finish digitize / point tool first');
+					return;
+				}
+				if (selectedIds.length !== 1) {
+					showToast(selectedIds.length === 0
+						? 'Select a feature first'
+						: 'Select exactly one feature to edit');
+					return;
+				}
+				requestEnterEdit(selectedIds[0]);
 				return;
 			}
 		}
@@ -2432,7 +2594,7 @@
 		states: [{
 			stateName: 'point-draw-off',
 			icon: POINT_DRAW_ICON,
-			title: 'Add Point',
+			title: 'Add Point (p)',
 			onClick: function (btn) {
 				activatePointDraw();
 				btn.state('point-draw-on');
@@ -2440,7 +2602,7 @@
 		}, {
 			stateName: 'point-draw-on',
 			icon: POINT_DRAW_ICON,
-			title: 'Exit Point tool',
+			title: 'Exit Point tool (p)',
 			onClick: function (btn) {
 				deactivatePointDraw();
 				btn.state('point-draw-off');
@@ -2448,6 +2610,9 @@
 		}]
 	});
 	pointDrawBtn.addTo(map);
+	if (pointDrawBtn && pointDrawBtn.button) {
+		pointDrawBtn.button.setAttribute('data-shortcut', 'p');
+	}
 
 	if (typeof L.control.routeSnap === 'function') {
 		routeSnapControl = L.control.routeSnap({
