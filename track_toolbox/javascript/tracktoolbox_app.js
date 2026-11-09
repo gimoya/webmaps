@@ -2062,8 +2062,8 @@
 
 	function editToolLetter(tool) {
 		if (tool === 'scissor') return 's';
-		if (tool === 'trimBefore') return '_t';
-		if (tool === 'trimAfter') return 't_';
+		if (tool === 'trimBefore') return 't_';
+		if (tool === 'trimAfter') return '_t';
 		if (tool === 'delete') return 'd';
 		if (tool === 'deleteFeature') return 'df';
 		return 'n';

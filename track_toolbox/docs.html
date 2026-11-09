@@ -141,7 +141,7 @@
     <li><strong>Save</strong> button (or <kbd>Enter</kbd>) — Save changes.</li>
     <li><strong>×</strong> (or <kbd>Esc</kbd>) — Discard (restores the session snapshot).</li>
     <li><strong>↶ / ↷</strong> buttons (or <kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd>) — Undo / redo within the session. Buttons are for mobile; shortcut badges show with <kbd>k</kbd> on desktop.</li>
-    <li>Tool buttons on the edit panel (or <strong>n / s / d / f</strong> on keyboard; <code>f</code> = <code>df</code>; <strong>t</strong> toggles <code>t_</code> ↔ <code>_t</code>). Points: <strong>n</strong>, <strong>d</strong>, <strong>df</strong> only.</li>
+    <li>Tool buttons on the edit panel (or <strong>n / s / d / f</strong> on keyboard; <code>f</code> = <code>df</code>; <strong>t</strong> toggles <code>t_</code> ↔ <code>_t</code>). <code>t_</code> = trim before, <code>_t</code> = trim after. Points: <strong>n</strong>, <strong>d</strong>, <strong>df</strong> only.</li>
     <li>Right-click / long-press another <em>session</em> feature (e.g. after a split) to switch the active target. Doing that on a non-session feature asks to discard and start a new session.</li>
   </ul>
 
@@ -150,8 +150,8 @@
   <ul>
     <li><strong>n</strong> — Node: drag vertices / Point; click the line away from vertices to insert. Elevation kept when present.</li>
     <li><strong>s</strong> — Scissor: click the line or a mid vertex to split (not start/end). Both parts stay in the session; the later part becomes active.</li>
-    <li><strong>_t</strong> — Trim before: delete everything before the click.</li>
-    <li><strong>t_</strong> — Trim after: delete everything after the click.</li>
+    <li><strong>t_</strong> — Trim before: delete everything before the click.</li>
+    <li><strong>_t</strong> — Trim after: delete everything after the click.</li>
     <li><strong>d</strong> — Delete node: click a vertex to remove it, or a Point to remove that feature (min. two vertices on a line).</li>
     <li><strong>df</strong> (<kbd>f</kbd>) — Delete feature: click a session Point or LineString to remove it whole. Empty session closes.</li>
   </ul>
