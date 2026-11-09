@@ -39,6 +39,9 @@
 	var editHandlesLayer = null;
 	var editHitLayer = null;
 	var _editConfirmCb = null;
+	/** After thin: last touched LineString vertex { id, index }. ←/→ step along track. */
+	var editFocusVertex = null;
+	var EDIT_FOCUS_MIN_ZOOM = 15;
 	var EDIT_HIT_WEIGHT = 25;
 	var EDIT_MIN_CUT_M = 1;
 	/** Screen-px radius around an existing vertex — click inside = no insert. */
@@ -1740,11 +1743,84 @@
 			tracks: deepClone(tracks),
 			working: editWorking ? deepClone(editWorking) : null,
 			sessionIds: editSessionIds.slice(),
-			targetId: editTargetId
+			targetId: editTargetId,
+			focus: snapshotEditFocus()
 		});
 		if (editUndoStack.length > EDIT_UNDO_MAX) editUndoStack.shift();
 		editRedoStack = [];
 		syncEditHistoryButtons();
+	}
+
+	function clearEditFocusVertex() {
+		editFocusVertex = null;
+	}
+
+	function setEditFocusVertex(index) {
+		if (!editWorking || !editWorking.geometry || editWorking.geometry.type !== 'LineString') {
+			editFocusVertex = null;
+			return;
+		}
+		var coords = editWorking.geometry.coordinates;
+		if (!coords || !coords.length) {
+			editFocusVertex = null;
+			return;
+		}
+		var i = Math.max(0, Math.min(index | 0, coords.length - 1));
+		editFocusVertex = { id: editWorking.id, index: i };
+	}
+
+	function clampEditFocusVertex() {
+		if (!editFocusVertex || !editWorking) {
+			editFocusVertex = null;
+			return;
+		}
+		if (
+			editWorking.id !== editFocusVertex.id ||
+			!editWorking.geometry ||
+			editWorking.geometry.type !== 'LineString'
+		) {
+			editFocusVertex = null;
+			return;
+		}
+		var n = editWorking.geometry.coordinates.length;
+		if (n < 1) {
+			editFocusVertex = null;
+			return;
+		}
+		editFocusVertex.index = Math.max(0, Math.min(editFocusVertex.index, n - 1));
+	}
+
+	function panToEditFocusVertex() {
+		clampEditFocusVertex();
+		if (!editFocusVertex || !editWorking) return;
+		var coords = editWorking.geometry.coordinates;
+		var c = coords[editFocusVertex.index];
+		if (!c) return;
+		var ll = L.latLng(c[1], c[0]);
+		if (map.getZoom() < EDIT_FOCUS_MIN_ZOOM) map.setView(ll, EDIT_FOCUS_MIN_ZOOM);
+		else map.panTo(ll, { animate: true });
+	}
+
+	function stepEditFocusVertex(delta) {
+		if (!editMode || !editFocusVertex) return false;
+		clampEditFocusVertex();
+		if (!editFocusVertex || !editWorking) return false;
+		var n = editWorking.geometry.coordinates.length;
+		var next = editFocusVertex.index + delta;
+		if (next < 0 || next >= n) {
+			showToast(next < 0 ? 'Start of track' : 'End of track');
+			return true;
+		}
+		editFocusVertex.index = next;
+		panToEditFocusVertex();
+		rebuildEditChrome();
+		return true;
+	}
+
+	function snapshotEditFocus() {
+		return editFocusVertex
+			? { id: editFocusVertex.id, index: editFocusVertex.index }
+			: null;
 	}
 
 	function restoreEditState(state) {
@@ -1752,12 +1828,16 @@
 		editWorking = state.working ? deepClone(state.working) : null;
 		editSessionIds = state.sessionIds.slice();
 		editTargetId = state.targetId;
+		editFocusVertex = state.focus
+			? { id: state.focus.id, index: state.focus.index }
+			: null;
 		if (editWorking) {
 			var idx = tracks.findIndex(function (t) { return t.id === editWorking.id; });
 			if (idx >= 0) tracks[idx] = editWorking;
 		}
 		selectedIds = editTargetId ? [editTargetId] : [];
 		if (isEditingPoint()) editTool = 'node';
+		clampEditFocusVertex();
 		syncSelectionUi();
 		syncTracksTo3D();
 		setEditTool(editTool);
@@ -1770,7 +1850,8 @@
 			tracks: deepClone(tracks),
 			working: editWorking ? deepClone(editWorking) : null,
 			sessionIds: editSessionIds.slice(),
-			targetId: editTargetId
+			targetId: editTargetId,
+			focus: snapshotEditFocus()
 		});
 		restoreEditState(editUndoStack.pop());
 	}
@@ -1781,7 +1862,8 @@
 			tracks: deepClone(tracks),
 			working: editWorking ? deepClone(editWorking) : null,
 			sessionIds: editSessionIds.slice(),
-			targetId: editTargetId
+			targetId: editTargetId,
+			focus: snapshotEditFocus()
 		});
 		restoreEditState(editRedoStack.pop());
 	}
@@ -1860,6 +1942,7 @@
 			editTargetId = id;
 			editWorking = deepClone(findTrack(id));
 			selectedIds = [id];
+			clearEditFocusVertex();
 			setEditTool(isEditingPoint() ? 'node' : editTool);
 			syncSelectionUi();
 			return;
@@ -1946,6 +2029,7 @@
 			editRedoStack = [];
 			editTool = 'node';
 			selectedIds = [id];
+			clearEditFocusVertex();
 			showEditToolbox(true);
 			setEditTool('node');
 			syncEditHistoryButtons();
@@ -1963,6 +2047,7 @@
 		editSessionIds = [];
 		editUndoStack = [];
 		editRedoStack = [];
+		clearEditFocusVertex();
 		clearEditPreviewLine();
 		editHandlesLayer.clearLayers();
 		editHitLayer.clearLayers();
@@ -2069,10 +2154,11 @@
 		return 'n';
 	}
 
-	function makeEditNodeIcon(letter, role) {
+	function makeEditNodeIcon(letter, role, focused) {
 		var wide = letter.length > 1;
 		var cls = 'tracktoolbox-edit-node tracktoolbox-edit-node--' + role +
-			(wide ? ' tracktoolbox-edit-node--wide' : '');
+			(wide ? ' tracktoolbox-edit-node--wide' : '') +
+			(focused ? ' tracktoolbox-edit-node--focus' : '');
 		var w = wide ? 18 : 14;
 		var h = 12;
 		return L.divIcon({
@@ -2109,6 +2195,7 @@
 		});
 		marker.on('dragend', function () {
 			clearEditPreviewLine();
+			if (!isPoint) setEditFocusVertex(index);
 			syncTracksTo3D();
 			redrawMapLayers();
 			rebuildEditChrome();
@@ -2117,8 +2204,15 @@
 
 	function addEditNodeMarker(ll, role, index, isPoint) {
 		var letter = editToolLetter(editTool);
+		var focused = !!(
+			!isPoint &&
+			editFocusVertex &&
+			editWorking &&
+			editFocusVertex.id === editWorking.id &&
+			editFocusVertex.index === index
+		);
 		var marker = L.marker(ll, {
-			icon: makeEditNodeIcon(letter, role),
+			icon: makeEditNodeIcon(letter, role, focused),
 			pane: 'tracktoolboxEditNodePane',
 			interactive: true,
 			keyboard: false,
@@ -2139,7 +2233,10 @@
 				return;
 			}
 			if (isPoint) return;
+			/* Node pane sits above the hit polyline — line tools must handle vertex clicks. */
 			if (editTool === 'scissor') doScissorAtVertex(index);
+			else if (editTool === 'trimBefore') doTrimBeforeAtVertex(index);
+			else if (editTool === 'trimAfter') doTrimAfterAtVertex(index);
 		});
 		editHandlesLayer.addLayer(marker);
 		bindNodeDrag(marker, index, isPoint);
@@ -2272,6 +2369,7 @@
 		var next = coords.slice();
 		next.splice(hit.index + 1, 0, hit.cutCoord.slice());
 		applyWorkingGeometry(next);
+		setEditFocusVertex(hit.index + 1);
 		syncSelectionUi();
 		syncTracksTo3D();
 		rebuildEditChrome();
@@ -2313,6 +2411,7 @@
 		editWorking = featB;
 		editTargetId = featB.id;
 		selectedIds = [featB.id];
+		setEditFocusVertex(0);
 		syncSelectionUi();
 		syncTracksTo3D();
 		rebuildEditChrome();
@@ -2354,34 +2453,54 @@
 		applyScissorSplit(aCoords, bCoords);
 	}
 
-	function doTrimBefore(hit) {
-		var coords = editWorking.geometry.coordinates;
-		var newCoords = [hit.cutCoord.slice()].concat(coords.slice(hit.index + 1));
+	function finishTrim(newCoords, toastMsg, focusIndex) {
 		if (newCoords.length < 2) {
 			showToast('Nothing left after trim');
 			return;
 		}
 		pushUndo();
 		applyWorkingGeometry(newCoords);
+		setEditFocusVertex(focusIndex != null ? focusIndex : 0);
 		syncSelectionUi();
 		syncTracksTo3D();
 		rebuildEditChrome();
-		showToast('Trimmed before');
+		showToast(toastMsg);
+	}
+
+	function doTrimBefore(hit) {
+		var coords = editWorking.geometry.coordinates;
+		finishTrim(
+			[hit.cutCoord.slice()].concat(coords.slice(hit.index + 1)),
+			'Trimmed before',
+			0
+		);
 	}
 
 	function doTrimAfter(hit) {
 		var coords = editWorking.geometry.coordinates;
-		var newCoords = coords.slice(0, hit.index + 1).concat([hit.cutCoord.slice()]);
-		if (newCoords.length < 2) {
-			showToast('Nothing left after trim');
+		var next = coords.slice(0, hit.index + 1).concat([hit.cutCoord.slice()]);
+		finishTrim(next, 'Trimmed after', next.length - 1);
+	}
+
+	function doTrimBeforeAtVertex(vertexIndex) {
+		if (!editWorking || editWorking.geometry.type !== 'LineString') return;
+		var coords = editWorking.geometry.coordinates;
+		if (vertexIndex <= 0) {
+			showToast('Nothing to trim before start');
 			return;
 		}
-		pushUndo();
-		applyWorkingGeometry(newCoords);
-		syncSelectionUi();
-		syncTracksTo3D();
-		rebuildEditChrome();
-		showToast('Trimmed after');
+		finishTrim(coords.slice(vertexIndex), 'Trimmed before', 0);
+	}
+
+	function doTrimAfterAtVertex(vertexIndex) {
+		if (!editWorking || editWorking.geometry.type !== 'LineString') return;
+		var coords = editWorking.geometry.coordinates;
+		if (vertexIndex >= coords.length - 1) {
+			showToast('Nothing to trim after end');
+			return;
+		}
+		var next = coords.slice(0, vertexIndex + 1);
+		finishTrim(next, 'Trimmed after', next.length - 1);
 	}
 
 	function onEditFeatureClick(id, ev) {
@@ -2405,6 +2524,7 @@
 		var next = coords.slice();
 		next.splice(index, 1);
 		applyWorkingGeometry(next);
+		setEditFocusVertex(Math.min(index, next.length - 1));
 		syncSelectionUi();
 		syncTracksTo3D();
 		rebuildEditChrome();
@@ -2424,6 +2544,7 @@
 				editTargetId = editSessionIds[0];
 				editWorking = deepClone(findTrack(editTargetId));
 				selectedIds = [editTargetId];
+				clearEditFocusVertex();
 			} else {
 				exitEditMode(false);
 				syncTracksTo3D();
@@ -2618,6 +2739,12 @@
 				e.preventDefault();
 				editRedo();
 			}
+			return;
+		}
+		if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+			if (!editFocusVertex) return;
+			e.preventDefault();
+			stepEditFocusVertex(e.key === 'ArrowLeft' ? -1 : 1);
 			return;
 		}
 		if (e.key === 'Enter') {
