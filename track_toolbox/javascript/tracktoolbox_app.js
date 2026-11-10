@@ -2,7 +2,7 @@
 (function () {
 	'use strict';
 
-	var TRACKTOOLBOX_VERSION = '1.0.0';
+	var TRACKTOOLBOX_VERSION = '1.4.0';
 	var DEFAULT_CENTER = [47.2692, 11.4041];
 	var DEFAULT_ZOOM = 11;
 	var MAX_FILE_BYTES = 25 * 1024 * 1024;
@@ -69,7 +69,8 @@
 	var map = L.map('map', {
 		zoom: DEFAULT_ZOOM,
 		zoomControl: false,
-		attributionControl: false
+		attributionControl: false,
+		boxZoom: false
 	});
 	map.setView(DEFAULT_CENTER, DEFAULT_ZOOM);
 
@@ -480,6 +481,7 @@
 			if (!tr) return;
 			selectedIds = [tr.id];
 			syncSelectionUi();
+			scrollTrackListToId(tr.id);
 			fitToGeometry(tr.geometry);
 			hideSearchResults();
 			if (searchInput) searchInput.blur();
@@ -1101,14 +1103,207 @@
 		}
 	}
 
+	/* —— Shift+drag box select (replaces Leaflet boxZoom) —— */
+	var _boxSelect = {
+		active: false,
+		startPt: null,
+		moved: false,
+		el: null,
+		suppressClick: false
+	};
+
+	function segmentsIntersectLL(a, b, c, d) {
+		function cross(p, q, r) {
+			return (q.lng - p.lng) * (r.lat - p.lat) - (q.lat - p.lat) * (r.lng - p.lng);
+		}
+		var d1 = cross(a, b, c);
+		var d2 = cross(a, b, d);
+		var d3 = cross(c, d, a);
+		var d4 = cross(c, d, b);
+		if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+			((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
+			return true;
+		}
+		return false;
+	}
+
+	function segmentIntersectsLatLngBounds(a, b, bounds) {
+		if (bounds.contains(a) || bounds.contains(b)) return true;
+		var sw = bounds.getSouthWest();
+		var ne = bounds.getNorthEast();
+		var nw = L.latLng(ne.lat, sw.lng);
+		var se = L.latLng(sw.lat, ne.lng);
+		return (
+			segmentsIntersectLL(a, b, sw, se) ||
+			segmentsIntersectLL(a, b, se, ne) ||
+			segmentsIntersectLL(a, b, ne, nw) ||
+			segmentsIntersectLL(a, b, nw, sw)
+		);
+	}
+
+	function featureIntersectsLatLngBounds(t, bounds) {
+		if (!t || !t.geometry || !bounds || !bounds.isValid()) return false;
+		var g = t.geometry;
+		if (g.type === 'Point') {
+			var pll = pointToLatLng(g.coordinates);
+			return !!(pll && bounds.contains(pll));
+		}
+		if (g.type !== 'LineString' || !g.coordinates || g.coordinates.length < 2) return false;
+		var coords = g.coordinates;
+		var lineBounds = L.latLngBounds([]);
+		var i;
+		for (i = 0; i < coords.length; i++) {
+			var p = L.latLng(coords[i][1], coords[i][0]);
+			if (bounds.contains(p)) return true;
+			lineBounds.extend(p);
+		}
+		if (!bounds.intersects(lineBounds)) return false;
+		for (i = 1; i < coords.length; i++) {
+			var a = L.latLng(coords[i - 1][1], coords[i - 1][0]);
+			var b = L.latLng(coords[i][1], coords[i][0]);
+			if (segmentIntersectsLatLngBounds(a, b, bounds)) return true;
+		}
+		return false;
+	}
+
+	function clearBoxSelectUi() {
+		if (_boxSelect.el && _boxSelect.el.parentNode) {
+			_boxSelect.el.parentNode.removeChild(_boxSelect.el);
+		}
+		_boxSelect.el = null;
+		_boxSelect.active = false;
+		_boxSelect.startPt = null;
+		_boxSelect.moved = false;
+		map.dragging.enable();
+		L.DomUtil.enableTextSelection();
+		L.DomUtil.enableImageDrag();
+	}
+
+	function updateBoxSelectRect(endPt) {
+		if (!_boxSelect.el || !_boxSelect.startPt) return;
+		var s = _boxSelect.startPt;
+		var left = Math.min(s.x, endPt.x);
+		var top = Math.min(s.y, endPt.y);
+		var w = Math.abs(endPt.x - s.x);
+		var h = Math.abs(endPt.y - s.y);
+		_boxSelect.el.style.left = left + 'px';
+		_boxSelect.el.style.top = top + 'px';
+		_boxSelect.el.style.width = w + 'px';
+		_boxSelect.el.style.height = h + 'px';
+	}
+
+	function finishBoxSelect(endPt) {
+		if (!_boxSelect.active || !_boxSelect.startPt) {
+			clearBoxSelectUi();
+			return;
+		}
+		var s = _boxSelect.startPt;
+		var dx = Math.abs(endPt.x - s.x);
+		var dy = Math.abs(endPt.y - s.y);
+		var startLL = map.containerPointToLatLng(s);
+		var endLL = map.containerPointToLatLng(endPt);
+		var didDrag = dx >= 4 || dy >= 4;
+		clearBoxSelectUi();
+		if (!didDrag) return;
+		_boxSelect.suppressClick = true;
+		setTimeout(function () { _boxSelect.suppressClick = false; }, 0);
+		if (editMode || digitizePickBlocked || pointDrawActive) return;
+		var bounds = L.latLngBounds(startLL, endLL);
+		if (!bounds.isValid()) return;
+		var hits = [];
+		var visible = visibleTracks();
+		for (var i = 0; i < visible.length; i++) {
+			if (featureIntersectsLatLngBounds(visible[i], bounds)) {
+				hits.push(visible[i].id);
+			}
+		}
+		var added = 0;
+		for (var j = 0; j < hits.length; j++) {
+			if (selectedIds.indexOf(hits[j]) === -1) {
+				selectedIds.push(hits[j]);
+				added++;
+			}
+		}
+		syncSelectionUi();
+		if (hits.length) {
+			scrollTrackListToId(hits[hits.length - 1]);
+			showToast(
+				added === 0
+					? (hits.length === 1 ? 'Already selected' : 'Already in selection')
+					: (added === 1 ? '+1 selected' : '+' + added + ' selected')
+			);
+		} else {
+			showToast('None in box');
+		}
+	}
+
+	map.on('mousedown', function (e) {
+		var oe = e.originalEvent;
+		if (!oe || !oe.shiftKey || oe.button !== 0) return;
+		if (editMode || digitizePickBlocked || pointDrawActive) return;
+		if (oe.target && oe.target.closest && oe.target.closest('.leaflet-control')) return;
+		L.DomEvent.stop(oe);
+		map.dragging.disable();
+		L.DomUtil.disableTextSelection();
+		L.DomUtil.disableImageDrag();
+		_boxSelect.active = true;
+		_boxSelect.moved = false;
+		_boxSelect.startPt = map.mouseEventToContainerPoint(oe);
+		_boxSelect.el = L.DomUtil.create('div', 'tracktoolbox-select-box', map.getContainer());
+		updateBoxSelectRect(_boxSelect.startPt);
+	});
+
+	map.on('mousemove', function (e) {
+		if (!_boxSelect.active) return;
+		var oe = e.originalEvent;
+		if (!oe) return;
+		var pt = map.mouseEventToContainerPoint(oe);
+		if (!_boxSelect.moved) {
+			var s = _boxSelect.startPt;
+			if (Math.abs(pt.x - s.x) > 2 || Math.abs(pt.y - s.y) > 2) _boxSelect.moved = true;
+		}
+		updateBoxSelectRect(pt);
+	});
+
+	function onBoxSelectUp(e) {
+		if (!_boxSelect.active) return;
+		var pt = e
+			? map.mouseEventToContainerPoint(e)
+			: _boxSelect.startPt;
+		finishBoxSelect(pt || _boxSelect.startPt);
+	}
+
+	L.DomEvent.on(document, 'mouseup', onBoxSelectUp);
+	L.DomEvent.on(document, 'keydown', function (e) {
+		if (_boxSelect.active && e.key === 'Escape') {
+			clearBoxSelectUi();
+		}
+	});
+
 	/** Toggle: add if not selected, remove if already selected. */
-	function toggleTrack(id) {
+	function scrollTrackListToId(id) {
+		if (!trackListEl || !id) return;
+		var btn = trackListEl.querySelector('.tracktoolbox-track-item[data-id="' + String(id).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"]');
+		if (btn && typeof btn.scrollIntoView === 'function') {
+			btn.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+		}
+	}
+
+	function toggleTrack(id, opts) {
+		if (_boxSelect.suppressClick) return;
 		if (editMode || digitizePickBlocked) return;
 		if (!id || !findTrack(id) || !isTrackVisible(id)) return;
 		var idx = selectedIds.indexOf(id);
 		if (idx >= 0) selectedIds.splice(idx, 1);
 		else selectedIds.push(id);
 		syncSelectionUi();
+		if (opts && opts.scrollList) {
+			if (isSelected(id)) scrollTrackListToId(id);
+			else {
+				var last = lastSelectedTrack();
+				if (last) scrollTrackListToId(last.id);
+			}
+		}
 	}
 
 	function syncSelectionUi() {
@@ -1124,16 +1319,21 @@
 			} else {
 				selCountEl.textContent = selTxt;
 			}
+			selCountEl.classList.toggle('has-selection', n > 0);
 		}
 		var t = lastSelectedTrack();
 		if (t) {
 			nameInput.disabled = false;
 			descInput.disabled = false;
+			nameInput.classList.add('is-meta-active');
+			descInput.classList.add('is-meta-active');
 			nameInput.value = t.name || '';
 			descInput.value = t.description || '';
 		} else {
 			nameInput.disabled = true;
 			descInput.disabled = true;
+			nameInput.classList.remove('is-meta-active');
+			descInput.classList.remove('is-meta-active');
 			nameInput.value = '';
 			descInput.value = '';
 		}
@@ -1146,12 +1346,18 @@
 	function refreshTrackList() {
 		trackListEl.innerHTML = '';
 		var list = visibleTracks();
+		var last = lastSelectedTrack();
 		for (var i = 0; i < list.length; i++) {
 			var t = list[i];
 			var li = document.createElement('li');
 			var btn = document.createElement('button');
 			btn.type = 'button';
-			btn.className = 'tracktoolbox-track-item' + (isSelected(t.id) ? ' is-selected' : '');
+			var cls = 'tracktoolbox-track-item';
+			if (isSelected(t.id)) {
+				cls += ' is-selected';
+				if (last && last.id === t.id) cls += ' is-last-selected';
+			}
+			btn.className = cls;
 			var isPoint = t.geometry && t.geometry.type === 'Point';
 			var label = t.name || '(unnamed)';
 			btn.textContent = (isPoint ? '• ' : '') + label;
@@ -1398,7 +1604,7 @@
 						return;
 					}
 					if (!isTrackVisible(id)) return;
-					toggleTrack(id);
+					toggleTrack(id, { scrollList: true });
 				};
 			})(t.id);
 			var onCtx = (function (id) {
@@ -2642,7 +2848,7 @@
 		}
 	}
 
-	function toggleSelectAllTracks() {
+	function selectAllVisibleTracks() {
 		if (editMode || digitizePickBlocked || pointDrawActive) {
 			showToast('Finish digitize / edit first');
 			return;
@@ -2652,18 +2858,23 @@
 			showToast(_trackFilterIds != null ? 'No filtered tracks' : 'No tracks loaded');
 			return;
 		}
-		var allSelected =
-			selectedIds.length === visible.length &&
-			visible.every(function (t) { return isSelected(t.id); });
-		if (allSelected) {
-			selectedIds = [];
-			syncSelectionUi();
-			showToast('All deselected');
-			return;
-		}
 		selectedIds = visible.map(function (t) { return t.id; });
 		syncSelectionUi();
 		showToast('All selected');
+	}
+
+	function deselectAllTracks() {
+		if (editMode || digitizePickBlocked || pointDrawActive) {
+			showToast('Finish digitize / edit first');
+			return;
+		}
+		if (!selectedIds.length) {
+			showToast('Nothing selected');
+			return;
+		}
+		selectedIds = [];
+		syncSelectionUi();
+		showToast('All deselected');
 	}
 
 	document.addEventListener('keydown', function (e) {
@@ -2686,7 +2897,12 @@
 		}
 		if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'a' || e.key === 'A')) {
 			e.preventDefault();
-			toggleSelectAllTracks();
+			selectAllVisibleTracks();
+			return;
+		}
+		if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'd' || e.key === 'D')) {
+			e.preventDefault();
+			deselectAllTracks();
 			return;
 		}
 		if (

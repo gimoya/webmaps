@@ -97,7 +97,7 @@
   <noscript>
     <div style="max-width:40rem;margin:2rem auto;padding:1rem;font-family:system-ui,sans-serif;color:#eee;background:#1e1e22">
       <h1>track toolbox</h1>
-      <p>Free browser GPX/KML editor and converter by <a href="https://tiroltrailhead.com">Tirol Trailhead</a>: upload tracks and waypoints, multi-select, edit geometry, digitize routes with BRouter, and export GPX or KML. JavaScript is required.</p>
+      <p>Free browser GPX/KML editor and converter by <a href="https://tiroltrailhead.com">Tirol Trailhead</a>: upload multiple tracks and waypoints, edit geometry, digitize routes with BRouter, and export to GPX or KML.</p>
       <p><a href="docs.html">Documentation</a></p>
     </div>
   </noscript>
@@ -106,7 +106,7 @@
       <button type="button" class="legacy-panel-close" id="tracktoolbox-welcome-close" aria-label="Close"><span>&times;</span></button>
       <div class="trails-welcome-box">
         <h2 id="tracktoolbox-welcome-title" class="tracktoolbox-panel-title">track 📐toolbox</h2>
-        <p class="tracktoolbox-welcome-blurb">Free GPX/KML browser toolbox: upload, edit geometry, digitize with BRouter, add waypoints, convert and export...</p>
+        <p class="tracktoolbox-welcome-blurb">Free GPX/KML browser toolbox: upload tracks, edit geometry, digitize with BRouter, add waypoints, convert format and export...</p>
         <div class="legacy-panel-rule" aria-hidden="true"></div>
         <div class="trails-welcome-donate">
           <p class="trails-welcome-donate-text"><i>🤝 This toolbox is free for you, but servers and hosting cost money!<br>💸 A contribution from your side helps to keep the project alive!</i></p>
@@ -138,7 +138,7 @@
         <h1>track 📐toolbox</h1>
         <a class="tracktoolbox-docs-link" href="docs.html" title="Documentation" aria-label="Documentation" target="_blank" rel="noopener"><i class="fas fa-info-circle" aria-hidden="true"></i></a>
       </header>
-      <p class="tracktoolbox-hint">Upload GPX, KML, ZIP, or KMZ (tracks and waypoints). Click to multi-select; click again to deselect. Right-click a feature to edit geometry. Name/description always edit the last selected feature. Free online GPX/KML converter and track editor.</p>
+  
 
       <input type="file" id="tracktoolbox-file-input" accept=".gpx,.kml,.zip,.kmz,application/gpx+xml,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz,application/zip" multiple hidden>
 
@@ -150,7 +150,7 @@
         <ul id="tracktoolbox-search-results" class="tracktoolbox-search-results" hidden role="listbox" aria-label="Search results"></ul>
       </div>
 
-      <p id="tracktoolbox-sel-count" class="tracktoolbox-sel-count" aria-live="polite" data-shortcut="Ctrl+A" title="Ctrl+A — select all / deselect all">0 selected</p>
+      <p id="tracktoolbox-sel-count" class="tracktoolbox-sel-count" aria-live="polite" data-shortcut="Ctrl+A" title="Ctrl+A select all · Ctrl+D deselect all · Shift+drag box-select">0 selected</p>
       <ul id="tracktoolbox-track-list" class="tracktoolbox-track-list" aria-label="Loaded tracks"></ul>
 
       <label class="tracktoolbox-field-label" for="tracktoolbox-name">Name <span class="tracktoolbox-field-hint">(last selected)</span></label>
@@ -177,7 +177,7 @@
         <button type="button" class="legacy-action-btn" id="tracktoolbox-dl-kml" disabled title="Download selected track(s) as KML">KML</button>
       </div>
       <div class="tracktoolbox-btn-row">
-        <button type="button" class="legacy-action-btn tracktoolbox-btn-danger" id="tracktoolbox-remove" disabled title="Remove selected track(s) and clear selection">Remove</button>
+        <button type="button" class="legacy-action-btn tracktoolbox-btn-danger" id="tracktoolbox-remove" disabled title="Remove selected track(s)">Remove</button>
         <button type="button" class="legacy-action-btn tracktoolbox-btn-danger" id="tracktoolbox-clear" disabled title="Remove all loaded tracks">Clear all</button>
       </div>
     </div>
@@ -218,7 +218,8 @@
       <li><kbd>3</kbd> 3D terrain on / off</li>
       <li><kbd>Esc</kbd> Cancel Digitize leg / exit Point</li>
       <li><kbd>e</kbd> Edit (exactly 1 selected)</li>
-      <li><kbd>Ctrl+A</kbd> Select all / deselect all</li>
+      <li><kbd>Ctrl+A</kbd> Select all · <kbd>Ctrl+D</kbd> Deselect all</li>
+      <li><kbd>Shift</kbd>+drag Box-select — add to selection</li>
       <li><kbd>n</kbd> <kbd>s</kbd> <kbd>t</kbd> <kbd>d</kbd> <kbd>f</kbd> Edit tools</li>
       <li><kbd>←</kbd> <kbd>→</kbd> Step last-edited vertex (after n/s/t/d)</li>
       <li><kbd>Enter</kbd> Save edit · <kbd>Esc</kbd> Discard edit</li>

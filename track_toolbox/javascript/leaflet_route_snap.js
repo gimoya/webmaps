@@ -129,7 +129,7 @@
 	/** Current BRouter .rd5 tiles on route.tiroltrailhead.com (SW corners E5/10/15 × N40/45). */
 	var COVERAGE_BOUNDS = L.latLngBounds([40, 5], [50, 20]);
 	/** Crow-flies cap between consecutive stations (long legs stall the VPS). */
-	var MAX_LEG_M = 75000;
+	var MAX_LEG_M = 25000;
 	var ROUTE_HIST_MAX = 40;
 
 	var INFO_HTML =

@@ -11,6 +11,21 @@
   max-width: min(90vw, 280px);
 }
 
+/* Darken basemap tiles so tracks / points read clearer (overlays stay unfiltered) */
+#map .leaflet-tile-pane {
+  filter: brightness(0.72) contrast(1.06);
+}
+
+/* Shift+drag multi-select rectangle */
+.tracktoolbox-select-box {
+  position: absolute;
+  z-index: 650;
+  box-sizing: border-box;
+  border: 2px solid #ff5f1f;
+  background: rgba(255, 95, 31, 0.18);
+  pointer-events: none;
+}
+
 /* Nav lives inside the toolbox panel (all viewports) */
 
 .tracktoolbox-header {
@@ -291,6 +306,21 @@
   letter-spacing: 0.02em;
 }
 
+.tracktoolbox-sel-count.has-selection {
+  color: #ff5f1f;
+  animation: tracktoolbox-sel-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes tracktoolbox-sel-pulse {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 .tracktoolbox-field-hint {
   font-weight: 500;
   font-size: 11px;
@@ -348,14 +378,21 @@
 }
 
 .tracktoolbox-track-item.is-selected {
-  background: rgba(0, 185, 254, 0.28);
+  background: rgba(255, 95, 31, 0.22);
   color: #fff;
   font-weight: 600;
 }
 
+/* Last selected = name/description target (stronger orange) */
+.tracktoolbox-track-item.is-selected.is-last-selected,
+#tracktoolbox-name.is-meta-active,
+#tracktoolbox-desc.is-meta-active {
+  background: rgba(255, 95, 31, 0.48);
+}
+
 .tracktoolbox-field-label {
   display: block;
-  margin: 5px 0 2px;
+  margin: 12px 0 2px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -379,6 +416,13 @@
 
 .tracktoolbox-field:disabled {
   opacity: 0.45;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+#tracktoolbox-name.is-meta-active,
+#tracktoolbox-desc.is-meta-active {
+  border-color: rgba(255, 95, 31, 0.55);
+  opacity: 1;
 }
 
 .tracktoolbox-field:focus {
@@ -1076,6 +1120,53 @@ html.tracktoolbox-busy * {
   background: rgba(255, 255, 255, 0.08);
   padding: 0.1em 0.35em;
   border-radius: 4px;
+}
+
+.tracktoolbox-docs-plainlist {
+  margin: 0.3em 0 0.6em;
+}
+
+.tracktoolbox-docs-row {
+  display: grid;
+  grid-template-columns: 10rem 1fr;
+  column-gap: 0.75rem;
+  align-items: start;
+  margin: 0.2em 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: rgba(240, 240, 240, 0.88);
+}
+
+.tracktoolbox-docs-key {
+  font-variant-numeric: tabular-nums;
+}
+
+.tracktoolbox-docs-desc {
+  min-width: 0;
+}
+
+.tracktoolbox-docs-tools .tracktoolbox-docs-row {
+  grid-template-columns: 2.5rem 1fr;
+  align-items: start;
+}
+
+.tracktoolbox-docs-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  max-width: 1.5rem;
+  min-height: 1.35rem;
+  padding: 2px 2px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.28);
+  color: #f0f0f0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
 }
 
 /* Add-Point control: center dot + crosshair */

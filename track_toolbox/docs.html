@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>track toolbox Docs — GPX/KML edit, Digitize, shortcuts</title>
-  <meta name="description" content="Documentation for track toolbox: upload GPX/KML, selection, Digitize with BRouter, geometry edit tools, keyboard shortcuts, and export.">
+  <title>track toolbox Docs — how to load, edit and export GPX/KML</title>
+  <meta name="description" content="How to use track toolbox: load GPX/KML, select and edit tracks, add points, digitize routes, and export.">
   <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#00b9fe">
   <meta name="author" content="Tirol Trailhead">
@@ -16,12 +16,12 @@
   <meta property="og:site_name" content="Tirol Trailhead">
   <meta property="og:url" content="https://tiroltrailhead.com/webmaps/track_toolbox/docs.html">
   <meta property="og:title" content="track toolbox Docs">
-  <meta property="og:description" content="How to use track toolbox: files, Digitize, edit tools, and keyboard shortcuts.">
+  <meta property="og:description" content="Simple guide to track toolbox: load, edit, digitize and export GPX/KML.">
   <meta property="og:image" content="https://tiroltrailhead.com/webmaps/track_toolbox/card.jpg">
 
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="track toolbox Docs">
-  <meta name="twitter:description" content="GPX/KML toolbox docs — Digitize, edit geometry, shortcuts.">
+  <meta name="twitter:description" content="How to load, edit and export GPX/KML with track toolbox.">
   <meta name="twitter:image" content="https://tiroltrailhead.com/webmaps/track_toolbox/card.jpg">
 
   <script type="application/ld+json">
@@ -74,95 +74,122 @@
 </head>
 <body class="tracktoolbox-docs-page">
   <h1>track 📐toolbox</h1>
-  <p>Load, select, convert, and edit GPX/KML tracks and waypoints in the browser.</p>
+  <p>Free browser tool to load, edit, convert and export GPX/KML tracks and waypoints. Basic GPX/KML knowledge is assumed.</p>
 
   <h2>Files</h2>
   <ul>
-    <li><strong>Upload files</strong> (<kbd>u</kbd>) — GPX, KML, ZIP, or KMZ (multiple). Tracks (LineString) and waypoints (Point). Max size per file applies; oversized files are rejected with a toast.</li>
-    <li><strong>GPX / KML</strong> — Download the current selection. <strong>Separate files</strong> (default): one LineString per file (ZIP if several). <strong>Feature collection</strong>: all selected LineStrings in one <code>tracks.gpx</code>/<code>tracks.kml</code>. Points: see <strong>Points</strong> (never mixed into the same XML as a LineString; mixed selection → ZIP with <code>tracks.*</code> + <code>points.*</code>).</li>
-    <li><strong>Remove</strong> — Delete selected features.</li>
-    <li><strong>Clear all</strong> — Remove every loaded feature.</li>
+    <li><strong>Upload files</strong> (<kbd>u</kbd>) — Load one or more GPX, KML, ZIP or KMZ files. Tracks and waypoints appear in the list. Very large files are refused.</li>
+    <li><strong>GPX / KML</strong> — Download what you have selected.
+      <ul>
+        <li><strong>Separate files</strong> (default) — each track becomes its own file (ZIP if you selected more than one).</li>
+        <li><strong>Feature collection</strong> — all selected tracks go into one <code>tracks.gpx</code> or <code>tracks.kml</code>.</li>
+        <li>Waypoints always go into one <code>points</code> file (never mixed with tracks in the same file). If you selected both tracks and waypoints, you get a ZIP with both.</li>
+      </ul>
+    </li>
+    <li><strong>Remove</strong> — Delete the selected items.</li>
+    <li><strong>Clear all</strong> — Remove everything from the list.</li>
   </ul>
 
-  <h2>Selection &amp; metadata</h2>
+  <h2>Selecting &amp; renaming</h2>
   <ul>
-    <li>Click a feature on the map or in the list to multi-select; click again to deselect.</li>
-    <li><strong>Name</strong> / <strong>Description</strong> always edit the <em>last</em> selected feature. Selection count is shown above the list.</li>
-    <li>Selected lines use the highlight style; points use a larger circle marker (also in 3D).</li>
-    <li><strong>Search/Filter</strong> — Fuzzy-match loaded tracks (name / description / source). While the query is non-empty, only matching features stay on the map and in the list; others are hidden and not selectable (including <kbd>Ctrl+A</kbd>). Dropdown still lists track hits (priority) plus OSM Nominatim places — Enter / click selects a track or flies to a place. Clear the field to show everything again.</li>
+    <li>Click a track or waypoint on the map or in the list to select it. Click again to deselect. You can select several at once.</li>
+    <li><strong>Shift+drag</strong> on the map draws a rectangle and <em>adds</em> every visible track or waypoint that is inside it or crosses it to the current selection.</li>
+    <li><strong>Name</strong> and <strong>Description</strong> always edit the <em>last</em> item you selected.</li>
+    <li>Selected tracks are highlighted; selected waypoints show a larger marker.</li>
+    <li><strong>Search/Filter</strong> — Type a name (or part of a name / description). Matching items stay on the map and in the list; the rest are hidden for now. The dropdown also suggests places from OpenStreetMap — pick one to fly there. Clear the field to show everything again. Your selection is kept while you filter.</li>
   </ul>
 
   <h2>Map</h2>
   <ul>
-    <li>2D Leaflet map with locate control and the usual base layers from the shared map CSS.</li>
-    <li>Toggle 3D terrain (Mapbox) via the map control; tracks/points sync into 3D. Edit mode forces 2D.</li>
+    <li>Normal 2D map with zoom, GPS locate, and base-map choices.</li>
+    <li>Use the cube control for a 3D terrain view. Your tracks and waypoints show there too. Editing always switches back to 2D.</li>
   </ul>
 
-  <h2>Points</h2>
+  <h2>Waypoints (points)</h2>
   <ul>
-    <li><strong>Add</strong> — Map control (point + crosshair), also <kbd>p</kbd>. Click the map to drop Point features into the list (named <code>Point N</code>). Stays on for multiple clicks; <strong>Esc</strong>, <kbd>p</kbd> again, or the control exits. Mutually exclusive with Digitize and edit; 2D-only.</li>
-    <li>Each click is its own list item (select / name / edit separately).</li>
-    <li><strong>Export</strong> — On GPX/KML download, all <em>selected</em> Points are written into <strong>one</strong> <code>points.gpx</code> or <code>points.kml</code> (many waypoints in a single file). Points and LineStrings are never mixed in the same document. If the selection also includes LineStrings, you get a ZIP: <code>points.*</code> plus one file per line.</li>
+    <li>Use the point control on the map (or <kbd>p</kbd>), then click the map to add waypoints. They show up in the list as <code>Point 1</code>, <code>Point 2</code>, …</li>
+    <li>Stay in point mode for several clicks. Exit with <strong>Esc</strong>, <kbd>p</kbd> again, or the control. Not available while Digitize or Edit is on (2D only).</li>
+    <li>Each waypoint is its own list item — you can rename or edit it separately.</li>
+    <li>When you download, all <em>selected</em> waypoints become one <code>points.gpx</code> / <code>points.kml</code>.</li>
   </ul>
 
-  <h2>Digitize (BRouter)</h2>
-  <p>Separate map control (route icon). Place waypoints, snap via BRouter (profiles / straight legs as in legacy_trails). The list button / save dialog <strong>adds a LineString to Tracks</strong> (no GPX download from digitize — export from the panel). Digitize is 2D-only; feature pick is blocked while active. Override endpoint with <code>?brouter=…</code>.</p>
+  <h2>Digitize (draw a route)</h2>
+  <p>Use the route control on the map. Click to place stations; the path between them is routed (or drawn straight, depending on the pen mode). When you save, the route is added to your track list — then export it with GPX/KML from the panel as usual. Digitize is 2D only.</p>
   <ul>
-    <li>Clear window = BRouter coverage; grey veil outside (Alps AT–CH–IT; lon 5–20°, lat 40–50°).</li>
-    <li>Stations farther than ~75 km crow-flies are refused (too slow / heavy for the router).</li>
-    <li><strong>Esc</strong> while a leg is routing cancels that request and keeps a straight chord between the last stations.</li>
-    <li><strong>r</strong> — Toggle Digitize. Second press exits (cancels in-flight leg like Esc, leaves waypoints/route on the map; no save prompt).</li>
-    <li><strong>Ctrl+Z / Ctrl+Y</strong> — Undo / redo last station edit (add, move, insert, clear).</li>
+    <li>Routing works inside the clear map window (Alps area). Outside that, the map is greyed out.</li>
+    <li>Stations more than about 25 km apart are not allowed (too heavy for the router).</li>
+    <li><strong>Esc</strong> while a leg is calculating cancels that leg and keeps a straight line instead.</li>
+    <li><kbd>r</kbd> — Turn Digitize on/off. Turning off leaves your route on the map (no save prompt).</li>
+    <li><kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd> — Undo / redo station changes.</li>
   </ul>
 
-  <h2>Shortcuts</h2>
-  <p>Desktop / keyboard only — phones and tablets have no shortcut keys (and no <kbd>k</kbd> cheat sheet). Use the on-map controls and touch gestures instead.</p>
-  <p>On a keyboard, press <kbd>k</kbd> to show / hide the on-map cheat sheet and shortcut badges. Same list:</p>
-  <ul>
-    <li><kbd>k</kbd> — Show / hide shortcut badges + cheat sheet</li>
-    <li><kbd>+</kbd> / <kbd>-</kbd> — Zoom in / out</li>
-    <li><kbd>u</kbd> — Upload files</li>
-    <li><kbd>p</kbd> — Add Point on / off</li>
-    <li><kbd>r</kbd> — Digitize on / off (off keeps route on the map)</li>
-    <li><kbd>l</kbd> — GPS locate on / off</li>
-    <li><kbd>3</kbd> — 3D terrain on / off</li>
-    <li><kbd>Esc</kbd> — Cancel in-flight Digitize leg / exit Point tool</li>
-    <li><kbd>e</kbd> — Edit when exactly one feature is selected</li>
-    <li><kbd>Ctrl+A</kbd> — Select all tracks; again deselects all</li>
-    <li><kbd>n</kbd> <kbd>s</kbd> <kbd>t</kbd> <kbd>d</kbd> <kbd>f</kbd> — Edit tools (<kbd>f</kbd> = df; <kbd>t</kbd> toggles trim)</li>
-    <li><kbd>←</kbd> / <kbd>→</kbd> — After a LineString edit (n/s/t/d), step the last-touched vertex up/downstream and pan the map</li>
-    <li><kbd>Enter</kbd> — Save edit · <kbd>Esc</kbd> — Discard edit</li>
-    <li><kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd> — Undo / redo (edit session or Digitize stations)</li>
-  </ul>
+  <h2>Keyboard shortcuts</h2>
+  <p>These work on a computer keyboard. On phone/tablet, use the on-map buttons and touch (long-press to edit).</p>
+  <p>Press <kbd>k</kbd> to show or hide the shortcut tips on screen:</p>
+  <div class="tracktoolbox-docs-plainlist">
+    <div class="tracktoolbox-docs-row"><span class="tracktoolbox-docs-key"><kbd>k</kbd></span><span class="tracktoolbox-docs-desc">Show / hide shortcut tips</span></div>
+    <div class="tracktoolbox-docs-row"><span class="tracktoolbox-docs-key"><kbd>+</kbd> / <kbd>-</kbd></span><span class="tracktoolbox-docs-desc">Zoom</span></div>
+    <div class="tracktoolbox-docs-row"><span class="tracktoolbox-docs-key"><kbd>u</kbd></span><span class="tracktoolbox-docs-desc">Upload</span></div>
+    <div class="tracktoolbox-docs-row"><span class="tracktoolbox-docs-key"><kbd>p</kbd></span><span class="tracktoolbox-docs-desc">Add waypoint on / off</span></div>
+    <div class="tracktoolbox-docs-row"><span class="tracktoolbox-docs-key"><kbd>r</kbd></span><span class="tracktoolbox-docs-desc">Digitize on / off</span></div>
+    <div class="tracktoolbox-docs-row"><span class="tracktoolbox-docs-key"><kbd>l</kbd></span><span class="tracktoolbox-docs-desc">GPS locate on / off</span></div>
+    <div class="tracktoolbox-docs-row"><span class="tracktoolbox-docs-key"><kbd>3</kbd></span><span class="tracktoolbox-docs-desc">3D on / off</span></div>
+    <div class="tracktoolbox-docs-row"><span class="tracktoolbox-docs-key"><kbd>Esc</kbd></span><span class="tracktoolbox-docs-desc">Cancel Digitize leg / exit point tool</span></div>
+    <div class="tracktoolbox-docs-row"><span class="tracktoolbox-docs-key"><kbd>e</kbd></span><span class="tracktoolbox-docs-desc">Edit (exactly one item selected)</span></div>
+    <div class="tracktoolbox-docs-row"><span class="tracktoolbox-docs-key"><kbd>Ctrl+A</kbd></span><span class="tracktoolbox-docs-desc">Select all visible items</span></div>
+    <div class="tracktoolbox-docs-row"><span class="tracktoolbox-docs-key"><kbd>Ctrl+D</kbd></span><span class="tracktoolbox-docs-desc">Deselect all</span></div>
+    <div class="tracktoolbox-docs-row"><span class="tracktoolbox-docs-key"><kbd>Shift</kbd>+drag</span><span class="tracktoolbox-docs-desc">Box-select — add features to selection</span></div>
+    <div class="tracktoolbox-docs-row"><span class="tracktoolbox-docs-key"><kbd>n</kbd> <kbd>s</kbd> <kbd>t</kbd> <kbd>d</kbd> <kbd>f</kbd></span><span class="tracktoolbox-docs-desc">Acitvate edit tools with these shortcuts</span></div>
+    <div class="tracktoolbox-docs-row"><span class="tracktoolbox-docs-key"><kbd>←</kbd> / <kbd>→</kbd></span><span class="tracktoolbox-docs-desc">Jump along the last edited track node</span></div>
+    <div class="tracktoolbox-docs-row"><span class="tracktoolbox-docs-key"><kbd>Enter</kbd> / <kbd>Esc</kbd></span><span class="tracktoolbox-docs-desc">Save edit / Discard edit</span></div>
+    <div class="tracktoolbox-docs-row"><span class="tracktoolbox-docs-key"><kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd></span><span class="tracktoolbox-docs-desc">Undo / redo</span></div>
+  </div>
 
-  <h2>Edit geometry</h2>
-  <p>Open the edit toolbox with a <strong>right-click</strong> on a feature (desktop), or a <strong>long-press</strong> on mobile (browser fires the same context-menu event). On a keyboard you can also press <kbd>e</kbd> when exactly one feature is selected. There is no separate edit button. One edit session per start; tools switch without leaving the session.</p>
+  <h2>Edit a track or waypoint</h2>
+  <p><strong>Right-click</strong> (computer) or <strong>long-press</strong> (phone) a feature to open the edit panel. Or select exactly one item and press <kbd>e</kbd>. You stay in one edit session until you save or discard; you can switch tools freely.</p>
   <ul>
-    <li><strong>Save</strong> button (or <kbd>Enter</kbd>) — Save changes.</li>
-    <li><strong>×</strong> (or <kbd>Esc</kbd>) — Discard (restores the session snapshot).</li>
-    <li><strong>↶ / ↷</strong> buttons (or <kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd>) — Undo / redo within the session. Buttons are for mobile; shortcut badges show with <kbd>k</kbd> on desktop.</li>
-    <li>After n / s / t_ / _t / d on a LineString, the last touched vertex is remembered (cyan outline). <kbd>←</kbd> / <kbd>→</kbd> step along the track and pan/zoom the map (≥ zoom 15). Cleared when the session ends or you switch to another session feature.</li>
-    <li>Tool buttons on the edit panel (or <strong>n / s / d / f</strong> on keyboard; <code>f</code> = <code>df</code>; <strong>t</strong> toggles <code>t_</code> ↔ <code>_t</code>). <code>t_</code> = trim before, <code>_t</code> = trim after. Points: <strong>n</strong>, <strong>d</strong>, <strong>df</strong> only.</li>
-    <li>Right-click / long-press another <em>session</em> feature (e.g. after a split) to switch the active target. Doing that on a non-session feature asks to discard and start a new session.</li>
+    <li><strong>Save</strong> (or <kbd>Enter</kbd>) — Keep your changes.</li>
+    <li><strong>×</strong> (or <kbd>Esc</kbd>) — Discard everything from this edit session.</li>
+    <li><strong>↶ / ↷</strong> (or <kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd>) — Undo / redo. The buttons are especially useful on mobile.</li>
+    <li>After you change a track node, it is marked. Use <kbd>←</kbd> / <kbd>→</kbd> to step to the previous/next node and move the map there.</li>
+    <li>Right-click / long-press another piece from the same edit (e.g. after a split) to work on that piece. Doing that on a different track asks whether to discard first.</li>
   </ul>
 
   <h2>Edit tools</h2>
-  <p>Vertex markers stay visible in every tool (node pane above the line). Letter = active tool. Start vertex green, end vertex red. Points: <strong>n</strong>, <strong>d</strong>, <strong>df</strong>.</p>
-  <ul>
-    <li><strong>n</strong> — Node: drag vertices / Point; click the line away from vertices to insert. Elevation kept when present.</li>
-    <li><strong>s</strong> — Scissor: click the line or a mid vertex to split (not start/end). Both parts stay in the session; the later part becomes active.</li>
-    <li><strong>t_</strong> — Trim before: delete everything before the click.</li>
-    <li><strong>_t</strong> — Trim after: delete everything after the click.</li>
-    <li><strong>d</strong> — Delete node: click a vertex to remove it, or a Point to remove that feature (min. two vertices on a line).</li>
-    <li><strong>df</strong> (<kbd>f</kbd>) — Delete feature: click a session Point or LineString to remove it whole. Empty session closes.</li>
-  </ul>
+  <p>Nodes on the track stay visible. Activate tools with the shortcuts n, d, f, t, s. When active,  the start node is marked green, the end red. The letters on the nodes indicate which tool is active. For waypoints only <strong>n</strong>, <strong>d</strong> and <strong>df</strong> apply.</p>
+  <div class="tracktoolbox-docs-plainlist tracktoolbox-docs-tools">
+    <div class="tracktoolbox-docs-row">
+      <span class="tracktoolbox-docs-badge">n</span>
+      <span class="tracktoolbox-docs-desc">Move nodes (drag). Click the track between nodes to insert a new one. Elevation is kept when the file had it.</span>
+    </div>
+    <div class="tracktoolbox-docs-row">
+      <span class="tracktoolbox-docs-badge">s</span>
+      <span class="tracktoolbox-docs-desc">Split the track at the click (not at start/end). You get two pieces; the later one becomes active.</span>
+    </div>
+    <div class="tracktoolbox-docs-row">
+      <span class="tracktoolbox-docs-badge">t_</span>
+      <span class="tracktoolbox-docs-desc">Cut off everything <em>before</em> the click.</span>
+    </div>
+    <div class="tracktoolbox-docs-row">
+      <span class="tracktoolbox-docs-badge">_t</span>
+      <span class="tracktoolbox-docs-desc">Cut off everything <em>after</em> the click.</span>
+    </div>
+    <div class="tracktoolbox-docs-row">
+      <span class="tracktoolbox-docs-badge">d</span>
+      <span class="tracktoolbox-docs-desc">Delete one node (or the whole waypoint if you click a point). A track needs at least two nodes.</span>
+    </div>
+    <div class="tracktoolbox-docs-row">
+      <span class="tracktoolbox-docs-badge">df</span>
+      <span class="tracktoolbox-docs-desc">Delete the whole track or waypoint. If nothing is left in the session, edit closes.</span>
+    </div>
+  </div>
 
-  <h2>Notes</h2>
+  <h2>Good to know</h2>
   <ul>
-    <li>Scissor / trim apply only to LineStrings. Cuts too close to an endpoint are ignored.</li>
-    <li>On LineString edit enter, vertices are chord-simplified once (~every 25 m along-track). Those nodes (plus any you add) stay for the session — no re-thinning. Discard restores the dense original; save keeps the chords.</li>
-    <li>Discard restores the full track list from when the session started (including undoing splits and deletes in that session).</li>
-    <li>Save commits the working geometry into the loaded set; then you can export as usual.</li>
+    <li>Split and trim only work on tracks, not on waypoints. Clicks too close to the start or end are ignored.</li>
+    <li>When you start editing a track, dense GPS points are thinned to about every 25 m so the nodes are usable. Discard brings back the original dense track; Save keeps the thinned version (plus your edits).</li>
+    <li>Discard undoes the whole edit session (including splits and deletes done in that session).</li>
+    <li>After Save, export with GPX/KML as usual.</li>
   </ul>
 </body>
 </html>
