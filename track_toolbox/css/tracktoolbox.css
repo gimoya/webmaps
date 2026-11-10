@@ -1103,6 +1103,42 @@ html.tracktoolbox-busy * {
   color: #00b9fe;
 }
 
+.tracktoolbox-docs-page a {
+  color: #00b9fe;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tracktoolbox-docs-page a:hover {
+  color: #5fd0ff;
+}
+
+.tracktoolbox-docs-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 0 0 1.2em;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.tracktoolbox-docs-cta {
+  display: inline-block;
+  margin: 0.8em 0 0.4em;
+  padding: 0.55em 0.9em;
+  border-radius: 6px;
+  background: #00b9fe;
+  color: #0b1220 !important;
+  font-weight: 600;
+  text-decoration: none !important;
+}
+
+.tracktoolbox-docs-cta:hover {
+  background: #5fd0ff;
+  color: #0b1220 !important;
+}
+
 .tracktoolbox-docs-page p,
 .tracktoolbox-docs-page li {
   font-size: 0.95rem;
@@ -1110,7 +1146,8 @@ html.tracktoolbox-busy * {
   color: rgba(240, 240, 240, 0.88);
 }
 
-.tracktoolbox-docs-page ul {
+.tracktoolbox-docs-page ul,
+.tracktoolbox-docs-page ol {
   padding-left: 1.2em;
   margin: 0.3em 0 0.6em;
 }

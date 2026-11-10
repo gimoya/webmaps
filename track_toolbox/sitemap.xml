@@ -10,4 +10,29 @@
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
+  <url>
+    <loc>https://tiroltrailhead.com/webmaps/track_toolbox/seo/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://tiroltrailhead.com/webmaps/track_toolbox/seo/clean-google-maps-kml.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://tiroltrailhead.com/webmaps/track_toolbox/seo/gpx-trim-split-online.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://tiroltrailhead.com/webmaps/track_toolbox/seo/gpx-kml-convert.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://tiroltrailhead.com/webmaps/track_toolbox/seo/vs-gpx-studio.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
 </urlset>

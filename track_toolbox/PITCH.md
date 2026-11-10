@@ -1,5 +1,7 @@
 # track 📐toolbox — pitch
 
+Visibility & SEO plan: [`STRATEGY.md`](STRATEGY.md) · hosted guides: [`seo/`](seo/)
+
 ## One-liner
 
 Fast multi-track / waypoint surgery in the browser: load, select, cut, rename, convert, digitize, export. Not a tour planner SPA — a **surgical GPX/KML toolbox**.
