@@ -813,7 +813,7 @@
 
 	function sanitizeFileBase(raw) {
 		var name = String(raw || 'track').trim() || 'track';
-		name = name.replace(/\.(gpx|kml)$/i, '');
+		name = name.replace(/\.(gpx|kml|fit)$/i, '');
 		name = name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '').replace(/\s+/g, '_');
 		return name || 'track';
 	}
@@ -1021,6 +1021,81 @@
 		throw new Error('unknown-format');
 	}
 
+	/* —— FIT import (lazy @garmin/fitsdk; export stays GPX/KML) —— */
+	var _fitSdkPromise = null;
+	var FIT_SDK_ESM = 'https://esm.sh/@garmin/fitsdk@21.221.0';
+	var FIT_SEMICIRCLE = 180 / 2147483648; /* 2^31 */
+
+	function loadFitSdk() {
+		if (_fitSdkPromise) return _fitSdkPromise;
+		_fitSdkPromise = import(/* webpackIgnore: true */ FIT_SDK_ESM).catch(function (err) {
+			_fitSdkPromise = null;
+			throw err;
+		});
+		return _fitSdkPromise;
+	}
+
+	function fitSemicircleToDeg(v) {
+		if (v == null || !isFinite(v)) return NaN;
+		/* Some pipelines already expose degrees; semicircle magnitudes are >> 180. */
+		if (Math.abs(v) <= 180) return v;
+		return v * FIT_SEMICIRCLE;
+	}
+
+	function fitTrackName(messages, sourceFile) {
+		var sessions = (messages && messages.sessionMesgs) || [];
+		if (sessions.length) {
+			var s0 = sessions[0];
+			if (s0.sport && String(s0.sport) !== 'generic') {
+				var sport = String(s0.sport).replace(/_/g, ' ');
+				sport = sport.charAt(0).toUpperCase() + sport.slice(1);
+				return sport;
+			}
+			if (s0.name) return String(s0.name);
+		}
+		var base = String(sourceFile || '').split('/').pop() || '';
+		base = base.replace(/\.fit$/i, '');
+		return base || 'FIT Track';
+	}
+
+	async function parseFitBuffer(arrayBuffer, sourceFile) {
+		var sdk = await loadFitSdk();
+		var Decoder = sdk.Decoder;
+		var Stream = sdk.Stream;
+		if (!Decoder || !Stream) throw new Error('fit-sdk-missing');
+		var stream = Stream.fromArrayBuffer(arrayBuffer);
+		var decoder = new Decoder(stream);
+		if (!decoder.isFIT()) throw new Error('invalid-fit');
+		var result = decoder.read({
+			applyScaleAndOffset: true,
+			expandSubFields: true,
+			expandComponents: true,
+			convertTypesToStrings: true,
+			convertDateTimesToDates: false,
+			includeUnknownData: false,
+			mergeHeartRates: false
+		});
+		var messages = result && result.messages;
+		var records = (messages && messages.recordMesgs) || [];
+		var coords = [];
+		for (var i = 0; i < records.length; i++) {
+			var r = records[i];
+			var lat = fitSemicircleToDeg(r.positionLat);
+			var lon = fitSemicircleToDeg(r.positionLong);
+			if (!isFinite(lat) || !isFinite(lon)) continue;
+			if (lat < -90 || lat > 90 || lon < -180 || lon > 180) continue;
+			var ele = r.enhancedAltitude;
+			if (ele == null || !isFinite(ele)) ele = r.altitude;
+			if (isFinite(ele)) coords.push([lon, lat, ele]);
+			else coords.push([lon, lat]);
+		}
+		if (coords.length < 2) return [];
+		return [makeTrack(fitTrackName(messages, sourceFile), '', {
+			type: 'LineString',
+			coordinates: coords
+		}, sourceFile)];
+	}
+
 	async function parseZipBuffer(buf, zipName) {
 		if (typeof JSZip === 'undefined') throw new Error('jszip-missing');
 		var zip = await JSZip.loadAsync(buf);
@@ -1032,9 +1107,16 @@
 			var base = names[i].split('/').pop();
 			if (base.indexOf('.') === 0) continue;
 			var ext = extOf(base);
-			if (ext !== 'gpx' && ext !== 'kml') continue;
-			var text = await entry.async('string');
-			var parsed = parseXmlTracks(text, base);
+			var parsed;
+			if (ext === 'fit') {
+				var fitBuf = await entry.async('arraybuffer');
+				parsed = await parseFitBuffer(fitBuf, base);
+			} else if (ext === 'gpx' || ext === 'kml') {
+				var text = await entry.async('string');
+				parsed = parseXmlTracks(text, base);
+			} else {
+				continue;
+			}
 			for (var j = 0; j < parsed.length; j++) {
 				parsed[j].sourceFile = zipName + '/' + names[i];
 				collected.push(parsed[j]);
@@ -1063,8 +1145,11 @@
 				try {
 					var parsed;
 					if (ext === 'zip' || ext === 'kmz') {
-						var buf = await readFileAsArrayBuffer(file);
-						parsed = await parseZipBuffer(buf, file.name);
+						var zipBuf = await readFileAsArrayBuffer(file);
+						parsed = await parseZipBuffer(zipBuf, file.name);
+					} else if (ext === 'fit') {
+						var fitBuf = await readFileAsArrayBuffer(file);
+						parsed = await parseFitBuffer(fitBuf, file.name);
 					} else {
 						var text = await readFileAsText(file);
 						parsed = parseXmlTracks(text, file.name);
