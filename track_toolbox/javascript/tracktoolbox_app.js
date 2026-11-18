@@ -2026,7 +2026,7 @@
 		selectedIds = [merged.id];
 		syncSelectionUi();
 		syncTracksTo3D();
-		showToast('Merged ' + list.length + ' LineStrings');
+		showToast('Merged ' + list.length + ' LineStrings · time dropped');
 	}
 
 	function removeSelected() {
