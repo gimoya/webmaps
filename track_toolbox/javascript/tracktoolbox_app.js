@@ -273,6 +273,7 @@
 	var selCountEl = document.getElementById('tracktoolbox-sel-count');
 	var dlGpxBtn = document.getElementById('tracktoolbox-dl-gpx');
 	var dlKmlBtn = document.getElementById('tracktoolbox-dl-kml');
+	var mergeBtn = document.getElementById('tracktoolbox-merge');
 	var removeBtn = document.getElementById('tracktoolbox-remove');
 	var clearBtn = document.getElementById('tracktoolbox-clear');
 	var searchInput = document.getElementById('tracktoolbox-search');
@@ -667,6 +668,7 @@
 
 	dlGpxBtn.addEventListener('click', function () { downloadSelected('gpx'); });
 	dlKmlBtn.addEventListener('click', function () { downloadSelected('kml'); });
+	if (mergeBtn) mergeBtn.addEventListener('click', mergeSelectedLines);
 	removeBtn.addEventListener('click', removeSelected);
 	clearBtn.addEventListener('click', clearAll);
 
@@ -1463,8 +1465,10 @@
 	function updateButtons() {
 		var hasSel = selectedTracks().length > 0;
 		var hasAny = tracks.length > 0;
+		var canMerge = selectedTracks().length >= 2;
 		dlGpxBtn.disabled = !hasSel;
 		dlKmlBtn.disabled = !hasSel;
+		if (mergeBtn) mergeBtn.disabled = !canMerge;
 		removeBtn.disabled = !hasSel;
 		clearBtn.disabled = !hasAny;
 	}
@@ -1942,6 +1946,87 @@
 		}
 		/* Mixed + separate: ZIP with points.{ext} + one file per LineString */
 		zipTracks(lines, format, 'selected_' + format + '.zip', points);
+	}
+
+	function joinDashParts(parts) {
+		var out = [];
+		for (var i = 0; i < parts.length; i++) {
+			var s = String(parts[i] || '').trim();
+			if (s) out.push(s);
+		}
+		return out.join(' - ');
+	}
+
+	function flattenLineCoords(geom) {
+		var parts = lineCoordsFromGeom(geom);
+		var coords = [];
+		for (var i = 0; i < parts.length; i++) {
+			var ring = parts[i];
+			if (!ring || !ring.length) continue;
+			for (var j = 0; j < ring.length; j++) coords.push(ring[j].slice());
+		}
+		return coords;
+	}
+
+	/** Concat LineStrings in selection order. Replaces sources with one merged track. */
+	function mergeSelectedLines() {
+		if (editMode || digitizePickBlocked || pointDrawActive) {
+			showToast('Finish digitize / edit first');
+			return;
+		}
+		var list = selectedTracks();
+		if (list.length < 2) {
+			showToast(list.length === 0
+				? 'Select LineStrings first'
+				: 'Select at least two LineStrings');
+			return;
+		}
+		var names = [];
+		var descs = [];
+		var coords = [];
+		var sourceFiles = [];
+		for (var i = 0; i < list.length; i++) {
+			var t = list[i];
+			var g = t.geometry;
+			if (!g || (g.type !== 'LineString' && g.type !== 'MultiLineString')) {
+				showToast('Merge needs LineStrings only');
+				return;
+			}
+			var part = flattenLineCoords(g);
+			if (part.length < 2) {
+				showToast('Merge needs LineStrings only');
+				return;
+			}
+			for (var j = 0; j < part.length; j++) coords.push(part[j]);
+			names.push(t.name);
+			descs.push(t.description);
+			if (t.sourceFile) sourceFiles.push(t.sourceFile);
+		}
+		if (coords.length < 2) {
+			showToast('Merge needs LineStrings only');
+			return;
+		}
+		var merged = makeTrack(
+			joinDashParts(names) || 'Merged',
+			joinDashParts(descs),
+			{ type: 'LineString', coordinates: coords },
+			sourceFiles[0] || ''
+		);
+		var removeSet = Object.create(null);
+		for (var r = 0; r < list.length; r++) removeSet[list[r].id] = true;
+		var insertAt = -1;
+		for (var ti = 0; ti < tracks.length; ti++) {
+			if (removeSet[tracks[ti].id]) {
+				if (insertAt < 0) insertAt = ti;
+			}
+		}
+		tracks = tracks.filter(function (tr) { return !removeSet[tr.id]; });
+		if (insertAt < 0 || insertAt > tracks.length) insertAt = tracks.length;
+		tracks.splice(insertAt, 0, merged);
+		selectedIds = [merged.id];
+		syncSelectionUi();
+		syncTracksTo3D();
+		showToast('Merged ' + list.length + ' LineStrings');
 	}
 
 	function removeSelected() {
@@ -3100,6 +3185,11 @@
 					return;
 				}
 				requestEnterEdit(selectedIds[0]);
+				return;
+			}
+			if (gk === 'm') {
+				e.preventDefault();
+				mergeSelectedLines();
 				return;
 			}
 		}
