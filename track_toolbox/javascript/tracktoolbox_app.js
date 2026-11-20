@@ -46,8 +46,6 @@
 	var EDIT_MIN_CUT_M = 1;
 	/** Screen-px radius around an existing vertex — click inside = no insert. */
 	var EDIT_NODE_PAD_PX = 12;
-	/** Along-track step (m) for one-time edit-session chord simplify. */
-	var EDIT_NODE_STEP_M = 20;
 	/** Fat invisible hit target for map selection / contextmenu. */
 	var SELECT_HIT_WEIGHT = 28;
 	var SELECT_POINT_HIT_R = 16;
@@ -2305,6 +2303,12 @@
 			askSaveAndExit();
 		});
 	}
+	var editStepInput = document.getElementById('tracktoolbox-edit-step');
+	if (editStepInput) {
+		editStepInput.addEventListener('change', function () {
+			rethinEditFromSnapshot();
+		});
+	}
 	if (editUndoBtn) {
 		editUndoBtn.addEventListener('click', function () {
 			if (!editMode || editUndoBtn.disabled) return;
@@ -2360,6 +2364,11 @@
 	/** Points: n / d / df. LineStrings: all tools. */
 	function syncEditToolboxForGeometry() {
 		var pointOnly = isEditingPoint();
+		var stepLabel = document.getElementById('tracktoolbox-edit-step-label');
+		if (stepLabel) {
+			stepLabel.hidden = pointOnly;
+			stepLabel.classList.toggle('is-hidden', pointOnly);
+		}
 		document.querySelectorAll('.tracktoolbox-edit-tool').forEach(function (btn) {
 			var tool = btn.getAttribute('data-tool');
 			var allow = !pointOnly || isPointAllowedTool(tool);
@@ -2625,9 +2634,17 @@
 	 * Spans between kept verts become single chords. Elev and time stay on kept points.
 	 * Returns null when nothing is dropped.
 	 */
+	function editNodeStepM() {
+		var el = document.getElementById('tracktoolbox-edit-step');
+		if (!el) return null;
+		var n = Number(el.value);
+		if (!(n > 0) || !isFinite(n)) return null;
+		return n;
+	}
+
 	function simplifyLineToChords(coords, stepM) {
 		if (!coords || coords.length < 3) return null;
-		stepM = stepM != null ? stepM : EDIT_NODE_STEP_M;
+		if (!(stepM > 0)) return null;
 		var total = 0;
 		var i;
 		for (i = 1; i < coords.length; i++) {
@@ -2662,7 +2679,9 @@
 		if (!editWorking || !editWorking.geometry) return;
 		if (editWorking.geometry.type !== 'LineString') return;
 		var coords = editWorking.geometry.coordinates;
-		var simplified = simplifyLineToChords(coords, EDIT_NODE_STEP_M);
+		var step = editNodeStepM();
+		if (!(step > 0)) return;
+		var simplified = simplifyLineToChords(coords, step);
 		if (!simplified) return;
 		var nextTimes = null;
 		if (editWorking.times) {
@@ -2676,6 +2695,24 @@
 		if (packed) editWorking.times = packed;
 		else delete editWorking.times;
 		commitWorkingIntoTracksArray();
+	}
+
+	function rethinEditFromSnapshot() {
+		if (!editMode || !editTracksSnapshot || !editTargetId) return;
+		tracks = deepClone(editTracksSnapshot);
+		var original = findTrack(editTargetId);
+		if (!original) return;
+		editWorking = deepClone(original);
+		editSessionIds = [editTargetId];
+		selectedIds = [editTargetId];
+		applyEditSessionChordSimplify();
+		editUndoStack = [];
+		editRedoStack = [];
+		clearEditFocusVertex();
+		syncEditHistoryButtons();
+		syncSelectionUi();
+		syncTracksTo3D();
+		rebuildEditChrome();
 	}
 
 	function enterEditMode(id) {

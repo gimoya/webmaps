@@ -200,6 +200,10 @@
         <h2>Edit</h2>
       </div>
       <p class="tracktoolbox-edit-hint" data-shortcut="↵/Esc">Enter save · Esc discard</p>
+      <label class="tracktoolbox-edit-step" id="tracktoolbox-edit-step-label" title="Keep a node when it is at least this many metres along the track from the last kept node. Changing it thins again from the original track.">
+        <input type="number" id="tracktoolbox-edit-step" min="1" step="1" value="10" inputmode="decimal" aria-label="Thin spacing in metres">
+        <span>m</span>
+      </label>
       <div class="tracktoolbox-edit-tools" role="toolbar">
         <button type="button" class="legacy-action-btn tracktoolbox-edit-tool is-active" data-tool="node" data-shortcut="n" title="Node — drag / insert vertices (n)">n</button>
         <button type="button" class="legacy-action-btn tracktoolbox-edit-tool" data-tool="scissor" data-shortcut="s" title="Scissor — split LineString at click (s)">s</button>

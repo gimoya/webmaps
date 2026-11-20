@@ -198,7 +198,7 @@
   <h2>Good to know</h2>
   <ul>
     <li>Split and trim only work on tracks, not on waypoints. Clicks too close to the start or end are ignored.</li>
-    <li>When you start editing a track, dense GPS points are thinned to about every 25 m so the nodes are usable. Discard brings back the original dense track; Save keeps the thinned version (plus your edits).</li>
+    <li>When you edit a track, the <strong>m</strong> field in the edit panel sets how far apart kept nodes stay. It starts at 10. Start and end stay. A middle node stays when it is at least that many metres along the track from the last kept node. Elevation and time stay on the nodes that remain. Change the number during the session and the track is thinned again from the original file, before edits you made in this session. Discard brings back the dense track. Save keeps the thinned track plus your edits. Waypoints are not thinned.</li>
     <li>Discard undoes the whole edit session (including splits and deletes done in that session).</li>
     <li>After Save, export with GPX/KML as usual.</li>
   </ul>

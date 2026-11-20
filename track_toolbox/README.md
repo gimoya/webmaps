@@ -162,7 +162,7 @@ The list button with `is-last-selected` is the tail of `selectedIds`. Earlier se
 
 ## Edit session
 
-Enter: right-click / long-press, or `e` with exactly one feature selected. `enterEditMode` clones the feature, snapshots `tracks`, then `applyEditSessionChordSimplify` (chords of `EDIT_NODE_STEP_M`, 20 m). Undo can step back inside the session. Esc discards to the snapshot from before the thin.
+Enter: right-click / long-press, or `e` with exactly one feature selected. `enterEditMode` clones the feature, snapshots `tracks`, then `applyEditSessionChordSimplify` using the edit panel metres field (`#tracktoolbox-edit-step`, starts at 10). Changing that field restores the snapshot and thins again. Undo can step back inside the session after that. Esc discards to the snapshot from before the thin.
 
 Tools (`setEditTool`): `node`, `scissor`, `trimBefore`, `trimAfter`, `delete`, `deleteFeature`. Points only allow node, delete, and delete-feature.
 
@@ -259,7 +259,7 @@ Behavior knobs in `tracktoolbox_app.js`:
 | `DEFAULT_CENTER` / `DEFAULT_ZOOM` | Innsbruck, 11 | Empty-map view |
 | `MAX_FILE_BYTES` | 25 MB | Reject on import |
 | `GAP_DOT_M` | 500 m | Dotted draw for a long segment |
-| `EDIT_NODE_STEP_M` | 20 m | Chord thin on entering edit |
+| `#tracktoolbox-edit-step` | 10 m | Chord thin on entering edit, and again when the field changes |
 | `EDIT_NODE_PAD_PX` | 12 px | No insert on top of a vertex |
 | `EDIT_MIN_CUT_M` | 1 m | No scissor at an end |
 | `EDIT_UNDO_MAX` | 50 | Undo depth |
