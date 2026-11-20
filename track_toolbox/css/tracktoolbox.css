@@ -99,6 +99,62 @@
   text-decoration: none;
   text-shadow: 2px 2px 0 #000;
   opacity: 0.85;
+  cursor: pointer;
+}
+
+.tracktoolbox-docs-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 11000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  box-sizing: border-box;
+}
+
+.tracktoolbox-docs-overlay.is-hidden,
+.tracktoolbox-docs-overlay[hidden] {
+  display: none !important;
+}
+
+.tracktoolbox-docs-frame {
+  display: flex;
+  flex-direction: column;
+  width: 90vw;
+  height: 90dvh;
+}
+
+@media (orientation: landscape) {
+  .tracktoolbox-docs-frame {
+    width: 60vw;
+  }
+}
+
+.tracktoolbox-docs-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.tracktoolbox-docs-title {
+  flex: 0 0 auto;
+  margin: 0;
+  background: rgb(88, 88, 88);
+  padding: 10px 14px 8px;
+  color: var(--legacy-panel-title, #fff);
+  font: 700 16px/1 var(--legacy-panel-font, system-ui, sans-serif);
+}
+
+.tracktoolbox-docs-iframe {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  background: transparent;
 }
 
 /* Beat leaflet_map.css `.fa-info-circle { color: #313131 }` */
@@ -801,16 +857,6 @@ html.tracktoolbox-show-keys [data-shortcut]::after {
   color: #fff;
 }
 
-.tracktoolbox-edit-close {
-  border: none;
-  background: transparent;
-  color: #f0f0f0;
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0 2px;
-}
-
 .tracktoolbox-edit-hint {
   margin: 4px 0 6px;
   font-size: 9px;
@@ -1087,9 +1133,48 @@ html.tracktoolbox-busy * {
   padding: 24px 18px 48px;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   color: #e8e8e8;
-  background: #1e1e22;
+  background-color: #323238;
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.07) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
   min-height: 100dvh;
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: #5a5a64 #2a2a30;
+}
+
+html:has(.tracktoolbox-docs-page) {
+  scrollbar-width: thin;
+  scrollbar-color: #5a5a64 #2a2a30;
+}
+
+html:has(.tracktoolbox-docs-page)::-webkit-scrollbar,
+.tracktoolbox-docs-page::-webkit-scrollbar {
+  width: 8px;
+}
+
+html:has(.tracktoolbox-docs-page)::-webkit-scrollbar-track,
+.tracktoolbox-docs-page::-webkit-scrollbar-track {
+  background: #2a2a30;
+}
+
+html:has(.tracktoolbox-docs-page)::-webkit-scrollbar-thumb,
+.tracktoolbox-docs-page::-webkit-scrollbar-thumb {
+  background: #5a5a64;
+  border-radius: 4px;
+}
+
+html:has(.tracktoolbox-docs-page)::-webkit-scrollbar-thumb:hover,
+.tracktoolbox-docs-page::-webkit-scrollbar-thumb:hover {
+  background: #7a7a86;
+}
+
+html.is-docs-embedded .tracktoolbox-docs-page {
+  max-width: none;
+  width: 100%;
+  margin: 0;
 }
 
 .tracktoolbox-docs-page h1 {

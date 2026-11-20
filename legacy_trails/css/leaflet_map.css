@@ -383,16 +383,17 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
 }
 
 .legacy-panel-close,
-.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close {
+.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close,
+.legacy-3d-trail-tip .mapboxgl-popup-close-button.legacy-panel-close {
     position: absolute;
-    top: -10px;
-    right: -10px;
+    top: -9px;
+    right: -9px;
     z-index: 20;
-    width: 30px;
-    height: 30px;
-    border: 2px solid rgba(255, 255, 255, 0.35);
+    width: 26px;
+    height: 26px;
+    border: 3px solid rgba(255, 255, 255, 0.55);
     background-color: #2a2a30;
-    font-size: 18px;
+    font-size: 16px;
     line-height: 1;
     color: #f0f0f0;
     cursor: pointer;
@@ -423,7 +424,9 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
 .legacy-panel-close:hover,
 .legacy-panel-close:focus-visible,
 .trailPopupClass a.leaflet-popup-close-button.legacy-panel-close:hover,
-.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close:focus-visible {
+.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close:focus-visible,
+.legacy-3d-trail-tip .mapboxgl-popup-close-button.legacy-panel-close:hover,
+.legacy-3d-trail-tip .mapboxgl-popup-close-button.legacy-panel-close:focus-visible {
     color: #ffffff;
     background-color: #3a3a42;
     border-color: #00b9fe;
@@ -432,7 +435,8 @@ html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
 }
 
 .legacy-panel-close:active,
-.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close:active {
+.trailPopupClass a.leaflet-popup-close-button.legacy-panel-close:active,
+.legacy-3d-trail-tip .mapboxgl-popup-close-button.legacy-panel-close:active {
     background-color: #111114;
 }
 
@@ -717,28 +721,6 @@ main {
     animation: trailsWelcomeBorder 8s ease infinite;
     color: var(--legacy-panel-text);
     font-family: var(--legacy-panel-font);
-}
-
-.legacy-3d-trail-tip .mapboxgl-popup-close-button {
-    color: #f0f0f0;
-    font-size: 18px;
-    width: 28px;
-    height: 28px;
-    padding: 0 !important;
-    margin: 0;
-    right: 2px;
-    top: 2px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    text-align: center;
-    z-index: 2;
-}
-
-.legacy-3d-trail-tip .mapboxgl-popup-close-button:hover {
-    background: transparent;
-    color: #fff;
 }
 
 .legacy-3d-trail-tip .mapboxgl-popup-tip {

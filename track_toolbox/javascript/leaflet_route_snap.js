@@ -974,14 +974,18 @@
 		},
 
 		_elevStatsSummary: function (stats) {
+			var len = formatDistLabel(
+				stats && stats.totalDist > 0 ? stats.totalDist : 0,
+				!!(stats && stats.totalDist >= 1000)
+			);
 			if (!stats || (stats.min == null && !stats.samples.length)) {
-				return 'Höhe: — (keine BRouter-Höhe)';
+				return len + ' · Höhe: — (keine BRouter-Höhe)';
 			}
 			var g = Math.round(stats.gain);
 			var l = Math.round(stats.loss);
 			var hi = stats.max != null ? Math.round(stats.max) : '—';
 			var lo = stats.min != null ? Math.round(stats.min) : '—';
-			return '↑' + g + ' m  ↓' + l + ' m · high ' + hi + ' m / low ' + lo + ' m';
+			return len + ' · ↑' + g + ' m  ↓' + l + ' m · high ' + hi + ' m / low ' + lo + ' m';
 		},
 
 		_toggleElevProfile: function () {
@@ -1013,7 +1017,7 @@
 			if (this._elevMeta) {
 				this._elevMeta.textContent = hasRoute
 					? this._elevStatsSummary(stats)
-					: 'Höhe: —';
+					: '0 m · Höhe: —';
 			}
 			this._elevChart.innerHTML = this._elevProfileSvg(stats, { height: 118 });
 			this._bindElevLoupe(this._elevChart);

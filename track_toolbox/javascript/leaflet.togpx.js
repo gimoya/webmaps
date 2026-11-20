@@ -98,8 +98,9 @@ function togpx( geojson, options ) {
     case "Point":
     case "MultiPoint":
       var coords = f.geometry.coordinates;
+      var times = options.featureCoordTimes(f);
       if (f.geometry.type == "Point") coords = [coords];
-      coords.forEach(function (coordinates) {
+      coords.forEach(function (coordinates, i) {
         o = {
           "@lat": coordinates[1],
           "@lon": coordinates[0],
@@ -108,6 +109,9 @@ function togpx( geojson, options ) {
         };
         if (coordinates[2] !== undefined) {
           o.ele = coordinates[2];
+        }
+        if (times && times[i]) {
+          o.time = times[i];
         }
         add_feature_link(o,f);
         gpx.gpx.wpt.push(o);

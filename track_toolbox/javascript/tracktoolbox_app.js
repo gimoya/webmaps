@@ -707,6 +707,11 @@
 	var welcomeCloseBtn = document.getElementById('tracktoolbox-welcome-close');
 	var kofiOverlay = document.getElementById('tracktoolbox-kofi-overlay');
 	var kofiCloseBtn = document.getElementById('tracktoolbox-kofi-close');
+	var docsOverlay = document.getElementById('tracktoolbox-docs-overlay');
+	var docsCloseBtn = document.getElementById('tracktoolbox-docs-close');
+	var docsOpenBtn = document.getElementById('tracktoolbox-docs-open');
+	var docsIframe = document.getElementById('tracktoolbox-docs-iframe');
+	var docsEscBound = false;
 
 	function showWelcomePanel() {
 		if (!welcomeOverlay) return;
@@ -739,6 +744,46 @@
 		kofiOverlay.classList.add('is-hidden');
 	}
 
+	function docsOverlayOpen() {
+		return !!(docsOverlay && !docsOverlay.hidden);
+	}
+
+	function bindDocsIframeEscape() {
+		if (docsEscBound || !docsIframe) return;
+		var win;
+		try {
+			win = docsIframe.contentWindow;
+		} catch (err) {
+			return;
+		}
+		if (!win) return;
+		win.addEventListener('keydown', function (e) {
+			if (e.key !== 'Escape') return;
+			e.preventDefault();
+			dismissDocsOverlay();
+		});
+		docsEscBound = true;
+	}
+
+	function showDocsOverlay() {
+		if (!docsOverlay) return;
+		if (docsIframe && !docsIframe.getAttribute('src')) {
+			docsIframe.addEventListener('load', bindDocsIframeEscape);
+			docsIframe.src = 'docs.html';
+		}
+		docsOverlay.hidden = false;
+		docsOverlay.setAttribute('aria-hidden', 'false');
+		docsOverlay.classList.remove('is-hidden');
+		if (docsCloseBtn) docsCloseBtn.focus();
+	}
+
+	function dismissDocsOverlay() {
+		if (!docsOverlayOpen()) return;
+		docsOverlay.hidden = true;
+		docsOverlay.setAttribute('aria-hidden', 'true');
+		docsOverlay.classList.add('is-hidden');
+	}
+
 	if (welcomeCloseBtn) {
 		welcomeCloseBtn.addEventListener('click', function (e) {
 			e.preventDefault();
@@ -759,6 +804,23 @@
 	if (kofiOverlay) {
 		kofiOverlay.addEventListener('click', function (e) {
 			if (e.target === kofiOverlay) dismissKofiDownloadReminder();
+		});
+	}
+	if (docsOpenBtn) {
+		docsOpenBtn.addEventListener('click', function (e) {
+			e.preventDefault();
+			showDocsOverlay();
+		});
+	}
+	if (docsCloseBtn) {
+		docsCloseBtn.addEventListener('click', function (e) {
+			e.preventDefault();
+			dismissDocsOverlay();
+		});
+	}
+	if (docsOverlay) {
+		docsOverlay.addEventListener('click', function (e) {
+			if (e.target === docsOverlay) dismissDocsOverlay();
 		});
 	}
 
@@ -834,9 +896,48 @@
 		return '';
 	}
 
+	/** Instant → UTC ISO-8601. GPX/KML values with no zone are UTC. Null if it is not a time. */
+	function canonicalTime(raw) {
+		if (raw == null || raw === '') return null;
+		if (raw instanceof Date) {
+			var msDate = raw.getTime();
+			if (!isFinite(msDate)) return null;
+			return new Date(msDate).toISOString();
+		}
+		var s = String(raw).trim();
+		if (!s) return null;
+		if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s) && !/(Z|[+-]\d{2}:?\d{2})$/.test(s)) s += 'Z';
+		var ms = Date.parse(s);
+		if (!isFinite(ms)) return null;
+		return new Date(ms).toISOString();
+	}
+
+	function coordCount(geometry) {
+		if (!geometry) return 0;
+		if (geometry.type === 'Point') return 1;
+		if (geometry.type === 'LineString') return (geometry.coordinates && geometry.coordinates.length) || 0;
+		return 0;
+	}
+
+	/** Parallel to vertices. Null slot = that vertex has no time. Drop the array when none do. */
+	function packTimes(times, geometry) {
+		var n = coordCount(geometry);
+		if (!n || !times) return null;
+		var out = [];
+		var any = false;
+		for (var i = 0; i < n; i++) {
+			var t = canonicalTime(times[i]);
+			if (t) any = true;
+			out.push(t);
+		}
+		return any ? out : null;
+	}
+
 	function pointsFromParent(parent, ptName) {
 		var coords = [];
-		if (!parent || !parent.children) return coords;
+		var times = [];
+		var anyTime = false;
+		if (!parent || !parent.children) return { coords: coords, times: null };
 		for (var i = 0; i < parent.children.length; i++) {
 			var el = parent.children[i];
 			if (localName(el) !== ptName) continue;
@@ -847,8 +948,11 @@
 			var ele = eleStr ? parseFloat(eleStr) : NaN;
 			if (isFinite(ele)) coords.push([lon, lat, ele]);
 			else coords.push([lon, lat]);
+			var time = canonicalTime(childText(el, 'time'));
+			if (time) anyTime = true;
+			times.push(time);
 		}
-		return coords;
+		return { coords: coords, times: anyTime ? times : null };
 	}
 
 	function parseGpxText(xmlText, sourceFile) {
@@ -867,22 +971,22 @@
 				for (var j = 0; j < n.children.length; j++) {
 					var seg = n.children[j];
 					if (localName(seg) !== 'trkseg') continue;
-					var coords = pointsFromParent(seg, 'trkpt');
-					if (coords.length < 2) continue;
+					var parsedSeg = pointsFromParent(seg, 'trkpt');
+					if (parsedSeg.coords.length < 2) continue;
 					out.push(makeTrack(trackName, trackDesc, {
 						type: 'LineString',
-						coordinates: coords
-					}, sourceFile));
+						coordinates: parsedSeg.coords
+					}, sourceFile, parsedSeg.times));
 				}
 			} else if (ln === 'rte') {
 				var routeName = childText(n, 'name') || sourceFile || 'GPX Route';
 				var routeDesc = childText(n, 'desc');
-				var rcoords = pointsFromParent(n, 'rtept');
-				if (rcoords.length < 2) continue;
+				var parsedRte = pointsFromParent(n, 'rtept');
+				if (parsedRte.coords.length < 2) continue;
 				out.push(makeTrack(routeName, routeDesc, {
 					type: 'LineString',
-					coordinates: rcoords
-				}, sourceFile));
+					coordinates: parsedRte.coords
+				}, sourceFile, parsedRte.times));
 			} else if (ln === 'wpt') {
 				var lat = parseFloat(n.getAttribute('lat'));
 				var lon = parseFloat(n.getAttribute('lon'));
@@ -892,10 +996,11 @@
 				var eleStr = childText(n, 'ele');
 				var ele = eleStr ? parseFloat(eleStr) : NaN;
 				var wptCoord = isFinite(ele) ? [lon, lat, ele] : [lon, lat];
+				var wptTime = canonicalTime(childText(n, 'time'));
 				out.push(makeTrack(wptName, wptDesc, {
 					type: 'Point',
 					coordinates: wptCoord
-				}, sourceFile));
+				}, sourceFile, wptTime ? [wptTime] : null));
 			}
 		}
 		return out;
@@ -927,13 +1032,14 @@
 			var desc = props.description || props.desc || '';
 			if (typeof desc !== 'string') desc = String(desc || '');
 			var g = f.geometry;
+			var pointTime = canonicalTime(props.timestamp);
 			if (g.type === 'Point') {
 				var pc = g.coordinates;
 				if (!pc || pc.length < 2) continue;
 				out.push(makeTrack(name, desc, {
 					type: 'Point',
 					coordinates: pc.slice()
-				}, sourceFile));
+				}, sourceFile, pointTime ? [pointTime] : null));
 				continue;
 			}
 			if (g.type === 'MultiPoint') {
@@ -944,41 +1050,72 @@
 					out.push(makeTrack(name, desc, {
 						type: 'Point',
 						coordinates: mpc.slice()
-					}, sourceFile));
+					}, sourceFile, pointTime ? [pointTime] : null));
 				}
 				continue;
 			}
+			var lineTimes = kmlLineTimes(props.coordTimes, g);
 			var lines = lineCoordsFromGeom(g);
+			var timeOffset = 0;
 			for (var L = 0; L < lines.length; L++) {
 				var coords = lines[L];
-				if (!coords || coords.length < 2) continue;
+				if (!coords || coords.length < 2) {
+					if (coords) timeOffset += coords.length;
+					continue;
+				}
+				var sliceTimes = null;
+				if (lineTimes) {
+					sliceTimes = lineTimes.slice(timeOffset, timeOffset + coords.length);
+					timeOffset += coords.length;
+				}
 				out.push(makeTrack(name, desc, {
 					type: 'LineString',
 					coordinates: coords
-				}, sourceFile));
+				}, sourceFile, sliceTimes));
 			}
 		}
 		return out;
 	}
 
-	function makeTrack(name, description, geometry, sourceFile) {
-		return {
+	/** toGeoJSON puts gx:Track whens on coordTimes, flat or one array per part. */
+	function kmlLineTimes(coordTimes, geom) {
+		if (!coordTimes || !coordTimes.length || !geom) return null;
+		var flat = coordTimes;
+		if (Array.isArray(coordTimes[0])) {
+			flat = [];
+			var parts = lineCoordsFromGeom(geom);
+			for (var i = 0; i < parts.length; i++) {
+				var partTimes = coordTimes[i] || [];
+				var ring = parts[i] || [];
+				for (var j = 0; j < ring.length; j++) flat.push(partTimes[j] || null);
+			}
+		}
+		return flat;
+	}
+
+	function makeTrack(name, description, geometry, sourceFile, times) {
+		var track = {
 			id: 't' + (_idSeq++),
 			name: String(name || 'Track'),
 			description: String(description || ''),
 			geometry: geometry,
 			sourceFile: sourceFile || ''
 		};
+		var packed = packTimes(times, geometry);
+		if (packed) track.times = packed;
+		return track;
 	}
 
 	function trackToFeature(t) {
+		var props = {
+			name: t.name,
+			description: t.description,
+			desc: t.description
+		};
+		if (t.times && t.times.length) props.times = t.times.slice();
 		return {
 			type: 'Feature',
-			properties: {
-				name: t.name,
-				description: t.description,
-				desc: t.description
-			},
+			properties: props,
 			geometry: t.geometry
 		};
 	}
@@ -1073,13 +1210,15 @@
 			expandSubFields: true,
 			expandComponents: true,
 			convertTypesToStrings: true,
-			convertDateTimesToDates: false,
+			convertDateTimesToDates: true,
 			includeUnknownData: false,
 			mergeHeartRates: false
 		});
 		var messages = result && result.messages;
 		var records = (messages && messages.recordMesgs) || [];
 		var coords = [];
+		var times = [];
+		var anyTime = false;
 		for (var i = 0; i < records.length; i++) {
 			var r = records[i];
 			var lat = fitSemicircleToDeg(r.positionLat);
@@ -1090,12 +1229,15 @@
 			if (ele == null || !isFinite(ele)) ele = r.altitude;
 			if (isFinite(ele)) coords.push([lon, lat, ele]);
 			else coords.push([lon, lat]);
+			var time = canonicalTime(r.timestamp);
+			if (time) anyTime = true;
+			times.push(time);
 		}
 		if (coords.length < 2) return [];
 		return [makeTrack(fitTrackName(messages, sourceFile), '', {
 			type: 'LineString',
 			coordinates: coords
-		}, sourceFile)];
+		}, sourceFile, anyTime ? times : null)];
 	}
 
 	async function parseZipBuffer(buf, zipName) {
@@ -1797,29 +1939,93 @@
 	}
 
 	function featureXml(t, format) {
-		var feature = trackToFeature(t);
-		if (format === 'gpx') return togpx(feature, gpxXmlOptions());
-		return tokml(feature, {
-			name: 'name',
-			description: 'description',
-			documentName: t.name,
-			documentDescription: t.description
-		});
+		if (format === 'gpx') return togpx(trackToFeature(t), gpxXmlOptions());
+		return featuresToKml([t], t.name, t.description);
 	}
 
 	/** One GPX/KML document for many Features (Points → many wpt / Placemark). Never mix with lines here. */
 	function featuresXml(list, format, docName) {
-		var fc = {
-			type: 'FeatureCollection',
-			features: list.map(trackToFeature)
-		};
-		if (format === 'gpx') return togpx(fc, gpxXmlOptions());
-		return tokml(fc, {
-			name: 'name',
-			description: 'description',
-			documentName: docName || 'points',
-			documentDescription: ''
-		});
+		if (format === 'gpx') {
+			return togpx({
+				type: 'FeatureCollection',
+				features: list.map(trackToFeature)
+			}, gpxXmlOptions());
+		}
+		return featuresToKml(list, docName || 'points', '');
+	}
+
+	function xmlEscape(s) {
+		return String(s == null ? '' : s)
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;');
+	}
+
+	function kmlCoordTuple(c) {
+		var s = c[0] + ',' + c[1];
+		if (c.length > 2 && c[2] != null && isFinite(c[2])) s += ',' + c[2];
+		return s;
+	}
+
+	function gxCoordTuple(c) {
+		var s = c[0] + ' ' + c[1];
+		if (c.length > 2 && c[2] != null && isFinite(c[2])) s += ' ' + c[2];
+		return s;
+	}
+
+	/** gx:Track pairs when[i] with coord[i]. A hole would shift every later time. */
+	function lineTimesComplete(t) {
+		if (!t || !t.times || !t.geometry || t.geometry.type !== 'LineString') return false;
+		var coords = t.geometry.coordinates || [];
+		if (t.times.length !== coords.length || !coords.length) return false;
+		for (var i = 0; i < coords.length; i++) {
+			if (!t.times[i]) return false;
+		}
+		return true;
+	}
+
+	function kmlGxTrack(t) {
+		var coords = t.geometry.coordinates;
+		var whens = '';
+		var gx = '';
+		for (var i = 0; i < coords.length; i++) {
+			whens += '<when>' + xmlEscape(t.times[i]) + '</when>';
+			gx += '<gx:coord>' + gxCoordTuple(coords[i]) + '</gx:coord>';
+		}
+		return '<gx:Track>' + whens + gx + '</gx:Track>';
+	}
+
+	function kmlPlacemark(t) {
+		var name = t.name ? '<name>' + xmlEscape(t.name) + '</name>' : '';
+		var desc = t.description ? '<description>' + xmlEscape(t.description) + '</description>' : '';
+		var geom = '';
+		if (t.geometry && t.geometry.type === 'Point') {
+			var when = t.times && t.times[0]
+				? '<TimeStamp><when>' + xmlEscape(t.times[0]) + '</when></TimeStamp>'
+				: '';
+			geom = when + '<Point><coordinates>' + kmlCoordTuple(t.geometry.coordinates) + '</coordinates></Point>';
+		} else if (t.geometry && t.geometry.type === 'LineString') {
+			if (lineTimesComplete(t)) {
+				geom = kmlGxTrack(t);
+			} else {
+				var tuples = [];
+				var coords = t.geometry.coordinates || [];
+				for (var i = 0; i < coords.length; i++) tuples.push(kmlCoordTuple(coords[i]));
+				geom = '<LineString><coordinates>' + tuples.join(' ') + '</coordinates></LineString>';
+			}
+		}
+		return '<Placemark>' + name + desc + geom + '</Placemark>';
+	}
+
+	function featuresToKml(list, docName, docDesc) {
+		var body = '';
+		for (var i = 0; i < list.length; i++) body += kmlPlacemark(list[i]);
+		var name = docName ? '<name>' + xmlEscape(docName) + '</name>' : '';
+		var desc = docDesc ? '<description>' + xmlEscape(docDesc) + '</description>' : '';
+		return '<?xml version="1.0" encoding="UTF-8"?>' +
+			'<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">' +
+			'<Document>' + name + desc + body + '</Document></kml>';
 	}
 
 	function partitionSelectedByGeom(list) {
@@ -1984,6 +2190,8 @@
 		var names = [];
 		var descs = [];
 		var coords = [];
+		var times = [];
+		var anyTime = false;
 		var sourceFiles = [];
 		for (var i = 0; i < list.length; i++) {
 			var t = list[i];
@@ -1997,7 +2205,12 @@
 				showToast('Merge needs LineStrings only');
 				return;
 			}
-			for (var j = 0; j < part.length; j++) coords.push(part[j]);
+			for (var j = 0; j < part.length; j++) {
+				coords.push(part[j]);
+				var tm = t.times ? canonicalTime(t.times[j]) : null;
+				if (tm) anyTime = true;
+				times.push(tm);
+			}
 			names.push(t.name);
 			descs.push(t.description);
 			if (t.sourceFile) sourceFiles.push(t.sourceFile);
@@ -2010,7 +2223,8 @@
 			joinDashParts(names) || 'Merged',
 			joinDashParts(descs),
 			{ type: 'LineString', coordinates: coords },
-			sourceFiles[0] || ''
+			sourceFiles[0] || '',
+			anyTime ? times : null
 		);
 		var removeSet = Object.create(null);
 		for (var r = 0; r < list.length; r++) removeSet[list[r].id] = true;
@@ -2026,7 +2240,7 @@
 		selectedIds = [merged.id];
 		syncSelectionUi();
 		syncTracksTo3D();
-		showToast('Merged ' + list.length + ' LineStrings · time dropped');
+		showToast('Merged ' + list.length + ' LineStrings');
 	}
 
 	function removeSelected() {
@@ -2408,10 +2622,11 @@
 
 	/**
 	 * Keep start/end; keep a vertex when along-track distance from last kept >= stepM.
-	 * Spans between kept verts become single chords. Elev preserved on kept points.
+	 * Spans between kept verts become single chords. Elev and time stay on kept points.
+	 * Returns null when nothing is dropped.
 	 */
 	function simplifyLineToChords(coords, stepM) {
-		if (!coords || coords.length < 3) return coords;
+		if (!coords || coords.length < 3) return null;
 		stepM = stepM != null ? stepM : EDIT_NODE_STEP_M;
 		var total = 0;
 		var i;
@@ -2421,9 +2636,10 @@
 				[coords[i][1], coords[i][0]]
 			);
 		}
-		if (!(total >= stepM)) return coords;
+		if (!(total >= stepM)) return null;
 
 		var out = [coords[0].slice()];
+		var kept = [0];
 		var sinceKept = 0;
 		for (i = 1; i < coords.length - 1; i++) {
 			sinceKept += haversineMeters(
@@ -2432,30 +2648,33 @@
 			);
 			if (sinceKept >= stepM) {
 				out.push(coords[i].slice());
+				kept.push(i);
 				sinceKept = 0;
 			}
 		}
 		out.push(coords[coords.length - 1].slice());
-		return out.length >= 2 ? out : coords;
+		kept.push(coords.length - 1);
+		if (out.length < 2 || out.length >= coords.length) return null;
+		return { coords: out, kept: kept };
 	}
 
 	function applyEditSessionChordSimplify() {
 		if (!editWorking || !editWorking.geometry) return;
 		if (editWorking.geometry.type !== 'LineString') return;
 		var coords = editWorking.geometry.coordinates;
-		var next = simplifyLineToChords(coords, EDIT_NODE_STEP_M);
-		if (next === coords) return;
-		if (next.length === coords.length) {
-			var same = true;
-			for (var i = 0; i < coords.length; i++) {
-				if (next[i][0] !== coords[i][0] || next[i][1] !== coords[i][1]) {
-					same = false;
-					break;
-				}
+		var simplified = simplifyLineToChords(coords, EDIT_NODE_STEP_M);
+		if (!simplified) return;
+		var nextTimes = null;
+		if (editWorking.times) {
+			nextTimes = [];
+			for (var i = 0; i < simplified.kept.length; i++) {
+				nextTimes.push(editWorking.times[simplified.kept[i]] || null);
 			}
-			if (same) return;
 		}
-		editWorking.geometry = { type: 'LineString', coordinates: next };
+		editWorking.geometry = { type: 'LineString', coordinates: simplified.coords };
+		var packed = packTimes(nextTimes, editWorking.geometry);
+		if (packed) editWorking.times = packed;
+		else delete editWorking.times;
 		commitWorkingIntoTracksArray();
 	}
 
@@ -2554,6 +2773,68 @@
 		return a[2] + (b[2] - a[2]) * t;
 	}
 
+	var EXTRAP_SPEED_MPS = 2;
+	/** dRef/dNew under this (or dRef == 0) has no speed. */
+	var EXTRAP_RATIO_EPS = 1e-6;
+
+	function segmentMeters(a, b) {
+		return haversineMeters([a[1], a[0]], [b[1], b[0]]);
+	}
+
+	function lerpTime(t0, t1, t) {
+		if (!t0 || !t1) return null;
+		var a = Date.parse(t0);
+		var b = Date.parse(t1);
+		if (!isFinite(a) || !isFinite(b)) return null;
+		return new Date(a + (b - a) * t).toISOString();
+	}
+
+	/** before: new vertex is earlier than anchor. Otherwise it is later. */
+	function extrapolateTime(anchorIso, otherIso, distNew, distRef, before) {
+		if (!anchorIso) return null;
+		var ta = Date.parse(anchorIso);
+		if (!isFinite(ta)) return null;
+		var dNew = distNew > 0 ? distNew : 0;
+		var dRef = distRef > 0 ? distRef : 0;
+		var refRatio = dNew > 0 ? dRef / dNew : 1;
+		var tb = otherIso ? Date.parse(otherIso) : NaN;
+		if (!(dRef > 0) || refRatio < EXTRAP_RATIO_EPS || !isFinite(tb)) {
+			var dt = (dNew / EXTRAP_SPEED_MPS) * 1000;
+			return new Date(ta + (before ? -dt : dt)).toISOString();
+		}
+		var ratio = dNew / dRef;
+		if (before) return new Date(ta - (tb - ta) * ratio).toISOString();
+		return new Date(ta + (ta - tb) * ratio).toISOString();
+	}
+
+	function extrapolateAhead(times, coords, segIndex, cutCoord) {
+		var b = segIndex + 1;
+		var c = b + 1;
+		if (!coords[b] || !times || !times[b]) return null;
+		var distNew = segmentMeters(cutCoord, coords[b]);
+		var distRef = coords[c] ? segmentMeters(coords[b], coords[c]) : 0;
+		return extrapolateTime(times[b], coords[c] ? times[c] : null, distNew, distRef, true);
+	}
+
+	function extrapolateBehind(times, coords, segIndex, cutCoord) {
+		var a = segIndex;
+		var prev = a - 1;
+		if (!coords[a] || !times || !times[a]) return null;
+		var distNew = segmentMeters(cutCoord, coords[a]);
+		var distRef = prev >= 0 && coords[prev] ? segmentMeters(coords[a], coords[prev]) : 0;
+		return extrapolateTime(times[a], prev >= 0 ? times[prev] : null, distNew, distRef, false);
+	}
+
+	/** Time for a vertex created on segment segIndex → segIndex+1. */
+	function timeForNewVertex(times, coords, segIndex, t, cutCoord) {
+		if (!times) return null;
+		var lerped = lerpTime(times[segIndex], times[segIndex + 1], t);
+		if (lerped) return lerped;
+		var ahead = extrapolateAhead(times, coords, segIndex, cutCoord);
+		if (ahead) return ahead;
+		return extrapolateBehind(times, coords, segIndex, cutCoord);
+	}
+
 	function projectClickOntoLine(coords, latlng) {
 		if (!coords || coords.length < 2) return null;
 		var best = null;
@@ -2583,12 +2864,17 @@
 		return best;
 	}
 
-	function applyWorkingGeometry(coords) {
+	function applyWorkingGeometry(coords, times) {
 		if (!editWorking) return;
 		editWorking.geometry = {
 			type: 'LineString',
 			coordinates: coords
 		};
+		if (arguments.length > 1) {
+			var packed = packTimes(times, editWorking.geometry);
+			if (packed) editWorking.times = packed;
+			else delete editWorking.times;
+		}
 		var idx = tracks.findIndex(function (t) { return t.id === editWorking.id; });
 		if (idx >= 0) tracks[idx] = editWorking;
 	}
@@ -2816,7 +3102,13 @@
 		pushUndo();
 		var next = coords.slice();
 		next.splice(hit.index + 1, 0, hit.cutCoord.slice());
-		applyWorkingGeometry(next);
+		var nextTimes = editWorking.times ? editWorking.times.slice() : null;
+		if (nextTimes) {
+			nextTimes.splice(hit.index + 1, 0, timeForNewVertex(
+				editWorking.times, coords, hit.index, hit.t, hit.cutCoord
+			));
+		}
+		applyWorkingGeometry(next, nextTimes);
 		setEditFocusVertex(hit.index + 1);
 		syncSelectionUi();
 		syncTracksTo3D();
@@ -2836,7 +3128,7 @@
 		else if (editTool === 'trimAfter') doTrimAfter(hit);
 	}
 
-	function applyScissorSplit(aCoords, bCoords) {
+	function applyScissorSplit(aCoords, bCoords, aTimes, bTimes) {
 		if (aCoords.length < 2 || bCoords.length < 2) {
 			showToast('Cut too short');
 			return;
@@ -2846,8 +3138,8 @@
 		var baseName = editWorking.name || 'Track';
 		var desc = editWorking.description;
 		var src = editWorking.sourceFile;
-		var featA = makeTrack(baseName + '_1', desc, { type: 'LineString', coordinates: aCoords }, src);
-		var featB = makeTrack(baseName + '_2', desc, { type: 'LineString', coordinates: bCoords }, src);
+		var featA = makeTrack(baseName + '_1', desc, { type: 'LineString', coordinates: aCoords }, src, aTimes);
+		var featB = makeTrack(baseName + '_2', desc, { type: 'LineString', coordinates: bCoords }, src, bTimes);
 		var idx = -1;
 		for (var i = 0; i < tracks.length; i++) {
 			if (tracks[i].id === oldId) { idx = i; break; }
@@ -2875,7 +3167,13 @@
 		}
 		var aCoords = coords.slice(0, vertexIndex + 1);
 		var bCoords = coords.slice(vertexIndex);
-		applyScissorSplit(aCoords, bCoords);
+		var srcTimes = editWorking.times;
+		applyScissorSplit(
+			aCoords,
+			bCoords,
+			srcTimes ? srcTimes.slice(0, vertexIndex + 1) : null,
+			srcTimes ? srcTimes.slice(vertexIndex) : null
+		);
 	}
 
 	function doScissor(hit) {
@@ -2898,16 +3196,23 @@
 		}
 		var aCoords = coords.slice(0, i + 1).concat([cut.slice()]);
 		var bCoords = [cut.slice()].concat(coords.slice(i + 1));
-		applyScissorSplit(aCoords, bCoords);
+		var srcTimes = editWorking.times;
+		var cutTime = timeForNewVertex(srcTimes, coords, i, hit.t, cut);
+		applyScissorSplit(
+			aCoords,
+			bCoords,
+			srcTimes ? srcTimes.slice(0, i + 1).concat([cutTime]) : null,
+			srcTimes ? [cutTime].concat(srcTimes.slice(i + 1)) : null
+		);
 	}
 
-	function finishTrim(newCoords, toastMsg, focusIndex) {
+	function finishTrim(newCoords, toastMsg, focusIndex, times) {
 		if (newCoords.length < 2) {
 			showToast('Nothing left after trim');
 			return;
 		}
 		pushUndo();
-		applyWorkingGeometry(newCoords);
+		applyWorkingGeometry(newCoords, times);
 		setEditFocusVertex(focusIndex != null ? focusIndex : 0);
 		syncSelectionUi();
 		syncTracksTo3D();
@@ -2917,17 +3222,27 @@
 
 	function doTrimBefore(hit) {
 		var coords = editWorking.geometry.coordinates;
+		var srcTimes = editWorking.times;
+		var cutTime = timeForNewVertex(srcTimes, coords, hit.index, hit.t, hit.cutCoord);
 		finishTrim(
 			[hit.cutCoord.slice()].concat(coords.slice(hit.index + 1)),
 			'Trimmed before',
-			0
+			0,
+			srcTimes ? [cutTime].concat(srcTimes.slice(hit.index + 1)) : null
 		);
 	}
 
 	function doTrimAfter(hit) {
 		var coords = editWorking.geometry.coordinates;
 		var next = coords.slice(0, hit.index + 1).concat([hit.cutCoord.slice()]);
-		finishTrim(next, 'Trimmed after', next.length - 1);
+		var srcTimes = editWorking.times;
+		var cutTime = timeForNewVertex(srcTimes, coords, hit.index, hit.t, hit.cutCoord);
+		finishTrim(
+			next,
+			'Trimmed after',
+			next.length - 1,
+			srcTimes ? srcTimes.slice(0, hit.index + 1).concat([cutTime]) : null
+		);
 	}
 
 	function doTrimBeforeAtVertex(vertexIndex) {
@@ -2937,7 +3252,13 @@
 			showToast('Nothing to trim before start');
 			return;
 		}
-		finishTrim(coords.slice(vertexIndex), 'Trimmed before', 0);
+		var srcTimes = editWorking.times;
+		finishTrim(
+			coords.slice(vertexIndex),
+			'Trimmed before',
+			0,
+			srcTimes ? srcTimes.slice(vertexIndex) : null
+		);
 	}
 
 	function doTrimAfterAtVertex(vertexIndex) {
@@ -2948,7 +3269,13 @@
 			return;
 		}
 		var next = coords.slice(0, vertexIndex + 1);
-		finishTrim(next, 'Trimmed after', next.length - 1);
+		var srcTimes = editWorking.times;
+		finishTrim(
+			next,
+			'Trimmed after',
+			next.length - 1,
+			srcTimes ? srcTimes.slice(0, vertexIndex + 1) : null
+		);
 	}
 
 	function onEditFeatureClick(id, ev) {
@@ -2971,7 +3298,9 @@
 		pushUndo();
 		var next = coords.slice();
 		next.splice(index, 1);
-		applyWorkingGeometry(next);
+		var nextTimes = editWorking.times ? editWorking.times.slice() : null;
+		if (nextTimes) nextTimes.splice(index, 1);
+		applyWorkingGeometry(next, nextTimes);
 		setEditFocusVertex(Math.min(index, next.length - 1));
 		syncSelectionUi();
 		syncTracksTo3D();
@@ -3048,6 +3377,11 @@
 	}
 
 	document.addEventListener('keydown', function (e) {
+		if (e.key === 'Escape' && docsOverlayOpen()) {
+			e.preventDefault();
+			dismissDocsOverlay();
+			return;
+		}
 		if (isTypingTarget(document.activeElement)) return;
 		if (
 			e.key === 'Escape' &&

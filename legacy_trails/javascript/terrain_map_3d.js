@@ -353,6 +353,9 @@
 				.setHTML(tipHtml)
 				.addTo(self.map);
 
+			var closeBtn = self._popup.getElement().querySelector('.mapboxgl-popup-close-button');
+			if (closeBtn) closeBtn.classList.add('legacy-panel-close');
+
 			var btn = self._popup.getElement().querySelector('.legacy-3d-tip-2d-btn');
 			if (btn) {
 				btn.addEventListener('click', function (ev) {
