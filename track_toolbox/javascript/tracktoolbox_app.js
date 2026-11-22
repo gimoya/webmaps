@@ -668,7 +668,32 @@
 	dlKmlBtn.addEventListener('click', function () { downloadSelected('kml'); });
 	if (mergeBtn) mergeBtn.addEventListener('click', mergeSelectedLines);
 	removeBtn.addEventListener('click', removeSelected);
-	clearBtn.addEventListener('click', clearAll);
+	clearBtn.addEventListener('click', function () {
+		if (!tracks.length) return;
+		showConfirm('Remove all loaded tracks?', function (yes) {
+			if (!yes) return;
+			clearAll();
+		});
+	});
+
+	var panelToggleBtn = document.getElementById('tracktoolbox-panel-toggle');
+	if (panelToggleBtn) {
+		panelToggleBtn.addEventListener('click', function () {
+			var panel = document.getElementById('tracktoolbox-panel');
+			if (!panel) return;
+			var collapsed = !panel.classList.contains('is-collapsed');
+			panel.classList.toggle('is-collapsed', collapsed);
+			panelToggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+			var label = collapsed ? 'Show panel' : 'Hide panel';
+			panelToggleBtn.title = label;
+			panelToggleBtn.setAttribute('aria-label', label);
+			var icon = panelToggleBtn.querySelector('i');
+			if (icon) {
+				icon.classList.toggle('fa-chevron-up', !collapsed);
+				icon.classList.toggle('fa-chevron-down', collapsed);
+			}
+		});
+	}
 
 	/* ---------- helpers ---------- */
 
@@ -3414,6 +3439,13 @@
 	}
 
 	document.addEventListener('keydown', function (e) {
+		if (confirmEl && !confirmEl.hidden) {
+			if (e.key === 'Enter' || e.key === 'Escape') {
+				e.preventDefault();
+				(e.key === 'Enter' ? confirmYes : confirmNo).click();
+			}
+			return;
+		}
 		if (e.key === 'Escape' && docsOverlayOpen()) {
 			e.preventDefault();
 			dismissDocsOverlay();

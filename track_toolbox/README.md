@@ -60,7 +60,7 @@ Bottom to top: `tracktoolboxTrackPane` (400), `tracktoolboxEditHitPane` (450), `
 
 ### Layout
 
-Desktop: left panel, `width: min(320px, 100vw - 24px)`, vertically centered. Portrait: the same panel becomes a top sheet, `max-height: min(36dvh, …)`. Merge, name, and description sit at the bottom of that sheet, so on a phone they are behind the panel scroll. Shift+drag box-select is a mouse path. Touch selection is tap-toggle. Hit targets for lines are `SELECT_HIT_WEIGHT` (28 px).
+Landscape: panel pinned top left, `width: min(320px, 100vw - 24px)`. Portrait: the same panel pinned top center, `max-height: min(36dvh, …)`. `#tracktoolbox-panel-toggle` adds `is-collapsed` and hides `#tracktoolbox-panel-body`; the title and info button stay. Merge, name, and description sit at the bottom of the panel, so on a phone they are behind the panel scroll. Shift+drag box-select is a mouse path. Touch selection is tap-toggle. Hit targets for lines are `SELECT_HIT_WEIGHT` (28 px).
 
 ## State
 

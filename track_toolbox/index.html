@@ -145,9 +145,10 @@
     <div class="legacy-panel-inner tracktoolbox-panel-inner">
       <header class="tracktoolbox-header">
         <h1>track 📐toolbox</h1>
+        <button type="button" class="tracktoolbox-docs-link" id="tracktoolbox-panel-toggle" title="Hide panel" aria-expanded="true" aria-controls="tracktoolbox-panel-body" aria-label="Hide panel"><i class="fas fa-chevron-up" aria-hidden="true"></i></button>
         <button type="button" class="tracktoolbox-docs-link" id="tracktoolbox-docs-open" title="Documentation" aria-label="Documentation"><i class="fas fa-info-circle" aria-hidden="true"></i></button>
       </header>
-  
+      <div id="tracktoolbox-panel-body">
 
       <input type="file" id="tracktoolbox-file-input" accept=".gpx,.kml,.zip,.kmz,.fit,application/gpx+xml,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz,application/zip" multiple hidden>
 
@@ -189,6 +190,7 @@
         <button type="button" class="legacy-action-btn" id="tracktoolbox-merge" disabled data-shortcut="m" title="Merge selected LineStrings in selection order (m). Keeps per-point time and elevation.">Merge</button>
         <button type="button" class="legacy-action-btn tracktoolbox-btn-danger" id="tracktoolbox-remove" disabled title="Remove selected track(s)">Remove</button>
         <button type="button" class="legacy-action-btn tracktoolbox-btn-danger" id="tracktoolbox-clear" disabled title="Remove all loaded tracks">Clear all</button>
+      </div>
       </div>
     </div>
   </aside>

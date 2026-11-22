@@ -177,10 +177,10 @@
 */
 #tracktoolbox-panel.tracktoolbox-panel {
   position: fixed;
-  top: 50%;
+  top: 12px;
   left: 12px;
   right: auto;
-  transform: translateY(-50%);
+  transform: none;
   z-index: 1002;
   width: min(320px, calc(100vw - 24px));
   max-height: calc(100dvh - 24px);
@@ -571,7 +571,7 @@
   }
 }
 
-/* Portrait: full-width top panel (nav is inside) */
+/* Portrait: panel pinned top center */
 @media (orientation: portrait) {
   .tracktoolbox-header h1 {
     font-size: 17px !important;
@@ -579,11 +579,11 @@
 
   #tracktoolbox-panel.tracktoolbox-panel {
     top: 6px;
-    left: 6px;
-    right: 6px;
+    left: 50%;
+    right: auto;
     bottom: auto;
-    transform: none;
-    width: auto;
+    transform: translateX(-50%);
+    width: min(320px, calc(100vw - 24px));
     max-width: none;
     max-height: min(36dvh, calc(100dvh - 16px));
     margin: 0 !important;
@@ -677,7 +677,7 @@
     height: 12px;
   }
 
-  /* Digitize flyouts open above the bottom strip */
+  /* Digitize flyouts open above the bottom strip. Panel is centered on the screen. */
   #map .legacy-routesnap-panel,
   #map .legacy-routesnap-info {
     top: auto;
@@ -685,6 +685,15 @@
     right: 0;
     left: auto;
     max-width: min(92vw, 300px);
+  }
+
+  #map .legacy-routesnap-panel {
+    position: fixed;
+    left: 50%;
+    right: auto;
+    bottom: calc(max(22px, 16px + env(safe-area-inset-bottom, 0px)) + 36px);
+    transform: translateX(-50%);
+    z-index: 1100;
   }
 
   #map .legacy-routesnap-info::before {
@@ -806,6 +815,16 @@ html.tracktoolbox-show-keys [data-shortcut]::after {
     left: auto;
     transform: translateY(-50%);
   }
+}
+
+#tracktoolbox-panel.is-collapsed #tracktoolbox-panel-body {
+  display: none;
+}
+
+#tracktoolbox-panel.is-collapsed .tracktoolbox-header {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .tracktoolbox-edit-toolbox.is-hidden,
