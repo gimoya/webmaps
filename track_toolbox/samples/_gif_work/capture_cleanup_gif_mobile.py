@@ -121,6 +121,32 @@ def click_sel(page, selector: str) -> None:
     click_xy(page, x, y)
 
 
+def type_name(page, selector: str, text: str) -> None:
+    click_sel(page, selector)
+    page.keyboard.press("Control+a")
+    shot(page)
+    for ch in text:
+        page.keyboard.type(ch, delay=0)
+        shot(page)
+        page.wait_for_timeout(40)
+
+
+def set_panel_collapsed(page, collapsed: bool) -> None:
+    is_collapsed = page.evaluate(
+        "() => document.getElementById('tracktoolbox-panel').classList.contains('is-collapsed')"
+    )
+    if is_collapsed == collapsed:
+        return
+    click_sel(page, "#tracktoolbox-panel-toggle")
+    page.wait_for_function(
+        """(want) => document.getElementById("tracktoolbox-panel").classList.contains("is-collapsed") === want""",
+        arg=collapsed,
+        timeout=5000,
+    )
+    page.evaluate("() => window.__ttMap && window.__ttMap.invalidateSize()")
+    wait_shot(page, 400)
+
+
 def rs_status(page) -> dict:
     return page.evaluate(
         """() => {
@@ -294,6 +320,7 @@ def main() -> int:
 
         click_sel(page, 'button.tracktoolbox-track-item:text-is("Nadine")')
         wait_shot(page, 400)
+        set_panel_collapsed(page, True)
         page.keyboard.press("e")
         page.wait_for_selector("#tracktoolbox-edit-toolbox:not(.is-hidden)", timeout=15000)
         page.evaluate("() => window.__ttMap && window.__ttMap.invalidateSize()")
@@ -316,8 +343,6 @@ def main() -> int:
         page.wait_for_selector("#tracktoolbox-edit-toolbox", state="hidden", timeout=10000)
         wait_shot(page, 800)
 
-        click_sel(page, 'button.tracktoolbox-track-item:text-is("Nadine")')
-        page.wait_for_timeout(400)
         page.evaluate(
             """() => {
               const map = window.__ttMap;
@@ -355,7 +380,7 @@ def main() -> int:
         click_sel(page, 'button[title="Add to tracks"]')
         page.wait_for_selector("#legacy-routesnap-track-name", timeout=10000)
         wait_shot(page, 300)
-        page.fill("#legacy-routesnap-track-name", ROUTE_NAME)
+        type_name(page, "#legacy-routesnap-track-name", ROUTE_NAME)
         wait_shot(page, 400)
         click_sel(page, ".legacy-routesnap-dialog-btn-primary")
         page.wait_for_function(
@@ -365,6 +390,7 @@ def main() -> int:
         )
         wait_shot(page, 700)
 
+        set_panel_collapsed(page, False)
         page.evaluate("() => { const el = document.activeElement; if (el && el.blur) el.blur(); }")
         page.keyboard.press("Control+d")
         wait_shot(page, 350)
@@ -382,7 +408,7 @@ def main() -> int:
             )
             if not on:
                 click_sel(page, sel)
-            page.fill("#tracktoolbox-name", f"Track {i}")
+            type_name(page, "#tracktoolbox-name", f"Track {i}")
             page.locator("#tracktoolbox-name").press("Tab")
             wait_shot(page, 450)
 
@@ -414,7 +440,8 @@ def main() -> int:
 
     frames = sorted(FRAMES.glob("*.png"))
     subprocess.check_call(
-        ["magick", "-delay", "12", "-loop", "0", *[str(f) for f in frames], "-resize", "390x", "-layers", "optimize", str(GIF)]
+        ["magick", "-delay", "12", "-loop", "0", "*.png", "-resize", "390x", "-layers", "optimize", str(GIF)],
+        cwd=str(FRAMES),
     )
     print(GIF, GIF.stat().st_size)
     return 0
