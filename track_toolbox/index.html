@@ -4,8 +4,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>track toolbox — GPX/KML editor, converter &amp; BRouter digitize</title>
-  <meta name="description" content="Free browser GPX/KML surgical toolbox: multi-select, trim &amp; split, clean Google Maps KML/KMZ, convert GPX↔KML, digitize with BRouter, export clean tracks and points — no install. By Tirol Trailhead.">
+  <title>track toolbox — the lightest GPX/KML cleaner in the browser</title>
+  <meta name="description" content="The lightest browser tool for cleaning and converting GPX and KML. Load, edit, cut, crop, reroute, export. No account, no ads, no install.">
   <meta name="keywords" content="GPX editor, KML editor, GPX to KML, KML to GPX, clean kml google maps, kmz editor, gpx trim split, track editor, gpx.studio alternative, waypoint, BRouter, MTB, Tirol Trailhead">
   <meta name="author" content="Tirol Trailhead">
   <meta name="robots" content="index, follow, max-image-preview:large">
@@ -23,14 +23,14 @@
   <meta property="og:site_name" content="Tirol Trailhead">
   <meta property="og:locale" content="en_US">
   <meta property="og:url" content="https://tiroltrailhead.com/webmaps/track_toolbox/">
-  <meta property="og:title" content="track toolbox — GPX/KML editor &amp; converter">
-  <meta property="og:description" content="Load, convert, edit, and digitize GPX/KML tracks in the browser. Multi-select, geometry tools, BRouter routing, 3D terrain — free.">
+  <meta property="og:title" content="track toolbox — the lightest GPX/KML cleaner in the browser">
+  <meta property="og:description" content="The lightest browser tool for cleaning and converting GPX and KML. Load, edit, cut, crop, reroute, export. No account, no ads, no install.">
   <meta property="og:image" content="https://tiroltrailhead.com/webmaps/track_toolbox/card.jpg">
   <meta property="og:image:alt" content="Tirol Trailhead — track toolbox">
 
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="track toolbox — GPX/KML editor &amp; converter">
-  <meta name="twitter:description" content="Free in-browser GPX/KML load, edit, digitize (BRouter), and export. By Tirol Trailhead.">
+  <meta name="twitter:title" content="track toolbox — the lightest GPX/KML cleaner in the browser">
+  <meta name="twitter:description" content="The lightest browser tool for cleaning and converting GPX and KML. Load, edit, cut, crop, reroute, export. No account, no ads, no install.">
   <meta name="twitter:image" content="https://tiroltrailhead.com/webmaps/track_toolbox/card.jpg">
 
   <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -45,7 +45,7 @@
     "name": "track toolbox",
     "alternateName": "track 📐toolbox",
     "url": "https://tiroltrailhead.com/webmaps/track_toolbox/",
-    "description": "Browser GPX/KML toolbox: upload, convert, multi-select, edit geometry, digitize with BRouter, add points, export GPX/KML.",
+    "description": "The lightest browser tool for cleaning and converting GPX and KML. Load, edit, cut, crop, reroute, export. No account, no ads, no install.",
     "applicationCategory": "UtilitiesApplication",
     "operatingSystem": "Any",
     "browserRequirements": "Requires JavaScript and a modern browser",
@@ -96,7 +96,7 @@
   <noscript>
     <div style="max-width:40rem;margin:2rem auto;padding:1rem;font-family:system-ui,sans-serif;color:#eee;background:#1e1e22">
       <h1>track toolbox</h1>
-      <p>Free browser GPX/KML editor and converter by <a href="https://tiroltrailhead.com">Tirol Trailhead</a>: upload multiple tracks and waypoints, edit geometry, digitize routes with BRouter, and export to GPX or KML.</p>
+      <p>The lightest browser tool for cleaning and converting GPX and KML. Load, edit, cut, crop, reroute, export. No account, no ads, no install. By <a href="https://tiroltrailhead.com">Tirol Trailhead</a>.</p>
       <p><a href="docs.html">Documentation</a> · <a href="seo/">Guides</a></p>
     </div>
   </noscript>
@@ -105,7 +105,7 @@
       <button type="button" class="legacy-panel-close" id="tracktoolbox-welcome-close" aria-label="Close"><span>&times;</span></button>
       <div class="trails-welcome-box">
         <h2 id="tracktoolbox-welcome-title" class="tracktoolbox-panel-title">track 📐toolbox</h2>
-        <p class="tracktoolbox-welcome-blurb">Free GPX/KML browser toolbox: upload tracks, edit geometry, digitize with BRouter, add waypoints, convert format and export...</p>
+        <p class="tracktoolbox-welcome-blurb">The lightest browser tool for cleaning and converting GPX and KML. Load, edit, cut, crop, reroute, export. No account, no ads, no install.</p>
         <div class="legacy-panel-rule" aria-hidden="true"></div>
         <div class="trails-welcome-donate">
           <p class="trails-welcome-donate-text"><i>🤝 This toolbox is free for you, but servers and hosting cost money!<br>💸 A contribution from your side helps to keep the project alive!</i></p>
@@ -191,7 +191,6 @@
         <button type="button" class="legacy-action-btn tracktoolbox-btn-danger" id="tracktoolbox-remove" disabled title="Remove selected track(s)">Remove</button>
         <button type="button" class="legacy-action-btn tracktoolbox-btn-danger" id="tracktoolbox-clear" disabled title="Remove all loaded tracks">Clear all</button>
       </div>
-      </div>
     </div>
   </aside>
 
@@ -223,6 +222,7 @@
   </aside>
 
   <aside id="tracktoolbox-keys-help" class="tracktoolbox-keys-help is-hidden" hidden aria-label="Keyboard shortcuts">
+    <p class="tracktoolbox-keys-blurb">The lightest browser tool for cleaning and converting GPX and KML. Load, edit, cut, crop, reroute, export. No account, no ads, no install.</p>
     <h3>Shortcuts <kbd>k</kbd></h3>
     <ul>
       <li><kbd>k</kbd> Show / hide this + badges</li>
@@ -266,5 +266,14 @@
 
   <script src="javascript/terrain_map_3d.js"></script>
   <script src="javascript/tracktoolbox_app.js"></script>
+  <script src="javascript/kofi-overlay-widget.js"></script>
+  <script>
+    kofiWidgetOverlay.draw('tiroltrailhead', {
+      'type': 'floating-chat',
+      'floating-chat.donateButton.text': '',
+      'floating-chat.donateButton.background-color': '#00b9fe',
+      'floating-chat.donateButton.text-color': '#fff'
+    });
+  </script>
 </body>
 </html>

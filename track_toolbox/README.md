@@ -1,6 +1,6 @@
 # track toolbox — developer notes
 
-Browser GPX/KML editor. Static files, no build, no test runner. Open `index.html` from a local server (FIT import and BRouter need network). User help is `docs.html`. Product copy is `PITCH.md` and `STRATEGY.md`.
+The lightest browser tool for cleaning and converting GPX and KML. Load, edit, cut, crop, reroute, export. No account, no ads, no install. Static files, no build, no test runner. Open `index.html` from a local server (FIT import and BRouter need network). User help is `docs.html`. Product copy is `PITCH.md` and `STRATEGY.md`.
 
 Version string: `TRACKTOOLBOX_VERSION` in `javascript/tracktoolbox_app.js`, shown in the map attribution.
 

@@ -136,13 +136,13 @@
 		'<strong>Digitize</strong>' +
 		'<ul>' +
 		'<li>Click = waypoint</li>' +
-		'<li>Coverage: Alps AT–CH–IT (clear window / grey outside) · lon 5–20°, lat 40–50°</li>' +
-		'<li>Max ~75 km between stations (else refused)</li>' +
+		'<li>Max ' + (MAX_LEG_M / 1000) + ' km between stations (else refused)</li>' +
 		'<li>Esc while routing = cancel current leg</li>' +
-		'<li>Ctrl+Z / Ctrl+Y = undo / redo station edit</li>' +
+		'<li>↶ undo (ctrl-z) · ↷ do (ctrl-y)</li>' +
 		'<li>r = toggle Digitize (off keeps route)</li>' +
 		'<li>Pen cycle: Route · straight+elev · straight skip elev</li>' +
 		'<li>Save → add LineString to Tracks</li>' +
+		'<li>Coverage: Alps AT–CH–IT (clear window / grey outside) · lon 5–20°, lat 40–50°</li>'
 		'</ul>';
 
 	function latLngPlain(ll) {
@@ -325,10 +325,13 @@
 				}
 			});
 
-			this._infoBox = L.DomUtil.create('div', 'legacy-routesnap-info', root);
+			this._infoBox = L.DomUtil.create('div', 'legacy-routesnap-info');
 			this._infoBox.setAttribute('role', 'tooltip');
 			this._infoBox.innerHTML = INFO_HTML;
 			this._infoBox.hidden = true;
+			document.body.appendChild(this._infoBox);
+			L.DomEvent.disableClickPropagation(this._infoBox);
+			L.DomEvent.disableScrollPropagation(this._infoBox);
 
 			L.DomEvent.on(this._toggleBtn, 'mouseenter', this._showInfo, this)
 				.on(this._toggleBtn, 'mouseleave', this._hideInfo, this)
@@ -355,6 +358,12 @@
 			this._elevToggle.innerHTML = '<span class="legacy-routesnap-elev-toggle-label" aria-hidden="true">&Delta;</span>';
 			L.DomEvent.on(this._elevToggle, 'click', L.DomEvent.stop)
 				.on(this._elevToggle, 'click', this._toggleElevProfile, this);
+			this._undoBtn = this._makeHistBtn(tools, '↶', 'Undo (ctrl-z)', function () {
+				this.undoStation();
+			});
+			this._redoBtn = this._makeHistBtn(tools, '↷', 'Redo (ctrl-y)', function () {
+				this.redoStation();
+			});
 
 			var profileWrap = L.DomUtil.create('label', 'legacy-routesnap-profile', this._panel);
 			profileWrap.appendChild(document.createTextNode('Profil'));
@@ -390,6 +399,9 @@
 		onRemove: function () {
 			this.deactivate();
 			this.clear();
+			if (this._infoBox && this._infoBox.parentNode) {
+				this._infoBox.parentNode.removeChild(this._infoBox);
+			}
 			this._map = null;
 		},
 
@@ -626,6 +638,17 @@
 			L.DomEvent.on(a, 'click', L.DomEvent.stop)
 				.on(a, 'click', fn, this);
 			return a;
+		},
+
+		_makeHistBtn: function (parent, label, title, fn) {
+			var btn = L.DomUtil.create('button', 'legacy-routesnap-tool legacy-routesnap-hist', parent);
+			btn.type = 'button';
+			btn.title = title;
+			btn.setAttribute('aria-label', title);
+			btn.textContent = label;
+			L.DomEvent.on(btn, 'click', L.DomEvent.stop)
+				.on(btn, 'click', fn, this);
+			return btn;
 		},
 
 		_makeToolBtn: function (parent, icon, title, fn) {
@@ -1774,6 +1797,12 @@
 			}
 			if (this._profileSelect) {
 				this._profileSelect.disabled = this._routing;
+			}
+			if (this._undoBtn) {
+				this._undoBtn.disabled = !this._histUndo.length || this._routing || this._draggingWp;
+			}
+			if (this._redoBtn) {
+				this._redoBtn.disabled = !this._histRedo.length || this._routing || this._draggingWp;
 			}
 			if (this._map) {
 				L.DomUtil[this._routing ? 'addClass' : 'removeClass'](

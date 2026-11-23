@@ -62,7 +62,7 @@ One before/after GIF beats a feature list.
 Do **not** claim to replace gpx.studio. Capture “I need something faster for cleanup”:
 
 - studio = workshop (elevation, time, merge, POI icons)
-- track toolbox = surgical toolbox (multi-select, trim/split session, KML/KMZ, Google loop)
+- track toolbox = the lightest cleaner/exporter (multi-select, trim/split session, KML/KMZ, Google loop)
 
 Page: [`seo/vs-gpx-studio.html`](seo/vs-gpx-studio.html).
 

@@ -758,6 +758,7 @@
 		kofiOverlay.hidden = false;
 		kofiOverlay.setAttribute('aria-hidden', 'false');
 		kofiOverlay.classList.remove('is-hidden');
+		document.documentElement.classList.add('legacy-kofi-open');
 	}
 
 	function dismissKofiDownloadReminder() {
@@ -765,6 +766,7 @@
 		kofiOverlay.hidden = true;
 		kofiOverlay.setAttribute('aria-hidden', 'true');
 		kofiOverlay.classList.add('is-hidden');
+		document.documentElement.classList.remove('legacy-kofi-open');
 	}
 
 	function docsOverlayOpen() {

@@ -162,7 +162,10 @@ html.dom-ready #page-loader {
 
 html.legacy-welcome-open [id^="kofi-widget-overlay-"],
 html.legacy-welcome-open .floating-chat-kofi-popup-iframe,
-html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi {
+html.legacy-welcome-open .floating-chat-kofi-popup-iframe-mobi,
+html.legacy-kofi-open [id^="kofi-widget-overlay-"],
+html.legacy-kofi-open .floating-chat-kofi-popup-iframe,
+html.legacy-kofi-open .floating-chat-kofi-popup-iframe-mobi {
     visibility: hidden !important;
     pointer-events: none !important;
     opacity: 0 !important;

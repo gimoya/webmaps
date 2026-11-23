@@ -4,7 +4,7 @@ Visibility & SEO plan: [`STRATEGY.md`](STRATEGY.md) · hosted guides: [`seo/`](s
 
 ## One-liner
 
-Fast multi-track / waypoint surgery in the browser: load, select, cut, rename, convert, digitize, export. Not a tour planner SPA — a **surgical GPX/KML toolbox**.
+The lightest browser tool for cleaning and converting GPX and KML. Load, edit, cut, crop, reroute, export. No account, no ads, no install.
 
 ## Niche we fill
 
@@ -54,7 +54,7 @@ If your workflow is “select → cut → export” more often than “plan a ro
 
 ## Pitch lines (pick one)
 
-- *Surgical GPX/KML editing for people who ship routes, not just draw them.*
+- *The lightest browser tool for cleaning and converting GPX and KML. Load, edit, cut, crop, reroute, export. No account, no ads, no install.*
 - *Multi-select, trim, split, convert — then download. Done.*
 - *The fast toolbox next to gpx.studio’s workshop.*
 - *From messy GPS to device-ready files — in the browser, free.*

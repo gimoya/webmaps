@@ -1,7 +1,7 @@
 {
   "name": "track toolbox",
   "short_name": "track toolbox",
-  "description": "GPX/KML load, convert, edit, Digitize (BRouter), and export in the browser.",
+  "description": "The lightest browser tool for cleaning and converting GPX and KML. Load, edit, cut, crop, reroute, export. No account, no ads, no install.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
